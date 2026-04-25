@@ -7,7 +7,17 @@ import { Link } from 'expo-router'
 const SignInForm = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  
+  const handleSignIn = () => {
+    setIsLoading(true);
+    // Simula un proceso de inicio de sesión
+    setTimeout(() => {
+      setIsLoading(false);
+      // Aquí iría la lógica real de autenticación
+    }, 2000);
+  };
   return (
     <KeyboardAvoidingView
       behavior="padding"
@@ -36,6 +46,8 @@ const SignInForm = () => {
             keyboardType='email-address'
             autoCapitalize='none'
             className='w-full bg-mist rounded-md px-4 py-4 mb-4 focus:border-primary focus:border-2'
+            value={email}
+            onChangeText={setEmail}
           />
           <Text className='text-night'> Contraseña</Text>
           <View className='w-full bg-mist rounded-md flex-row items-center mb-4 focus:border-primary focus:border-2'>
@@ -43,6 +55,8 @@ const SignInForm = () => {
               placeholder='********'
               secureTextEntry={!showPassword}
               className='flex-1 px-4 py-4'
+              value={password}
+              onChangeText={setPassword}
             />
             <Pressable onPress={() => setShowPassword(!showPassword)} className='pr-4'>
               {showPassword
@@ -54,11 +68,13 @@ const SignInForm = () => {
           <Link href="/forgot-password" asChild>
             <Text className='text-primary text-right font-sans-bold mb-4'>¿Olvidaste tu contraseña?</Text> 
           </Link>
-          <Pressable>
-            <Text className={`bg-primary text-white py-4 rounded-md text-center font-sans-bold active:bg-primary-dark
-            ${isLoading ? 'bg-primary-dark' : 'bg-primary'}`}
-                disabled={isLoading}
-            >Iniciar Sesion
+          <Pressable
+            onPress={handleSignIn}
+            disabled={isLoading}
+            className={`py-4 rounded-md active:opacity-80 ${isLoading ? 'bg-primary/70' : 'bg-primary'}`}
+          >
+            <Text className="text-white text-center font-sans-bold">
+              {isLoading ? 'Cargando...' : 'Iniciar Sesion'}
             </Text>
           </Pressable>
           <Text className='text-night text-center mt-4'>
