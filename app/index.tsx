@@ -2,7 +2,7 @@ import { Pressable, Text, View } from "react-native";
 import { Trophy } from "lucide-react-native";
 import { Colors } from "@/constants/Colors";
 import { Link } from "expo-router";
-
+//import { Redirect } from 'expo-router';
 export default function HomeScreen() {
   return (
 
@@ -28,4 +28,6 @@ export default function HomeScreen() {
       
     </View>
   );
+  //return <Redirect href="/(profile)" />;
 }
+
