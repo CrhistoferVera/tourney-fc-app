@@ -10,6 +10,7 @@ module.exports = {
       fontFamily: {
         sans:          ["Inter_400Regular"],
         "sans-medium": ["Inter_500Medium"],
+        "sans-bold":   ["Inter_600SemiBold"],
       },
       colors: {
         primary:   "#0D7A3E",
