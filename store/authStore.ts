@@ -17,7 +17,7 @@ interface AuthStore {
 }
 
 export const useAuthStore = create<AuthStore>((set) => ({
-  token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJmMzA2Nzc3My01MDZiLTQzNTEtYjdjYi1jN2M1MGM0YWMyOWUiLCJlbWFpbCI6Imp1YW5AZXhhbXBsZS5jb20iLCJpYXQiOjE3NzcxMzIzNjIsImV4cCI6MTc3NzIxODc2Mn0.3y37L91Usz_mdO-LY7i8Zgp2FIzulJiqGFeOQshdajE',
+  token: null,//'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJmMzA2Nzc3My01MDZiLTQzNTEtYjdjYi1jN2M1MGM0YWMyOWUiLCJlbWFpbCI6Imp1YW5AZXhhbXBsZS5jb20iLCJpYXQiOjE3NzcxMzIzNjIsImV4cCI6MTc3NzIxODc2Mn0.3y37L91Usz_mdO-LY7i8Zgp2FIzulJiqGFeOQshdajE',
   usuario: null,
   setToken: (token) => set({ token }),
   setUsuario: (usuario) => set({ usuario }),
