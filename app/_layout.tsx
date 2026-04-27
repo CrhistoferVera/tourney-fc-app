@@ -4,6 +4,9 @@ import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, useFonts } from "
 import { useEffect } from "react";
 import "../global.css";
 
+
+
+
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
@@ -15,5 +18,7 @@ export default function RootLayout() {
 
   if (!loaded) return null;
 
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <Stack screenOptions={{ headerShown: false }} />
+  );
 }

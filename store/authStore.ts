@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface Usuario {
   id: string;
@@ -16,10 +18,18 @@ interface AuthStore {
   clearAuth: () => void;
 }
 
-export const useAuthStore = create<AuthStore>((set) => ({
-  token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJmMzA2Nzc3My01MDZiLTQzNTEtYjdjYi1jN2M1MGM0YWMyOWUiLCJlbWFpbCI6Imp1YW5AZXhhbXBsZS5jb20iLCJpYXQiOjE3NzcxMzIzNjIsImV4cCI6MTc3NzIxODc2Mn0.3y37L91Usz_mdO-LY7i8Zgp2FIzulJiqGFeOQshdajE',
-  usuario: null,
-  setToken: (token) => set({ token }),
-  setUsuario: (usuario) => set({ usuario }),
-  clearAuth: () => set({ token: null, usuario: null }),
-}));
+export const useAuthStore = create<AuthStore>()(
+  persist(
+    (set) => ({
+      token: null,
+      usuario: null,
+      setToken: (token) => set({ token }),
+      setUsuario: (usuario) => set({ usuario }),
+      clearAuth: () => set({ token: null, usuario: null }),
+    }),
+    {
+      name: 'auth-storage',
+      storage: createJSONStorage(() => AsyncStorage),
+    }
+  )
+);
