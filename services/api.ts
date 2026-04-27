@@ -1,4 +1,4 @@
-const BASE_URL = 'http://192.168.0.127:3000';
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL;
 
 export const api = {
   get: async (endpoint: string, token?: string) => {
