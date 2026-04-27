@@ -126,7 +126,7 @@ export default function CreateTournamentScreen() {
   const handleSaveDraft = async () => {
     setSaving(true);
     try {
-      await createTournament(buildDto(), token ?? undefined);
+      await createTournament(buildDto());
       showAlert({
         type: 'success',
         title: 'Borrador guardado',
@@ -158,8 +158,8 @@ export default function CreateTournamentScreen() {
         hideAlert();
         setSaving(true);
         try {
-          const created = await createTournament(buildDto(), token ?? undefined);
-          await publishTournament(created.id, token ?? undefined);
+          const created = await createTournament(buildDto());
+          await publishTournament(created.id);
           showAlert({
             type: 'success',
             title: '¡Publicado!',

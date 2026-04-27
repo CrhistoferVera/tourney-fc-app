@@ -1,4 +1,14 @@
+// services/api.ts
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL;
+
+const handleResponse = async (response: Response) => {
+  const data = await response.json();
+  if (!response.ok) {
+    const errorMessage = data.message || data.error || 'Error en la petición';
+    throw new Error(errorMessage);
+  }
+  return data;
+};
 
 export const api = {
   get: async (endpoint: string, token?: string) => {
@@ -9,7 +19,7 @@ export const api = {
         ...(token && { Authorization: `Bearer ${token}` }),
       },
     });
-    return response.json();
+    return handleResponse(response);
   },
 
   patch: async (endpoint: string, body: object, token?: string) => {
@@ -21,7 +31,7 @@ export const api = {
       },
       body: JSON.stringify(body),
     });
-    return response.json();
+    return handleResponse(response);
   },
 
   post: async (endpoint: string, body: object, token?: string) => {
@@ -33,7 +43,7 @@ export const api = {
       },
       body: JSON.stringify(body),
     });
-    return response.json();
+    return handleResponse(response);
   },
 
   delete: async (endpoint: string, token?: string) => {
@@ -44,7 +54,7 @@ export const api = {
         ...(token && { Authorization: `Bearer ${token}` }),
       },
     });
-    return response.json();
+    return handleResponse(response);
   },
 
   getWithParams: async (endpoint: string, params?: Record<string, string>, token?: string) => {
@@ -57,6 +67,6 @@ export const api = {
         ...(token && { Authorization: `Bearer ${token}` }),
       },
     });
-    return response.json();
+    return handleResponse(response);
   },
 };
