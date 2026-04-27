@@ -1,10 +1,13 @@
-import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Alert, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { api } from '../../services/api';
+import CustomAlert from '../../components/CustomAlert';
+import { useAlert } from '../../hooks/useAlert';
 
 export default function RegisterScreen() {
   const router = useRouter();
+  const { alertState, hideAlert, showError, showSuccess } = useAlert();
 
   const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
@@ -44,11 +47,11 @@ export default function RegisterScreen() {
 
   const handleRegister = async () => {
     if (!nombre || !email || !password || !confirmPassword) {
-      Alert.alert('Error', 'Completa todos los campos');
+      showError('Campos requeridos', 'Completa todos los campos para continuar');
       return;
     }
     if (nombreError || emailError || passwordError || confirmError) {
-      Alert.alert('Error', 'Corrige los errores antes de continuar');
+      showError('Datos inválidos', 'Corrige los errores antes de continuar');
       return;
     }
 
@@ -56,14 +59,14 @@ export default function RegisterScreen() {
     try {
       const data = await api.post('/auth/register', { nombre, email, password });
       if (data.registrado) {
-        Alert.alert('Éxito', 'Cuenta creada exitosamente', [
-          { text: 'Iniciar sesión', onPress: () => router.replace('/(auth)/login') },
-        ]);
+        showSuccess('Cuenta creada', 'Tu cuenta fue creada exitosamente', () => {
+          router.replace('/(auth)/login');
+        });
       } else {
-        Alert.alert('Error', data.message ?? 'No se pudo crear la cuenta');
+        showError('Error al registrarse', data.message ?? 'No se pudo crear la cuenta');
       }
     } catch {
-      Alert.alert('Error', 'No se pudo conectar al servidor');
+      showError('Error de conexión', 'No se pudo conectar al servidor');
     } finally {
       setLoading(false);
     }
@@ -71,8 +74,9 @@ export default function RegisterScreen() {
 
   return (
     <ScrollView className="flex-1 bg-white" contentContainerStyle={{ flexGrow: 1 }}>
+      <CustomAlert {...alertState} onConfirm={alertState.onConfirm} onCancel={hideAlert} />
+
       <View className="flex-1 px-6 pt-20 pb-8">
-        {/* Logo */}
         <View className="items-center mb-10">
           <View className="w-20 h-20 rounded-full bg-primary items-center justify-center mb-4">
             <Text className="text-white text-4xl">🏆</Text>
@@ -80,11 +84,9 @@ export default function RegisterScreen() {
           <Text className="text-primary text-2xl font-sans-medium">TourneyFC</Text>
         </View>
 
-        {/* Título */}
         <Text className="text-night text-3xl font-sans-medium mb-1">Crear cuenta</Text>
         <Text className="text-carbon text-sm mb-8">Completa el formulario para registrarte</Text>
 
-        {/* Nombre */}
         <View className="mb-4">
           <Text className="text-night text-sm font-sans-medium mb-2">Nombre completo</Text>
           <TextInput
@@ -97,7 +99,6 @@ export default function RegisterScreen() {
           {nombreError ? <Text className="text-danger text-xs mt-1">{nombreError}</Text> : null}
         </View>
 
-        {/* Email */}
         <View className="mb-4">
           <Text className="text-night text-sm font-sans-medium mb-2">Correo electrónico</Text>
           <TextInput
@@ -112,7 +113,6 @@ export default function RegisterScreen() {
           {emailError ? <Text className="text-danger text-xs mt-1">{emailError}</Text> : null}
         </View>
 
-        {/* Contraseña */}
         <View className="mb-4">
           <Text className="text-night text-sm font-sans-medium mb-2">Contraseña</Text>
           <View className="bg-mist rounded-xl px-4 py-4 flex-row items-center">
@@ -131,7 +131,6 @@ export default function RegisterScreen() {
           {passwordError ? <Text className="text-danger text-xs mt-1">{passwordError}</Text> : null}
         </View>
 
-        {/* Confirmar contraseña */}
         <View className="mb-8">
           <Text className="text-night text-sm font-sans-medium mb-2">Confirmar contraseña</Text>
           <View className="bg-mist rounded-xl px-4 py-4 flex-row items-center">
@@ -150,7 +149,6 @@ export default function RegisterScreen() {
           {confirmError ? <Text className="text-danger text-xs mt-1">{confirmError}</Text> : null}
         </View>
 
-        {/* Botón registro */}
         <TouchableOpacity
           className="bg-primary rounded-xl py-4 items-center mb-6"
           onPress={handleRegister}
@@ -163,7 +161,6 @@ export default function RegisterScreen() {
           )}
         </TouchableOpacity>
 
-        {/* Iniciar sesión */}
         <View className="flex-row justify-center mb-4">
           <Text className="text-carbon text-sm">¿Ya tienes cuenta? </Text>
           <TouchableOpacity onPress={() => router.replace('/(auth)/login')}>

@@ -1,12 +1,15 @@
-import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, Alert, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../store/authStore';
 import { api } from '../../services/api';
+import CustomAlert from '../../components/CustomAlert';
+import { useAlert } from '../../hooks/useAlert';
 
 export default function LoginScreen() {
   const router = useRouter();
   const { setToken, setUsuario } = useAuthStore();
+  const { alertState, hideAlert, showError } = useAlert();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -17,28 +20,22 @@ export default function LoginScreen() {
 
   const validateEmail = (value: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(value)) {
-      setEmailError('El formato del correo electrónico no es válido');
-    } else {
-      setEmailError('');
-    }
+    if (!emailRegex.test(value)) setEmailError('El formato del correo electrónico no es válido');
+    else setEmailError('');
   };
 
   const validatePassword = (value: string) => {
-    if (value.length < 8) {
-      setPasswordError('La contraseña debe contener al menos 8 caracteres');
-    } else {
-      setPasswordError('');
-    }
+    if (value.length < 8) setPasswordError('La contraseña debe contener al menos 8 caracteres');
+    else setPasswordError('');
   };
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Completa todos los campos');
+      showError('Campos requeridos', 'Completa todos los campos para continuar');
       return;
     }
     if (emailError || passwordError) {
-      Alert.alert('Error', 'Corrige los errores antes de continuar');
+      showError('Datos inválidos', 'Corrige los errores antes de continuar');
       return;
     }
 
@@ -56,10 +53,10 @@ export default function LoginScreen() {
         });
         router.replace('/(app)/home');
       } else {
-        Alert.alert('Error', data.message ?? 'Correo electrónico o contraseña incorrectos. Por favor, intente nuevamente');
+        showError('Error al iniciar sesión', data.message ?? 'Correo electrónico o contraseña incorrectos. Por favor, intente nuevamente');
       }
     } catch {
-      Alert.alert('Error', 'No se pudo conectar al servidor');
+      showError('Error de conexión', 'No se pudo conectar al servidor');
     } finally {
       setLoading(false);
     }
@@ -67,8 +64,9 @@ export default function LoginScreen() {
 
   return (
     <ScrollView className="flex-1 bg-white" contentContainerStyle={{ flexGrow: 1 }}>
+      <CustomAlert {...alertState} onConfirm={alertState.onConfirm} onCancel={hideAlert} />
+
       <View className="flex-1 px-6 pt-20 pb-8">
-        {/* Logo */}
         <View className="items-center mb-10">
           <View className="w-20 h-20 rounded-full bg-primary items-center justify-center mb-4">
             <Text className="text-white text-4xl">🏆</Text>
@@ -76,11 +74,9 @@ export default function LoginScreen() {
           <Text className="text-primary text-2xl font-sans-medium">TourneyFC</Text>
         </View>
 
-        {/* Título */}
         <Text className="text-night text-3xl font-sans-medium mb-1">Iniciar sesión</Text>
         <Text className="text-carbon text-sm mb-8">Ingresa tus credenciales para continuar</Text>
 
-        {/* Email */}
         <View className="mb-4">
           <Text className="text-night text-sm font-sans-medium mb-2">Correo electrónico</Text>
           <TextInput
@@ -95,7 +91,6 @@ export default function LoginScreen() {
           {emailError ? <Text className="text-danger text-xs mt-1">{emailError}</Text> : null}
         </View>
 
-        {/* Contraseña */}
         <View className="mb-2">
           <Text className="text-night text-sm font-sans-medium mb-2">Contraseña</Text>
           <View className="bg-mist rounded-xl px-4 py-4 flex-row items-center">
@@ -114,12 +109,10 @@ export default function LoginScreen() {
           {passwordError ? <Text className="text-danger text-xs mt-1">{passwordError}</Text> : null}
         </View>
 
-        {/* Olvidaste contraseña */}
         <TouchableOpacity className="items-end mb-8">
           <Text className="text-primary text-sm font-sans-medium">¿Olvidaste tu contraseña?</Text>
         </TouchableOpacity>
 
-        {/* Botón login */}
         <TouchableOpacity
           className="bg-primary rounded-xl py-4 items-center mb-6"
           onPress={handleLogin}
@@ -132,7 +125,6 @@ export default function LoginScreen() {
           )}
         </TouchableOpacity>
 
-        {/* Crear cuenta */}
         <View className="flex-row justify-center">
           <Text className="text-carbon text-sm">¿No tienes cuenta? </Text>
           <TouchableOpacity onPress={() => router.push('/(auth)/register')}>

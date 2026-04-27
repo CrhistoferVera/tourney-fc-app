@@ -4,7 +4,7 @@ import { useAuthStore } from '../store/authStore';
 
 export default function Index() {
   const { token } = useAuthStore();
-  return <Redirect href={token ? '/(app)/home' : '/(auth)/login'} />;
+  return <Redirect href={token ? '/(app)/home' : '/welcome'} />;
 }
 
 /*return (
