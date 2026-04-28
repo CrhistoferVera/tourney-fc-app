@@ -8,7 +8,7 @@ import { useAuthStore } from '../store/authStore';
 
 const DRAWER_WIDTH = Dimensions.get('window').width * 0.78;
 
-export type DrawerSection = 'inicio' | 'torneos' | 'borradores';
+export type DrawerSection = 'inicio' | 'dashboard' | 'torneos' | 'borradores';
 
 interface Props {
   visible: boolean;
@@ -18,9 +18,10 @@ interface Props {
 }
 
 const SECTIONS: { key: DrawerSection; label: string; icon: string }[] = [
-  { key: 'inicio',     label: 'Inicio',      icon: '🏠' },
-  { key: 'torneos',    label: 'Torneos',     icon: '🏆' },
-  { key: 'borradores', label: 'Borradores',  icon: '📝' },
+  { key: 'inicio',      label: 'Inicio',      icon: '' },
+  { key: 'dashboard',   label: 'Dashboard',   icon: '' },
+  { key: 'torneos',     label: 'Torneos',     icon: '' },
+  { key: 'borradores',  label: 'Borradores',  icon: '' },
 ];
 
 export default function DrawerMenu({ visible, onClose, activeSection, onSelectSection }: Props) {
@@ -61,7 +62,6 @@ export default function DrawerMenu({ visible, onClose, activeSection, onSelectSe
         backgroundColor: '#FFFFFF', shadowColor: '#0F1A14',
         shadowOpacity: 0.18, shadowRadius: 16, elevation: 12,
       }}>
-        {/* Perfil */}
         <TouchableOpacity
           onPress={() => { onClose(); router.push('/(profile)'); }}
           className="bg-primary pt-14 pb-5 px-5 flex-row items-center"
@@ -87,11 +87,8 @@ export default function DrawerMenu({ visible, onClose, activeSection, onSelectSe
           <Text className="text-primary-light text-base">›</Text>
         </TouchableOpacity>
 
-        {/* Secciones */}
         <View className="px-3 pt-4">
-          <Text className="text-carbon text-xs font-sans-medium uppercase px-2 mb-2">
-            Menú
-          </Text>
+          <Text className="text-carbon text-xs font-sans-medium uppercase px-2 mb-2">Menú</Text>
           {SECTIONS.map((s) => {
             const active = activeSection === s.key;
             return (
@@ -99,17 +96,13 @@ export default function DrawerMenu({ visible, onClose, activeSection, onSelectSe
                 key={s.key}
                 onPress={() => { onSelectSection(s.key); onClose(); }}
                 activeOpacity={0.75}
-                className={`flex-row items-center px-3 py-3.5 rounded-xl mb-1 ${
-                  active ? 'bg-primary-light' : ''
-                }`}
+                className={`flex-row items-center px-3 py-3.5 rounded-xl mb-1 ${active ? 'bg-primary-light' : ''}`}
               >
                 <Text style={{ fontSize: 18, marginRight: 12 }}>{s.icon}</Text>
                 <Text className={`font-sans-medium text-sm ${active ? 'text-primary' : 'text-night'}`}>
                   {s.label}
                 </Text>
-                {active && (
-                  <View className="ml-auto w-1.5 h-1.5 rounded-full bg-primary" />
-                )}
+                {active && <View className="ml-auto w-1.5 h-1.5 rounded-full bg-primary" />}
               </TouchableOpacity>
             );
           })}
