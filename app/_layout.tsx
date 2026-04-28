@@ -14,8 +14,13 @@ function AuthGuard() {
 
   useEffect(() => {
     const inApp = segments[0] === '(app)';
+    const inAuth = segments[0] === '(auth)';
+    
     if (!token && inApp) {
       router.replace('/welcome');
+    }
+    if (token && (inAuth || segments[0] === undefined)) {
+      router.replace('/(app)/home');
     }
   }, [token, segments]);
 
