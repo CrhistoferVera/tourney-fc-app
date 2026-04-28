@@ -12,6 +12,7 @@ import { useAuthStore } from "../../store/authStore";
 import { api } from "../../services/api";
 import CustomAlert from "../../components/CustomAlert";
 import { useAlert } from "../../hooks/useAlert";
+import { Feather } from "@expo/vector-icons";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -144,9 +145,11 @@ export default function LoginScreen() {
               }}
             />
             <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-              <Text className="text-carbon text-lg">
-                {showPassword ? "🙈" : "👁️"}
-              </Text>
+              <Feather
+                name={showPassword ? "eye-off" : "eye"}
+                size={22}
+                color="#3D4F44"
+              />
             </TouchableOpacity>
           </View>
           {passwordError ? (
