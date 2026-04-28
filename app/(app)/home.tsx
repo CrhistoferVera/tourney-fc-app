@@ -15,6 +15,9 @@ import {
   getPublicTournaments,
   Tournament,
 } from '../../services/tournamentService';
+import TournamentCard from '../../components/tournament/TournamentCard';
+import SectionHeader from '../../components/tournament/SectionHeader';
+import DrawerMenu from '../../components/DrawerMenu';
 
 
 const FORMAT_LABEL: Record<string, string> = {
@@ -44,73 +47,9 @@ function StatusBadge({ estado }: { estado: string }) {
   );
 }
 
-function TournamentCard({
-  item,
-  onPress,
-}: {
-  item: Tournament;
-  onPress: () => void;
-}) {
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      activeOpacity={0.75}
-      className="bg-white rounded-2xl mb-3 overflow-hidden"
-      style={{ shadowColor: '#0F1A14', shadowOpacity: 0.06, shadowRadius: 8, elevation: 2 }}
-    >
-      {/* Color accent bar based on status */}
-      <View
-        className={`h-1 w-full ${
-          item.estado === 'EN_CURSO'
-            ? 'bg-primary'
-            : item.estado === 'EN_INSCRIPCION'
-            ? 'bg-accent'
-            : item.estado === 'BORRADOR'
-            ? 'bg-carbon'
-            : 'bg-mist'
-        }`}
-      />
-      <View className="px-4 py-3">
-        <View className="flex-row justify-between items-start mb-1">
-          <Text
-            className="text-night font-sans-medium text-base flex-1 mr-2"
-            numberOfLines={1}
-          >
-            {item.nombre}
-          </Text>
-          <StatusBadge estado={item.estado} />
-        </View>
 
-        <View className="flex-row items-center gap-3 mt-1">
-          <Text className="text-carbon text-xs">
-            {FORMAT_LABEL[item.formato] ?? item.formato} · {item.maxEquipos} equipos
-          </Text>
-        </View>
 
-        {item.zona ? (
-          <Text className="text-carbon text-xs mt-0.5">📍 {item.zona}</Text>
-        ) : null}
 
-        {item.rolUsuario ? (
-          <Text className="text-primary text-xs font-sans-medium mt-1">
-            Tu rol: {item.rolUsuario}
-          </Text>
-        ) : null}
-      </View>
-    </TouchableOpacity>
-  );
-}
-
-function SectionHeader({ title, count }: { title: string; count: number }) {
-  return (
-    <View className="flex-row items-center mb-3 mt-1">
-      <Text className="text-night font-sans-medium text-base flex-1">{title}</Text>
-      <View className="bg-primary-light px-2 py-0.5 rounded-full">
-        <Text className="text-primary text-xs font-sans-medium">{count}</Text>
-      </View>
-    </View>
-  );
-}
 
 function EmptyState({ message }: { message: string }) {
   return (
@@ -124,13 +63,14 @@ function EmptyState({ message }: { message: string }) {
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { usuario } = useAuthStore();
+  const { token } = useAuthStore();
 
   const [myTournaments, setMyTournaments] = useState<Tournament[]>([]);
   const [publicTournaments, setPublicTournaments] = useState<Tournament[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -144,7 +84,7 @@ export default function HomeScreen() {
     } catch {
       setError('No se pudieron cargar los torneos.');
     }
-  }, []);
+  }, [token]);
 
   useEffect(() => {
     fetchData().finally(() => setLoading(false));
@@ -158,34 +98,25 @@ export default function HomeScreen() {
 
   const myDrafts = myTournaments.filter((t) => t.estado === 'BORRADOR');
   const myActive = myTournaments.filter((t) => t.estado !== 'BORRADOR');
-
   const myIds = new Set(myTournaments.map((t) => t.id));
   const otherPublic = publicTournaments.filter((t) => !myIds.has(t.id));
-
   const allVisible = [...myActive, ...otherPublic];
 
   return (
     <View className="flex-1 bg-mist">
       {/* Header */}
       <View className="bg-primary px-6 pt-14 pb-4 flex-row justify-between items-center">
-        <Text className="text-white text-xl font-sans-medium">TourneyFC</Text>
-        <TouchableOpacity onPress={() => router.push('/(profile)')}>
-          {usuario?.fotoPerfil ? (
-            <Image
-              source={{ uri: usuario.fotoPerfil }}
-              className="w-10 h-10 rounded-full"
-            />
-          ) : (
-            <View className="w-10 h-10 rounded-full bg-primary-dark items-center justify-center">
-              <Text className="text-white text-sm font-sans-medium">
-                {usuario?.nombre?.slice(0, 2).toUpperCase() ?? 'U'}
-              </Text>
-            </View>
-          )}
+        <TouchableOpacity onPress={() => setDrawerOpen(true)}>
+          <View className="gap-1">
+            <View className="w-6 h-0.5 bg-white rounded-full" />
+            <View className="w-6 h-0.5 bg-white rounded-full" />
+            <View className="w-6 h-0.5 bg-white rounded-full" />
+          </View>
         </TouchableOpacity>
+        <Text className="text-white text-xl font-sans-medium">TourneyFC</Text>
+        <View style={{ width: 24 }} />
       </View>
 
-      {/* Body */}
       {loading ? (
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator color="#0D7A3E" size="large" />
@@ -196,12 +127,7 @@ export default function HomeScreen() {
           contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor="#0D7A3E"
-              colors={['#0D7A3E']}
-            />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0D7A3E" colors={['#0D7A3E']} />
           }
         >
           {error ? (
@@ -213,35 +139,21 @@ export default function HomeScreen() {
             </View>
           ) : null}
 
-          <TouchableOpacity
-            onPress={() => router.push('/(app)/create-tournament')}
-            className="bg-primary rounded-2xl px-4 py-3 flex-row items-center justify-center mb-5"
-            activeOpacity={0.85}
-          >
-            <Text className="text-white font-sans-medium text-sm mr-1">＋</Text>
-            <Text className="text-white font-sans-medium text-sm">Crear torneo</Text>
-          </TouchableOpacity>
-
-          {/* Section 1: Torneos publicados y disponibles */}
-          <SectionHeader
-            title="Torneos disponibles"
-            count={allVisible.length}
-          />
+          <SectionHeader title="Torneos disponibles" count={allVisible.length} />
           {allVisible.length === 0 ? (
-            <EmptyState message="No hay torneos publicados aún." />
+            <View className="bg-white rounded-2xl px-4 py-6 items-center mb-3">
+              <Text className="text-carbon text-sm text-center">No hay torneos publicados aún.</Text>
+            </View>
           ) : (
             allVisible.map((item) => (
               <TournamentCard
                 key={item.id}
                 item={item}
-                onPress={() =>
-                  router.push(`/(app)/tournament/${item.id}` as never)
-                }
+                onPress={() => router.push(`/(app)/tournament/${item.id}` as never)}
               />
             ))
           )}
 
-          {/* Section 2: Borradores (solo propios) */}
           {myDrafts.length > 0 ? (
             <>
               <View className="mt-4" />
@@ -250,15 +162,22 @@ export default function HomeScreen() {
                 <TournamentCard
                   key={item.id}
                   item={item}
-                  onPress={() =>
-                    router.push(`/(app)/tournament/${item.id}` as never)
-                  }
+                  onPress={() => router.push(`/(app)/tournament/${item.id}` as never)}
                 />
               ))}
             </>
           ) : null}
         </ScrollView>
       )}
+
+      <DrawerMenu
+        visible={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        publicTournaments={allVisible}
+        draftTournaments={myDrafts}
+        onCreateTournament={() => router.push('/(app)/create-tournament')}
+        onSelectTournament={(id) => router.push(`/(app)/tournament/${id}` as never)}
+      />
     </View>
   );
 }

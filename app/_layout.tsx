@@ -1,16 +1,29 @@
-import { Stack } from 'expo-router';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import { useFonts, Inter_400Regular, Inter_500Medium } from '@expo-google-fonts/inter';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
+import { useAuthStore } from '../store/authStore';
 import '../global.css';
 
 SplashScreen.preventAutoHideAsync();
 
+function AuthGuard() {
+  const { token } = useAuthStore();
+  const segments = useSegments();
+  const router = useRouter();
+
+  useEffect(() => {
+    const inApp = segments[0] === '(app)';
+    if (!token && inApp) {
+      router.replace('/welcome');
+    }
+  }, [token, segments]);
+
+  return null;
+}
+
 export default function RootLayout() {
-  const [loaded] = useFonts({
-    Inter_400Regular,
-    Inter_500Medium,
-  });
+  const [loaded] = useFonts({ Inter_400Regular, Inter_500Medium });
 
   useEffect(() => {
     if (loaded) SplashScreen.hideAsync();
@@ -19,6 +32,9 @@ export default function RootLayout() {
   if (!loaded) return null;
 
   return (
-    <Stack screenOptions={{ headerShown: false }} />
+    <>
+      <AuthGuard />
+      <Stack screenOptions={{ headerShown: false }} />
+    </>
   );
 }
