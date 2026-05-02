@@ -27,10 +27,10 @@ export default function TournamentCard({ item, onPress }: Props) {
           item.estado === 'EN_CURSO'
             ? 'bg-primary'
             : item.estado === 'EN_INSCRIPCION'
-            ? 'bg-accent'
-            : item.estado === 'BORRADOR'
-            ? 'bg-carbon'
-            : 'bg-mist'
+              ? 'bg-accent'
+              : item.estado === 'BORRADOR'
+                ? 'bg-carbon'
+                : 'bg-mist'
         }`}
       />
       <View className="px-4 py-3">
@@ -45,9 +45,7 @@ export default function TournamentCard({ item, onPress }: Props) {
             {FORMAT_LABEL[item.formato] ?? item.formato} · {item.maxEquipos} equipos
           </Text>
         </View>
-        {item.zona ? (
-          <Text className="text-carbon text-xs mt-0.5">📍 {item.zona}</Text>
-        ) : null}
+        {item.zona ? <Text className="text-carbon text-xs mt-0.5">📍 {item.zona}</Text> : null}
         {item.rolUsuario ? (
           <Text className="text-primary text-xs font-sans-medium mt-1">
             Tu rol: {item.rolUsuario}

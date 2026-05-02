@@ -47,17 +47,14 @@ export default function CustomAlert({
   };
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      statusBarTranslucent
-    >
+    <Modal visible={visible} transparent animationType="fade" statusBarTranslucent>
       <View className="flex-1 bg-black/50 items-center justify-center px-8">
         <View className="bg-white rounded-3xl w-full overflow-hidden">
           {/* Icono */}
           <View className="items-center pt-8 pb-4">
-            <View className={`w-16 h-16 rounded-full ${getIconColor()} items-center justify-center`}>
+            <View
+              className={`w-16 h-16 rounded-full ${getIconColor()} items-center justify-center`}
+            >
               <Text className="text-white text-2xl font-sans-medium">{getIcon()}</Text>
             </View>
           </View>
@@ -82,7 +79,9 @@ export default function CustomAlert({
                 className="border border-mist rounded-xl py-4 items-center"
                 onPress={onCancel}
               >
-                <Text className="text-carbon font-sans-medium text-base">{cancelText ?? 'Cancelar'}</Text>
+                <Text className="text-carbon font-sans-medium text-base">
+                  {cancelText ?? 'Cancelar'}
+                </Text>
               </TouchableOpacity>
             )}
           </View>

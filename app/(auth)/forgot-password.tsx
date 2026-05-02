@@ -1,4 +1,11 @@
-import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ActivityIndicator,
+  ScrollView,
+} from 'react-native';
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { api } from '../../services/api';
@@ -54,7 +61,9 @@ export default function ForgotPasswordScreen() {
         </View>
 
         <Text className="text-night text-3xl font-sans-medium mb-1">¿Olvidaste tu contraseña?</Text>
-        <Text className="text-carbon text-sm mb-8">Ingresa tu correo y te enviaremos un código de verificación</Text>
+        <Text className="text-carbon text-sm mb-8">
+          Ingresa tu correo y te enviaremos un código de verificación
+        </Text>
 
         <View className="mb-6">
           <Text className="text-night text-sm font-sans-medium mb-2">Correo electrónico</Text>
@@ -65,7 +74,10 @@ export default function ForgotPasswordScreen() {
             keyboardType="email-address"
             autoCapitalize="none"
             value={email}
-            onChangeText={(v) => { setEmail(v); validateEmail(v); }}
+            onChangeText={(v) => {
+              setEmail(v);
+              validateEmail(v);
+            }}
           />
           {emailError ? <Text className="text-danger text-xs mt-1">{emailError}</Text> : null}
         </View>

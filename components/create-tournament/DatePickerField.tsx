@@ -61,11 +61,7 @@ export default function DatePickerField({
               current={value || today}
               minDate={minDate ?? today}
               onDayPress={handleDayPress}
-              markedDates={
-                value
-                  ? { [value]: { selected: true, selectedColor: '#0D7A3E' } }
-                  : {}
-              }
+              markedDates={value ? { [value]: { selected: true, selectedColor: '#0D7A3E' } } : {}}
               theme={{
                 backgroundColor: '#FFFFFF',
                 calendarBackground: '#FFFFFF',

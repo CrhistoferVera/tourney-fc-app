@@ -34,9 +34,7 @@ export default function InputField({
         } ${multiline ? 'py-3 min-h-[90px]' : 'py-3'}`}
         style={{ textAlignVertical: multiline ? 'top' : 'center' }}
       />
-      {error ? (
-        <Text className="text-danger text-xs mt-1">{error}</Text>
-      ) : null}
+      {error ? <Text className="text-danger text-xs mt-1">{error}</Text> : null}
     </View>
   );
 }

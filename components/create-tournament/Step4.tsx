@@ -17,8 +17,7 @@ export default function Step4({ staffEmails, onChange }: Props) {
     setEmailInput('');
   };
 
-  const removeEmail = (email: string) =>
-    onChange(staffEmails.filter((e) => e !== email));
+  const removeEmail = (email: string) => onChange(staffEmails.filter((e) => e !== email));
 
   return (
     <>

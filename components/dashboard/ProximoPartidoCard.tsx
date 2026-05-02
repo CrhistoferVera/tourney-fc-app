@@ -8,7 +8,13 @@ interface Props {
 const formatFecha = (fecha: string | null) => {
   if (!fecha) return '—';
   const d = new Date(fecha);
-  return d.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleDateString('es-ES', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 };
 
 export default function ProximoPartidoCard({ partido }: Props) {

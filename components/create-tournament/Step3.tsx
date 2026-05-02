@@ -20,8 +20,7 @@ export default function Step3({ maxEquipos, campos, onChangeEquipos, onChangeCam
     onChangeCampos(campos.map((c, i) => (i === index ? { ...c, [key]: value } : c)));
   };
 
-  const removeCampo = (index: number) =>
-    onChangeCampos(campos.filter((_, i) => i !== index));
+  const removeCampo = (index: number) => onChangeCampos(campos.filter((_, i) => i !== index));
 
   const openMap = (index: number) => {
     setEditingIndex(index);

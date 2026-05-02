@@ -31,7 +31,9 @@ export default function CodeInput({ value, onChange }: CodeInputProps) {
       {Array.from({ length: 6 }).map((_, i) => (
         <TextInput
           key={i}
-          ref={(ref) => { inputs.current[i] = ref; }}
+          ref={(ref) => {
+            inputs.current[i] = ref;
+          }}
           className="flex-1 h-14 bg-mist rounded-xl text-center text-night text-xl font-sans-medium border-2 border-transparent focus:border-primary"
           maxLength={1}
           keyboardType="numeric"

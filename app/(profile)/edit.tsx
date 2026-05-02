@@ -6,38 +6,38 @@ import {
   ScrollView,
   ActivityIndicator,
   Image,
-} from "react-native";
-import { useState, useEffect } from "react";
-import { useRouter } from "expo-router";
-import { useProfile } from "../../hooks/useProfile";
-import CustomAlert from "../../components/CustomAlert";
-import { useAlert } from "../../hooks/useAlert";
+} from 'react-native';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'expo-router';
+import { useProfile } from '../../hooks/useProfile';
+import CustomAlert from '../../components/CustomAlert';
+import { useAlert } from '../../hooks/useAlert';
 
 export default function EditProfileScreen() {
   const { alertState, hideAlert, showError } = useAlert();
   const { usuario, loading, updateProfile, pickAndUploadPhoto } = useProfile();
   const router = useRouter();
 
-  const [nombre, setNombre] = useState("");
-  const [zona, setZona] = useState("");
+  const [nombre, setNombre] = useState('');
+  const [zona, setZona] = useState('');
   const [fotoPerfil, setFotoPerfil] = useState<string | null>(null);
-  const [nombreError, setNombreError] = useState("");
+  const [nombreError, setNombreError] = useState('');
 
   useEffect(() => {
     if (usuario) {
-      setNombre(usuario.nombre ?? "");
-      setZona(usuario.zona ?? "");
+      setNombre(usuario.nombre ?? '');
+      setZona(usuario.zona ?? '');
       setFotoPerfil(usuario.fotoPerfil ?? null);
     }
   }, [usuario]);
 
   const validateNombre = (value: string) => {
     if (value.length < 3) {
-      setNombreError("El nombre debe tener al menos 3 caracteres");
+      setNombreError('El nombre debe tener al menos 3 caracteres');
     } else if (value.length > 50) {
-      setNombreError("El nombre no puede exceder 50 caracteres");
+      setNombreError('El nombre no puede exceder 50 caracteres');
     } else {
-      setNombreError("");
+      setNombreError('');
     }
   };
 
@@ -55,7 +55,7 @@ export default function EditProfileScreen() {
 
   const handleSave = async () => {
     if (nombreError || nombre.length < 3) {
-      showError("Error de validación", "Corrige los errores antes de guardar");
+      showError('Error de validación', 'Corrige los errores antes de guardar');
       return;
     }
 
@@ -68,33 +68,23 @@ export default function EditProfileScreen() {
     if (success) {
       router.back();
     } else {
-      showError(
-        "Error al guardar",
-        "No se pudo actualizar el perfil. Intenta nuevamente",
-      );
+      showError('Error al guardar', 'No se pudo actualizar el perfil. Intenta nuevamente');
     }
   };
 
   return (
     <>
-      <CustomAlert
-        {...alertState}
-        onConfirm={alertState.onConfirm}
-        onCancel={hideAlert}
-      />
+      <CustomAlert {...alertState} onConfirm={alertState.onConfirm} onCancel={hideAlert} />
       <ScrollView className="flex-1 bg-mist">
         {/* Header */}
         <View className="bg-primary px-6 pt-16 pb-8 items-center">
           <TouchableOpacity onPress={handlePickPhoto} className="relative mb-3">
             {fotoPerfil ? (
-              <Image
-                source={{ uri: fotoPerfil }}
-                className="w-24 h-24 rounded-full"
-              />
+              <Image source={{ uri: fotoPerfil }} className="w-24 h-24 rounded-full" />
             ) : (
               <View className="w-24 h-24 rounded-full bg-primary-dark items-center justify-center">
                 <Text className="text-white text-3xl font-sans-medium">
-                  {usuario?.nombre?.slice(0, 2).toUpperCase() ?? "U"}
+                  {usuario?.nombre?.slice(0, 2).toUpperCase() ?? 'U'}
                 </Text>
               </View>
             )}
@@ -102,9 +92,7 @@ export default function EditProfileScreen() {
               <Text className="text-white text-xs">✎</Text>
             </View>
           </TouchableOpacity>
-          <Text className="text-white text-lg font-sans-medium">
-            {usuario?.nombre}
-          </Text>
+          <Text className="text-white text-lg font-sans-medium">{usuario?.nombre}</Text>
         </View>
 
         {/* Formulario */}
@@ -123,12 +111,8 @@ export default function EditProfileScreen() {
               placeholderTextColor="#3D4F44"
               maxLength={50}
             />
-            {nombreError ? (
-              <Text className="text-danger text-xs mt-1">{nombreError}</Text>
-            ) : null}
-            <Text className="text-carbon text-xs mt-1">
-              Mínimo 3 caracteres
-            </Text>
+            {nombreError ? <Text className="text-danger text-xs mt-1">{nombreError}</Text> : null}
+            <Text className="text-carbon text-xs mt-1">Mínimo 3 caracteres</Text>
           </View>
 
           {/* Zona */}
@@ -152,16 +136,11 @@ export default function EditProfileScreen() {
             {loading ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text className="text-white font-sans-medium text-base">
-                Guardar cambios
-              </Text>
+              <Text className="text-white font-sans-medium text-base">Guardar cambios</Text>
             )}
           </TouchableOpacity>
 
-          <TouchableOpacity
-            className="items-center py-3"
-            onPress={() => router.back()}
-          >
+          <TouchableOpacity className="items-center py-3" onPress={() => router.back()}>
             <Text className="text-carbon text-base">Cancelar</Text>
           </TouchableOpacity>
         </View>

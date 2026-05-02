@@ -1,12 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  Modal,
-  TouchableOpacity,
-  ActivityIndicator,
-  TextInput,
-} from 'react-native';
+import { View, Text, Modal, TouchableOpacity, ActivityIndicator, TextInput } from 'react-native';
 import MapView, { Marker, MapPressEvent, Region } from 'react-native-maps';
 import * as Location from 'expo-location';
 
@@ -25,7 +18,9 @@ const DEFAULT_REGION: Region = {
 
 export default function MapPickerModal({ visible, onClose, onConfirm }: Props) {
   const [region, setRegion] = useState<Region>(DEFAULT_REGION);
-  const [markerCoords, setMarkerCoords] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [markerCoords, setMarkerCoords] = useState<{ latitude: number; longitude: number } | null>(
+    null,
+  );
   const [resolvedAddress, setResolvedAddress] = useState('');
   const [loadingLocation, setLoadingLocation] = useState(false);
   const [loadingAddress, setLoadingAddress] = useState(false);
@@ -88,25 +83,22 @@ export default function MapPickerModal({ visible, onClose, onConfirm }: Props) {
           <TouchableOpacity onPress={onClose} className="mr-3">
             <Text className="text-white text-base">✕</Text>
           </TouchableOpacity>
-          <Text className="text-white font-sans-medium text-base flex-1">Seleccionar ubicación</Text>
+          <Text className="text-white font-sans-medium text-base flex-1">
+            Seleccionar ubicación
+          </Text>
           {loadingLocation && <ActivityIndicator color="white" size="small" />}
         </View>
 
-        <MapView
-          ref={mapRef}
-          style={{ flex: 1 }}
-          initialRegion={region}
-          onPress={handleMapPress}
-        >
-          {markerCoords && (
-            <Marker coordinate={markerCoords} pinColor="#0D7A3E" />
-          )}
+        <MapView ref={mapRef} style={{ flex: 1 }} initialRegion={region} onPress={handleMapPress}>
+          {markerCoords && <Marker coordinate={markerCoords} pinColor="#0D7A3E" />}
         </MapView>
 
         <View className="bg-white px-5 pt-4 pb-8">
           {markerCoords ? (
             <>
-              <Text className="text-carbon text-xs font-sans-medium mb-1">Dirección seleccionada</Text>
+              <Text className="text-carbon text-xs font-sans-medium mb-1">
+                Dirección seleccionada
+              </Text>
               {loadingAddress ? (
                 <ActivityIndicator color="#0D7A3E" size="small" />
               ) : (

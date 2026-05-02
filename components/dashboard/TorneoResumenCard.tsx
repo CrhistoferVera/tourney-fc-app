@@ -37,10 +37,16 @@ export default function TorneoResumenCard({ torneo, onPress }: Props) {
           </Text>
         </View>
       </View>
-      <Text className="text-carbon text-xs">{torneo.formato} • {torneo.cantidadEquipos} equipos</Text>
+      <Text className="text-carbon text-xs">
+        {torneo.formato} • {torneo.cantidadEquipos} equipos
+      </Text>
       <View className="mt-2 bg-primary-light px-2 py-0.5 rounded-full self-start">
         <Text className="text-primary text-xs font-sans-medium">
-          {torneo.estado === 'EN_CURSO' ? 'Activo' : torneo.estado === 'EN_INSCRIPCION' ? 'Inscripción' : torneo.estado}
+          {torneo.estado === 'EN_CURSO'
+            ? 'Activo'
+            : torneo.estado === 'EN_INSCRIPCION'
+              ? 'Inscripción'
+              : torneo.estado}
         </Text>
       </View>
     </TouchableOpacity>

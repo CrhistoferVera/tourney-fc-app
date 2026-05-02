@@ -72,7 +72,9 @@ export default function ProfileScreen() {
         </View>
         <View className="bg-white rounded-2xl p-4">
           <Text className="text-carbon text-xs mb-1">Zona</Text>
-          <Text className="text-night text-base font-sans-medium">{usuario?.zona ?? 'No especificada'}</Text>
+          <Text className="text-night text-base font-sans-medium">
+            {usuario?.zona ?? 'No especificada'}
+          </Text>
         </View>
 
         <TouchableOpacity className="items-center py-4 mt-2" onPress={handleLogout}>

@@ -1,11 +1,4 @@
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
@@ -112,16 +105,16 @@ function ResultCard({ match }: { match: MatchResult }) {
         </View>
       </View>
       <View className="flex-row items-center justify-between mt-2">
-        <Text className="text-carbon text-xs">{match.date} · {match.venue}</Text>
+        <Text className="text-carbon text-xs">
+          {match.date} · {match.venue}
+        </Text>
         <View
           className={`px-2 py-0.5 rounded-full ${
             isConfirmed ? 'bg-primary-light' : 'bg-accent-soft'
           }`}
         >
           <Text
-            className={`text-xs font-sans-medium ${
-              isConfirmed ? 'text-primary' : 'text-accent'
-            }`}
+            className={`text-xs font-sans-medium ${isConfirmed ? 'text-primary' : 'text-accent'}`}
           >
             {match.status}
           </Text>
@@ -149,7 +142,9 @@ function UpcomingCard({ match }: { match: UpcomingMatch }) {
         <Text style={{ fontSize: 24 }}>{match.awayEmoji}</Text>
       </View>
       <View className="flex-row items-center justify-between mt-2">
-        <Text className="text-carbon text-xs">{match.date} · {match.venue}</Text>
+        <Text className="text-carbon text-xs">
+          {match.date} · {match.venue}
+        </Text>
         <View className="bg-accent-soft px-2 py-0.5 rounded-full">
           <Text className="text-accent text-xs font-sans-medium">Pendiente</Text>
         </View>
@@ -213,9 +208,7 @@ export default function TournamentDetailScreen() {
   if (!tournament) {
     return (
       <View className="flex-1 bg-mist items-center justify-center px-8">
-        <Text className="text-carbon text-base text-center">
-          No se encontró el torneo.
-        </Text>
+        <Text className="text-carbon text-base text-center">No se encontró el torneo.</Text>
       </View>
     );
   }
@@ -241,15 +234,15 @@ export default function TournamentDetailScreen() {
               {tournament.estado === 'EN_CURSO'
                 ? 'Activo'
                 : tournament.estado === 'EN_INSCRIPCION'
-                ? 'Inscripción'
-                : tournament.estado === 'BORRADOR'
-                ? 'Borrador'
-                : 'Finalizado'}
+                  ? 'Inscripción'
+                  : tournament.estado === 'BORRADOR'
+                    ? 'Borrador'
+                    : 'Finalizado'}
             </Text>
           </View>
           <Text className="text-primary-light text-xs">
-            {FORMAT_LABEL[tournament.formato] ?? tournament.formato} ·{' '}
-            {tournament.maxEquipos} equipos
+            {FORMAT_LABEL[tournament.formato] ?? tournament.formato} · {tournament.maxEquipos}{' '}
+            equipos
           </Text>
         </View>
       </View>
@@ -261,13 +254,9 @@ export default function TournamentDetailScreen() {
       >
         {/* Publish banner (only for organizer in draft) */}
         {isDraft && isOrganizer ? (
-          <View
-            className="bg-accent-soft border border-accent rounded-2xl px-4 py-3 mb-4 flex-row items-center justify-between"
-          >
+          <View className="bg-accent-soft border border-accent rounded-2xl px-4 py-3 mb-4 flex-row items-center justify-between">
             <View className="flex-1 mr-3">
-              <Text className="text-accent font-sans-medium text-sm">
-                Torneo en borrador
-              </Text>
+              <Text className="text-accent font-sans-medium text-sm">Torneo en borrador</Text>
               <Text className="text-carbon text-xs mt-0.5">
                 Publícalo para que otros equipos puedan inscribirse.
               </Text>
@@ -302,9 +291,7 @@ export default function TournamentDetailScreen() {
             {tournament.zona ? (
               <View className="items-end">
                 <Text className="text-carbon text-xs">Zona</Text>
-                <Text className="text-night font-sans-medium text-sm">
-                  {tournament.zona}
-                </Text>
+                <Text className="text-night font-sans-medium text-sm">{tournament.zona}</Text>
               </View>
             ) : null}
           </View>
@@ -314,24 +301,20 @@ export default function TournamentDetailScreen() {
         </View>
 
         {/* Acceso rápido */}
-        <Text className="text-night font-sans-medium text-base mb-3">
-          Acceso rápido
-        </Text>
+        <Text className="text-night font-sans-medium text-base mb-3">Acceso rápido</Text>
         <View className="flex-row gap-2 mb-2">
-          <QuickBtn icon="📅" label="Fixture"       color="bg-primary"      />
-          <QuickBtn icon="🏆" label="Tabla"         color="bg-accent"       />
-          <QuickBtn icon="👥" label="Equipos"       color="bg-info"         />
+          <QuickBtn icon="📅" label="Fixture" color="bg-primary" />
+          <QuickBtn icon="🏆" label="Tabla" color="bg-accent" />
+          <QuickBtn icon="👥" label="Equipos" color="bg-info" />
         </View>
         <View className="flex-row gap-2 mb-4">
-          <QuickBtn icon="📊" label="Estadísticas"  color="bg-primary-dark" />
-          <QuickBtn icon="⚙️" label="Gestionar"     color="bg-carbon"       />
-          <QuickBtn icon="🔔" label="Notificaciones" color="bg-accent"      />
+          <QuickBtn icon="📊" label="Estadísticas" color="bg-primary-dark" />
+          <QuickBtn icon="⚙️" label="Gestionar" color="bg-carbon" />
+          <QuickBtn icon="🔔" label="Notificaciones" color="bg-accent" />
         </View>
 
         {/* Últimos resultados */}
-        <Text className="text-night font-sans-medium text-base mb-3">
-          Últimos resultados
-        </Text>
+        <Text className="text-night font-sans-medium text-base mb-3">Últimos resultados</Text>
         {recentResults.length === 0 ? (
           <View className="bg-white rounded-2xl px-4 py-6 items-center mb-4">
             <Text className="text-carbon text-sm text-center">
@@ -343,9 +326,7 @@ export default function TournamentDetailScreen() {
         )}
 
         {/* Próximos partidos */}
-        <Text className="text-night font-sans-medium text-base mb-3 mt-1">
-          Próximos partidos
-        </Text>
+        <Text className="text-night font-sans-medium text-base mb-3 mt-1">Próximos partidos</Text>
         {upcomingMatches.length === 0 ? (
           <View className="bg-white rounded-2xl px-4 py-6 items-center">
             <Text className="text-carbon text-sm text-center">

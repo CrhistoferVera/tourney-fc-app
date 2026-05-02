@@ -2,8 +2,8 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { TournamentFormat } from '../../services/tournamentService';
 
 const FORMATS: { value: TournamentFormat; label: string; desc: string }[] = [
-  { value: 'LIGA', label: 'Liga',  desc: 'Todos contra todos, tabla de posiciones' },
-  { value: 'COPA', label: 'Copa',  desc: 'Eliminación directa, partido único' },
+  { value: 'LIGA', label: 'Liga', desc: 'Todos contra todos, tabla de posiciones' },
+  { value: 'COPA', label: 'Copa', desc: 'Eliminación directa, partido único' },
 ];
 
 interface Props {
@@ -37,7 +37,9 @@ export default function Step2({ formato, onChange, error }: Props) {
               {selected ? <View className="w-2.5 h-2.5 rounded-full bg-primary" /> : null}
             </View>
             <View>
-              <Text className={`font-sans-medium text-sm ${selected ? 'text-primary' : 'text-night'}`}>
+              <Text
+                className={`font-sans-medium text-sm ${selected ? 'text-primary' : 'text-night'}`}
+              >
                 {f.label}
               </Text>
               <Text className="text-carbon text-xs mt-0.5">{f.desc}</Text>

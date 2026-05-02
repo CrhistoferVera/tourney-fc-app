@@ -26,7 +26,9 @@ export default function VerifyCodeScreen() {
   }, [secondsLeft]);
 
   const formatTime = (seconds: number) => {
-    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const m = Math.floor(seconds / 60)
+      .toString()
+      .padStart(2, '0');
     const s = (seconds % 60).toString().padStart(2, '0');
     return `${m}:${s}`;
   };
@@ -76,9 +78,7 @@ export default function VerifyCodeScreen() {
         </View>
 
         <Text className="text-night text-3xl font-sans-medium mb-1">Verificar código</Text>
-        <Text className="text-carbon text-sm mb-2">
-          Ingresa el código de 6 dígitos enviado a
-        </Text>
+        <Text className="text-carbon text-sm mb-2">Ingresa el código de 6 dígitos enviado a</Text>
         <Text className="text-primary text-sm font-sans-medium mb-8">{email}</Text>
 
         {/* Input de código */}

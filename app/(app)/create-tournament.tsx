@@ -75,11 +75,9 @@ export default function CreateTournamentScreen() {
     onConfirm: () => {},
   });
 
-  const onChange = (key: string, value: unknown) =>
-    setForm((prev) => ({ ...prev, [key]: value }));
+  const onChange = (key: string, value: unknown) => setForm((prev) => ({ ...prev, [key]: value }));
 
-  const showAlert = (params: Omit<AlertState, 'visible'>) =>
-    setAlert({ visible: true, ...params });
+  const showAlert = (params: Omit<AlertState, 'visible'>) => setAlert({ visible: true, ...params });
 
   const hideAlert = () => setAlert((prev) => ({ ...prev, visible: false }));
 
