@@ -94,8 +94,16 @@ export default function RegisterScreen() {
           data.message ?? "No se pudo crear la cuenta",
         );
       }
-    } catch {
-      showError("Error de conexión", "No se pudo conectar al servidor");
+    } catch (error: any) {
+      const mensaje = error?.message ?? "No se pudo conectar al servidor";
+      const esConexion =
+        mensaje.includes("fetch") ||
+        mensaje.includes("network") ||
+        mensaje.includes("Network");
+      showError(
+        esConexion ? "Error de conexión" : "Error al registrarse",
+        esConexion ? "No se pudo conectar al servidor" : mensaje,
+      );
     } finally {
       setLoading(false);
     }
