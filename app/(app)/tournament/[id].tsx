@@ -1,6 +1,9 @@
-import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
+import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import CustomAlert from '../../../components/CustomAlert';
+import { useAlert } from '../../../hooks/useAlert';
 import {
   getTournamentById,
   publishTournament,
@@ -38,6 +41,8 @@ const FORMAT_LABEL: Record<string, string> = {
   ELIMINATORIA: 'Eliminatoria',
 };
 
+const { alertState, hideAlert, showError, showConfirm } = useAlert();
+
 function formatDate(iso: string) {
   try {
     const d = new Date(iso);
@@ -62,11 +67,11 @@ function QuickBtn({ icon, label, color, onPress }: QuickBtnProps) {
   return (
     <TouchableOpacity
       onPress={onPress}
-      activeOpacity={0.8}
-      className={`${color} rounded-2xl items-center justify-center py-4`}
+      activeOpacity={onPress ? 0.8 : 0.6}
+      className={`${color} rounded-2xl items-center justify-center py-4 ${!onPress ? 'opacity-50' : ''}`}
       style={{ flex: 1, minHeight: 80 }}
     >
-      <Text style={{ fontSize: 24 }}>{icon}</Text>
+      <Feather name={icon as any} size={24} color="white" />
       <Text className="text-white text-xs font-sans-medium mt-1">{label}</Text>
     </TouchableOpacity>
   );
@@ -156,6 +161,7 @@ function UpcomingCard({ match }: { match: UpcomingMatch }) {
 export default function TournamentDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { alertState, hideAlert, showError, showConfirm } = useAlert();
 
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [loading, setLoading] = useState(true);
@@ -167,33 +173,28 @@ export default function TournamentDetailScreen() {
     if (!id) return;
     getTournamentById(id)
       .then(setTournament)
-      .catch(() => Alert.alert('Error', 'No se pudo cargar el torneo.'))
+      .catch(() => showError('Error', 'No se pudo cargar el torneo.'))
       .finally(() => setLoading(false));
   }, [id]);
 
   const handlePublish = async () => {
     if (!tournament) return;
-    Alert.alert(
+
+    showConfirm(
       'Publicar torneo',
       '¿Estás seguro? El torneo pasará a estado "En inscripción" y será visible para todos.',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Publicar',
-          style: 'default',
-          onPress: async () => {
-            setPublishing(true);
-            try {
-              const updated = await publishTournament(tournament.id);
-              setTournament(updated);
-            } catch {
-              Alert.alert('Error', 'No se pudo publicar el torneo.');
-            } finally {
-              setPublishing(false);
-            }
-          },
-        },
-      ],
+      async () => {
+        setPublishing(true);
+        try {
+          const updated = await publishTournament(tournament.id);
+          setTournament(updated);
+        } catch {
+          showError('Error', 'No se pudo publicar el torneo.');
+        } finally {
+          setPublishing(false);
+        }
+      },
+      undefined, // o una función onCancel si quieres
     );
   };
 
@@ -218,6 +219,7 @@ export default function TournamentDetailScreen() {
 
   return (
     <View className="flex-1 bg-mist">
+      <CustomAlert {...alertState} onConfirm={alertState.onConfirm} onCancel={hideAlert} />
       {/* Header */}
       <View className="bg-primary px-6 pt-14 pb-4">
         <View className="flex-row items-center mb-1">
@@ -301,16 +303,59 @@ export default function TournamentDetailScreen() {
         </View>
 
         {/* Acceso rápido */}
-        <Text className="text-night font-sans-medium text-base mb-3">Acceso rápido</Text>
         <View className="flex-row gap-2 mb-2">
-          <QuickBtn icon="📅" label="Fixture" color="bg-primary" />
-          <QuickBtn icon="🏆" label="Tabla" color="bg-accent" />
-          <QuickBtn icon="👥" label="Equipos" color="bg-info" />
+          <QuickBtn
+            icon="calendar"
+            label="Fixture"
+            color="bg-primary"
+            onPress={() =>
+              router.push({
+                pathname: '/(app)/tournament/fixture',
+                params: {
+                  id: tournament.id,
+                  rol: tournament.rolUsuario ?? '',
+                  fechaInicio: tournament.fechaInicio,
+                  fechaFin: tournament.fechaFin,
+                },
+              } as never)
+            }
+          />
+          <QuickBtn icon="award" label="Tabla" color="bg-accent" />
+          <QuickBtn
+            icon="users"
+            label="Equipos"
+            color="bg-info"
+            onPress={() =>
+              router.push({
+                pathname: '/(app)/tournament/teams',
+                params: { id: tournament.id, rol: tournament.rolUsuario ?? '' },
+              } as never)
+            }
+          />
         </View>
         <View className="flex-row gap-2 mb-4">
-          <QuickBtn icon="📊" label="Estadísticas" color="bg-primary-dark" />
-          <QuickBtn icon="⚙️" label="Gestionar" color="bg-carbon" />
-          <QuickBtn icon="🔔" label="Notificaciones" color="bg-accent" />
+          <QuickBtn icon="bar-chart-2" label="Estadísticas" color="bg-primary-dark" />
+          <QuickBtn
+            icon="settings"
+            label="Gestionar"
+            color="bg-carbon"
+            onPress={
+              isOrganizer
+                ? () =>
+                    router.push({
+                      pathname: '/(app)/tournament/manage',
+                      params: {
+                        id: tournament.id,
+                        nombre: tournament.nombre,
+                        descripcion: tournament.descripcion ?? '',
+                        fechaInicio: tournament.fechaInicio,
+                        fechaFin: tournament.fechaFin,
+                      },
+                    } as never)
+                : undefined
+            }
+          />
+          <QuickBtn icon="bell" label="Notificaciones" color="bg-accent" />
         </View>
 
         {/* Últimos resultados */}
