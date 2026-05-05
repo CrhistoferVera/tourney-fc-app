@@ -155,7 +155,7 @@ export default function TeamsScreen() {
           />
           <TextInput
             className="bg-mist rounded-xl px-4 py-3 text-night text-sm mb-1"
-            placeholder="Cantidad de jugadores (referencial)"
+            placeholder="Cantidad de jugadores"
             placeholderTextColor="#3D4F44"
             keyboardType="number-pad"
             value={cantidadJugadores}
