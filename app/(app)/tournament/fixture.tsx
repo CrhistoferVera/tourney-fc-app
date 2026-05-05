@@ -4,18 +4,26 @@ import { useEffect, useState, useCallback } from 'react';
 import { Feather } from '@expo/vector-icons';
 import { getFixture, generateFixture, RondaFixture, Partido } from '../../../services/fixtureService';
 import { updateMatch, confirmMatch } from '../../../services/matchService';
+import { getTeamsByTournament } from '../../../services/teamsService';
 import MatchCard from '../../../components/tournament/MatchCard';
 import CustomAlert from '../../../components/CustomAlert';
 import { useAlert } from '../../../hooks/useAlert';
 
 export default function FixtureScreen() {
-  const { id: torneoId, rol, fechaInicio, fechaFin } = useLocalSearchParams<{
-    id: string; rol: string; fechaInicio: string; fechaFin: string;
-  }>();
+  const { id: torneoId, rol, fechaInicio, fechaFin, maxEquipos: maxEquiposParam } =
+    useLocalSearchParams<{
+      id: string;
+      rol: string;
+      fechaInicio: string;
+      fechaFin: string;
+      maxEquipos: string;
+    }>();
   const router = useRouter();
   const { alertState, hideAlert, showError, showSuccess, showConfirm } = useAlert();
+  const maxEquipos = maxEquiposParam ? parseInt(maxEquiposParam, 10) : null;
 
   const [rondas, setRondas] = useState<RondaFixture[]>([]);
+  const [equiposInscritos, setEquiposInscritos] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -27,6 +35,8 @@ export default function FixtureScreen() {
   const isOrganizadorOStaff = rol === 'ORGANIZADOR' || rol === 'STAFF';
   const isCapitan = rol === 'CAPITAN';
   const canEdit = isOrganizadorOStaff || isCapitan;
+  const cupoCompleto = maxEquipos !== null && equiposInscritos >= maxEquipos;
+  const puedeGenerar = maxEquipos === null || cupoCompleto;
 
   const fetchFixture = useCallback(async () => {
     if (!torneoId) return;
@@ -37,18 +47,30 @@ export default function FixtureScreen() {
       setRondas([]);
     }
   }, [torneoId]);
+  const fetchEquipos = useCallback(async () => {
+    if (!torneoId) return;
+    try {
+      const teams = await getTeamsByTournament(torneoId);
+      setEquiposInscritos(Array.isArray(teams) ? teams.length : 0);
+    } catch {
+      setEquiposInscritos(0);
+    }
+  }, [torneoId]);
 
   useEffect(() => {
-    fetchFixture().finally(() => setLoading(false));
-  }, [fetchFixture]);
+    Promise.all([fetchFixture(), fetchEquipos()]).finally(() => setLoading(false));
+  }, [fetchFixture, fetchEquipos]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await fetchFixture();
+    await Promise.all([fetchFixture(), fetchEquipos()]);
     setRefreshing(false);
-  }, [fetchFixture]);
+  }, [fetchFixture, fetchEquipos]);
 
   const handleGenerate = () => {
+    if (!puedeGenerar) {
+      showError('Equipos insuficientes',`Se necesitan ${maxEquipos} equipos para generar el fixture. Actualmente hay ${equiposInscritos} inscrito${equiposInscritos !== 1 ? 's' : ''}.`,);
+      return;}
     showConfirm(
       'Generar fixture',
       rondas.length > 0
@@ -127,11 +149,21 @@ export default function FixtureScreen() {
             {generating ? (
               <ActivityIndicator color="white" size="small" />
             ) : (
-              <Feather name="refresh-cw" size={20} color="white" />
+              <Feather name="refresh-cw" size={20} color={puedeGenerar ? 'white' : 'rgba(255,255,255,0.35)'} />
             )}
           </TouchableOpacity>
         )}
       </View>
+      {isOrganizadorOStaff && maxEquipos !== null && (
+        <View className={`px-4 py-2 flex-row items-center gap-2 border-b ${cupoCompleto ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
+          <Feather name={cupoCompleto ? 'check-circle' : 'alert-circle'} size={14} color={cupoCompleto ? '#16A34A' : '#D97706'} />
+          <Text className={`text-xs flex-1 ${cupoCompleto ? 'text-green-700' : 'text-amber-700'}`}>
+            {cupoCompleto
+              ? `Cupo completo (${equiposInscritos}/${maxEquipos}). Puedes generar el fixture.`
+              : `Equipos inscritos: ${equiposInscritos}/${maxEquipos}. Faltan ${maxEquipos - equiposInscritos} para poder generar el fixture.`}
+          </Text>
+        </View>
+      )}
 
       <ScrollView
         className="flex-1"
@@ -150,12 +182,12 @@ export default function FixtureScreen() {
               No hay fixture generado aún.
             </Text>
             {isOrganizadorOStaff && (
-              <TouchableOpacity
-                className="bg-primary rounded-xl px-6 py-3 mt-4"
-                onPress={handleGenerate}
-                disabled={generating}
-              >
-                <Text className="text-white font-sans-medium text-sm">Generar fixture</Text>
+              <TouchableOpacity className={`rounded-xl px-6 py-3 mt-4 ${puedeGenerar ? 'bg-primary' : 'bg-gray-200'}`} onPress={handleGenerate} disabled={generating}>
+                <Text className={`font-sans-medium text-sm ${puedeGenerar ? 'text-white' : 'text-gray-400'}`}>
+                  {puedeGenerar
+                    ? 'Generar fixture'
+                    : `Faltan ${maxEquipos !== null ? maxEquipos - equiposInscritos : '?'} equipos`}
+                </Text>
               </TouchableOpacity>
             )}
           </View>
