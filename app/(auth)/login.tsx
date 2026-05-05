@@ -1,10 +1,18 @@
-import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ActivityIndicator,
+  ScrollView,
+} from 'react-native';
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../store/authStore';
 import { api } from '../../services/api';
 import CustomAlert from '../../components/CustomAlert';
 import { useAlert } from '../../hooks/useAlert';
+import { Feather } from '@expo/vector-icons';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -53,10 +61,20 @@ export default function LoginScreen() {
         });
         router.replace('/(app)/home');
       } else {
-        showError('Error al iniciar sesión', data.message ?? 'Correo electrónico o contraseña incorrectos. Por favor, intente nuevamente');
+        showError(
+          'Error al iniciar sesión',
+          data.message ??
+            'Correo electrónico o contraseña incorrectos. Por favor, intente nuevamente',
+        );
       }
-    } catch {
-      showError('Error de conexión', 'No se pudo conectar al servidor');
+    } catch (error: any) {
+      const mensaje = error?.message ?? 'No se pudo conectar al servidor';
+      const esConexion =
+        mensaje.includes('fetch') || mensaje.includes('network') || mensaje.includes('Network');
+      showError(
+        esConexion ? 'Error de conexión' : 'Error al iniciar sesión',
+        esConexion ? 'No se pudo conectar al servidor' : mensaje,
+      );
     } finally {
       setLoading(false);
     }
@@ -86,7 +104,10 @@ export default function LoginScreen() {
             keyboardType="email-address"
             autoCapitalize="none"
             value={email}
-            onChangeText={(v) => { setEmail(v); validateEmail(v); }}
+            onChangeText={(v) => {
+              setEmail(v);
+              validateEmail(v);
+            }}
           />
           {emailError ? <Text className="text-danger text-xs mt-1">{emailError}</Text> : null}
         </View>
@@ -100,16 +121,22 @@ export default function LoginScreen() {
               placeholderTextColor="#3D4F44"
               secureTextEntry={!showPassword}
               value={password}
-              onChangeText={(v) => { setPassword(v); validatePassword(v); }}
+              onChangeText={(v) => {
+                setPassword(v);
+                validatePassword(v);
+              }}
             />
             <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-              <Text className="text-carbon text-lg">{showPassword ? '🙈' : '👁️'}</Text>
+              <Feather name={showPassword ? 'eye-off' : 'eye'} size={22} color="#3D4F44" />
             </TouchableOpacity>
           </View>
           {passwordError ? <Text className="text-danger text-xs mt-1">{passwordError}</Text> : null}
         </View>
 
-        <TouchableOpacity className="items-end mb-8">
+        <TouchableOpacity
+          className="items-end mb-8"
+          onPress={() => router.push('/(auth)/forgot-password')}
+        >
           <Text className="text-primary text-sm font-sans-medium">¿Olvidaste tu contraseña?</Text>
         </TouchableOpacity>
 

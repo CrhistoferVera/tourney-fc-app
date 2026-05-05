@@ -24,7 +24,11 @@ export const useProfile = () => {
     }
   };
 
-  const updateProfile = async (updates: { nombre?: string; zona?: string; fotoPerfil?: string }) => {
+  const updateProfile = async (updates: {
+    nombre?: string;
+    zona?: string;
+    fotoPerfil?: string;
+  }) => {
     if (!token) return;
     setLoading(true);
     setError(null);
@@ -69,7 +73,7 @@ export const useProfile = () => {
     try {
       const response = await fetch(
         `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
-        { method: 'POST', body: formData }
+        { method: 'POST', body: formData },
       );
       const data = await response.json();
       return data.secure_url as string;

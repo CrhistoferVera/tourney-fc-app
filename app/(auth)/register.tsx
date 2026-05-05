@@ -1,9 +1,17 @@
-import { View, Text, TextInput, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ActivityIndicator,
+  ScrollView,
+} from 'react-native';
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { api } from '../../services/api';
 import CustomAlert from '../../components/CustomAlert';
 import { useAlert } from '../../hooks/useAlert';
+import { Feather } from '@expo/vector-icons';
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -36,7 +44,8 @@ export default function RegisterScreen() {
 
   const validatePassword = (v: string) => {
     if (v.length < 8) setPasswordError('La contraseña debe contener al menos 8 caracteres');
-    else if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(v)) setPasswordError('Debe contener una mayúscula, una minúscula y un número');
+    else if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(v))
+      setPasswordError('Debe contener una mayúscula, una minúscula y un número');
     else setPasswordError('');
   };
 
@@ -57,7 +66,11 @@ export default function RegisterScreen() {
 
     setLoading(true);
     try {
-      const data = await api.post('/auth/register', { nombre, email, password });
+      const data = await api.post('/auth/register', {
+        nombre,
+        email,
+        password,
+      });
       if (data.registrado) {
         showSuccess('Cuenta creada', 'Tu cuenta fue creada exitosamente', () => {
           router.replace('/(auth)/login');
@@ -65,8 +78,14 @@ export default function RegisterScreen() {
       } else {
         showError('Error al registrarse', data.message ?? 'No se pudo crear la cuenta');
       }
-    } catch {
-      showError('Error de conexión', 'No se pudo conectar al servidor');
+    } catch (error: any) {
+      const mensaje = error?.message ?? 'No se pudo conectar al servidor';
+      const esConexion =
+        mensaje.includes('fetch') || mensaje.includes('network') || mensaje.includes('Network');
+      showError(
+        esConexion ? 'Error de conexión' : 'Error al registrarse',
+        esConexion ? 'No se pudo conectar al servidor' : mensaje,
+      );
     } finally {
       setLoading(false);
     }
@@ -94,7 +113,10 @@ export default function RegisterScreen() {
             placeholder="Juan Pérez"
             placeholderTextColor="#3D4F44"
             value={nombre}
-            onChangeText={(v) => { setNombre(v); validateNombre(v); }}
+            onChangeText={(v) => {
+              setNombre(v);
+              validateNombre(v);
+            }}
           />
           {nombreError ? <Text className="text-danger text-xs mt-1">{nombreError}</Text> : null}
         </View>
@@ -108,7 +130,10 @@ export default function RegisterScreen() {
             keyboardType="email-address"
             autoCapitalize="none"
             value={email}
-            onChangeText={(v) => { setEmail(v); validateEmail(v); }}
+            onChangeText={(v) => {
+              setEmail(v);
+              validateEmail(v);
+            }}
           />
           {emailError ? <Text className="text-danger text-xs mt-1">{emailError}</Text> : null}
         </View>
@@ -122,10 +147,13 @@ export default function RegisterScreen() {
               placeholderTextColor="#3D4F44"
               secureTextEntry={!showPassword}
               value={password}
-              onChangeText={(v) => { setPassword(v); validatePassword(v); }}
+              onChangeText={(v) => {
+                setPassword(v);
+                validatePassword(v);
+              }}
             />
             <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-              <Text className="text-carbon text-lg">{showPassword ? '🙈' : '👁️'}</Text>
+              <Feather name={showPassword ? 'eye-off' : 'eye'} size={22} color="#3D4F44" />
             </TouchableOpacity>
           </View>
           {passwordError ? <Text className="text-danger text-xs mt-1">{passwordError}</Text> : null}
@@ -140,10 +168,13 @@ export default function RegisterScreen() {
               placeholderTextColor="#3D4F44"
               secureTextEntry={!showConfirm}
               value={confirmPassword}
-              onChangeText={(v) => { setConfirmPassword(v); validateConfirm(v); }}
+              onChangeText={(v) => {
+                setConfirmPassword(v);
+                validateConfirm(v);
+              }}
             />
             <TouchableOpacity onPress={() => setShowConfirm(!showConfirm)}>
-              <Text className="text-carbon text-lg">{showConfirm ? '🙈' : '👁️'}</Text>
+              <Feather name={showConfirm ? 'eye-off' : 'eye'} size={22} color="#3D4F44" />
             </TouchableOpacity>
           </View>
           {confirmError ? <Text className="text-danger text-xs mt-1">{confirmError}</Text> : null}
