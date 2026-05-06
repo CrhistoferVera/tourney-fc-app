@@ -316,6 +316,7 @@ export default function TournamentDetailScreen() {
                   rol: tournament.rolUsuario ?? '',
                   fechaInicio: tournament.fechaInicio,
                   fechaFin: tournament.fechaFin,
+                  maxEquipos: String(tournament.maxEquipos)
                 },
               } as never)
             }
@@ -328,7 +329,7 @@ export default function TournamentDetailScreen() {
             onPress={() =>
               router.push({
                 pathname: '/(app)/tournament/teams',
-                params: { id: tournament.id, rol: tournament.rolUsuario ?? '' },
+                params: { id: tournament.id, rol: tournament.rolUsuario ?? '', maxEquipos: String(tournament.maxEquipos), },
               } as never)
             }
           />

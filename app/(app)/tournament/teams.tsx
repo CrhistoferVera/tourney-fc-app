@@ -9,11 +9,12 @@ import CustomAlert from '../../../components/CustomAlert';
 import { useAlert } from '../../../hooks/useAlert';
 
 export default function TeamsScreen() {
-  const { id: torneoId, rol } = useLocalSearchParams<{ id: string; rol: string }>();
+  const { id: torneoId, rol, maxEquipos: maxEquiposParam } = useLocalSearchParams<{id: string;rol: string;maxEquipos: string;}>();
   const router = useRouter();
   const { usuario } = useAuthStore();
   const { alertState, hideAlert, showError, showSuccess, showConfirm } = useAlert();
-
+  const maxEquipos = maxEquiposParam ? parseInt(maxEquiposParam, 10) : null;
+  const [cantidadJugadores, setCantidadJugadores] = useState('');
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -23,6 +24,7 @@ export default function TeamsScreen() {
   const [saving, setSaving] = useState(false);
 
   const isOrganizadorOStaff = rol === 'ORGANIZADOR' || rol === 'STAFF';
+  const cupoLleno = maxEquipos !== null && teams.length >= maxEquipos;
 
   const fetchTeams = useCallback(async () => {
     if (!torneoId) return;
@@ -49,17 +51,28 @@ export default function TeamsScreen() {
       showError('Campo requerido', 'Ingresa el nombre del equipo');
       return;
     }
+    if (cupoLleno) {
+      showError('Cupo lleno', `El torneo ya tiene el máximo de ${maxEquipos} equipos inscritos`);
+      return;
+    }
+    const jugadoresNum = cantidadJugadores.trim() ? parseInt(cantidadJugadores, 10) : undefined;
+    if (cantidadJugadores.trim() && (isNaN(jugadoresNum!) || jugadoresNum! < 1)) {
+      showError('Cantidad inválida', 'Ingresa un número de jugadores válido');
+      return;
+    }
     if (!torneoId) return;
     setSaving(true);
     try {
       const team = await createTeam(torneoId, {
         nombre: nombre.trim(),
         telefonoCapitan: telefono.trim() || undefined,
+        cantidadJugadores: jugadoresNum,
       });
       setTeams((prev) => [...prev, team]);
       setShowForm(false);
       setNombre('');
       setTelefono('');
+      setCantidadJugadores('');
       showSuccess('Equipo inscrito', 'Tu equipo fue inscrito exitosamente');
     } catch (e: any) {
       showError('Error', e.message ?? 'No se pudo inscribir el equipo');
@@ -94,16 +107,35 @@ export default function TeamsScreen() {
         <TouchableOpacity onPress={() => router.back()} className="mr-3">
           <Feather name="arrow-left" size={22} color="white" />
         </TouchableOpacity>
-        <Text className="text-white text-xl font-sans-medium flex-1">Equipos</Text>
-        {!isOrganizadorOStaff && (
+        <Text className="text-white text-xl font-sans-medium flex-1">
+          Equipos{maxEquipos ? ` (${teams.length}/${maxEquipos})` : ''}
+        </Text>
+        {!isOrganizadorOStaff && !cupoLleno && (
           <TouchableOpacity onPress={() => setShowForm(!showForm)}>
             <Feather name={showForm ? 'x' : 'plus'} size={22} color="white" />
           </TouchableOpacity>
         )}
       </View>
+      {cupoLleno && !isOrganizadorOStaff && (
+        <View className="bg-amber-50 border-b border-amber-200 px-4 py-3 flex-row items-center gap-2">
+          <Feather name="alert-circle" size={15} color="#D97706" />
+          <Text className="text-amber-700 text-xs flex-1">El torneo alcanzó el máximo de {maxEquipos} equipos. No se aceptan más inscripciones.</Text>
+        </View>
+      )}
+      {isOrganizadorOStaff && maxEquipos !== null && (
+        <View className={`px-4 py-2 flex-row items-center gap-2 border-b ${
+            cupoLleno ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
+          <Feather name={cupoLleno ? 'check-circle' : 'users'} size={14} color={cupoLleno ? '#16A34A' : '#D97706'} />
+          <Text className={`text-xs flex-1 ${cupoLleno ? 'text-green-700' : 'text-amber-700'}`}>
+            {cupoLleno
+              ? `Cupo completo: ${teams.length}/${maxEquipos} equipos inscritos.`
+              : `${teams.length}/${maxEquipos} equipos. Faltan ${maxEquipos - teams.length} para completar el cupo.`}
+          </Text>
+        </View>
+      )}
 
       {/* Formulario inscribir equipo */}
-      {showForm && (
+      {showForm && !cupoLleno && (
         <View className="bg-white px-4 py-4 border-b border-mist">
           <Text className="text-night font-sans-medium text-sm mb-3">Inscribir mi equipo</Text>
           <TextInput
@@ -120,6 +152,14 @@ export default function TeamsScreen() {
             keyboardType="phone-pad"
             value={telefono}
             onChangeText={setTelefono}
+          />
+          <TextInput
+            className="bg-mist rounded-xl px-4 py-3 text-night text-sm mb-1"
+            placeholder="Cantidad de jugadores"
+            placeholderTextColor="#3D4F44"
+            keyboardType="number-pad"
+            value={cantidadJugadores}
+            onChangeText={setCantidadJugadores}
           />
           <TouchableOpacity
             className="bg-primary rounded-xl py-3 items-center"
