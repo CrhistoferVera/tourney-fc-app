@@ -1,6 +1,11 @@
 {
   "expo": {
     "name": "tourney-fc-app",
+    "androidNavigationBar": {
+      "visible": "always",
+      "buttonColor": "#000000",
+      "backgroundColor": "#FFFFFF"
+    },
     "slug": "tourney-fc-app",
     "version": "1.0.0",
     "orientation": "portrait",

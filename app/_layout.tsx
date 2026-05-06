@@ -1,9 +1,10 @@
+
+import { Inter_400Regular, Inter_500Medium, useFonts } from "@expo-google-fonts/inter";
+import { useEffect } from "react";
+import "../global.css";
 import { Stack, useRouter, useSegments } from 'expo-router';
-import { useFonts, Inter_400Regular, Inter_500Medium } from '@expo-google-fonts/inter';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
 import { useAuthStore } from '../store/authStore';
-import '../global.css';
 
 SplashScreen.preventAutoHideAsync();
 
