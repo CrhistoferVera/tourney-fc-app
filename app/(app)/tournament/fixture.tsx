@@ -306,67 +306,66 @@ export default function FixtureScreen() {
       </ScrollView>
 
       {/* Modal editar fecha */}
-      <Modal visible={editModal} transparent animationType="slide">
-        <View className="flex-1 bg-black/50 justify-end">
-          <View className="bg-white rounded-t-3xl px-6 py-6">
-            <View className="flex-row items-center justify-between mb-4">
-              <Text className="text-night font-sans-medium text-base">Editar partido</Text>
-              <TouchableOpacity onPress={() => setEditModal(false)}>
-                <Feather name="x" size={20} color="#3D4F44" />
-              </TouchableOpacity>
-            </View>
+      {calendarOpen && (
+  <DatePickerField
+    label="Fecha del partido"
+    value={editFecha}
+    onChange={(date) => {
+      setEditFecha(date);
+      setCalendarOpen(false);
+      setEditModal(true);
+    }}
+    minDate={fechaInicio?.slice(0, 10)}
+    maxDate={fechaFin?.slice(0, 10)}
+    visible={calendarOpen}
+    onOpen={() => setCalendarOpen(true)}
+    onClose={() => {
+      setCalendarOpen(false);
+      setEditModal(true);
+    }}
+  />
+)}
 
-            {selectedPartido && (
-              <Text className="text-carbon text-sm mb-4">
-                {selectedPartido.equipoLocal.nombre} vs {selectedPartido.equipoVisitante.nombre}
-              </Text>
-            )}
+<Modal visible={editModal} transparent animationType="slide">
+  <View className="flex-1 bg-black/50 justify-end">
+    <View className="bg-white rounded-t-3xl px-6 py-6">
+      <View className="flex-row items-center justify-between mb-4">
+        <Text className="text-night font-sans-medium text-base">Editar partido</Text>
+        <TouchableOpacity onPress={() => setEditModal(false)}>
+          <Feather name="x" size={20} color="#3D4F44" />
+        </TouchableOpacity>
+      </View>
 
-            <DatePickerField
-              label="Fecha del partido"
-              value={editFecha}
-              onChange={(date) => {
-                setEditFecha(date);
-                setCalendarOpen(false);
-                setEditModal(true);
-              }}
-              minDate={fechaInicio?.slice(0, 10)}
-              maxDate={fechaFin?.slice(0, 10)}
-              visible={calendarOpen}
-              onOpen={() => setCalendarOpen(true)}
-              onClose={() => {
-                setCalendarOpen(false);
-                setEditModal(true);
-              }}
-            />
+      {selectedPartido && (
+        <Text className="text-carbon text-sm mb-4">
+          {selectedPartido.equipoLocal.nombre} vs {selectedPartido.equipoVisitante.nombre}
+        </Text>
+      )}
 
-            <Text className="text-carbon text-sm font-sans-medium mb-1">Fecha del partido</Text>
-            <TouchableOpacity
-              onPress={() => {
-                setEditModal(false);
-                setCalendarOpen(true);
-              }}
-              className="bg-mist rounded-xl px-4 py-3 border border-mist mb-4"
-            >
-              <Text className="text-night font-sans-medium text-sm">
-                {editFecha ? editFecha.split('-').reverse().join('/') : 'Seleccionar fecha'}
-              </Text>
-            </TouchableOpacity>
+      <Text className="text-carbon text-sm font-sans-medium mb-1">Fecha del partido</Text>
+      <TouchableOpacity
+        onPress={() => { setEditModal(false); setCalendarOpen(true); }}
+        className="bg-mist rounded-xl px-4 py-3 border border-mist mb-4"
+      >
+        <Text className="text-night font-sans-medium text-sm">
+          {editFecha ? editFecha.split('-').reverse().join('/') : 'Seleccionar fecha'}
+        </Text>
+      </TouchableOpacity>
 
-            <TouchableOpacity
-              className="bg-primary rounded-xl py-4 items-center"
-              onPress={handleSaveEdit}
-              disabled={saving}
-            >
-              {saving ? (
-                <ActivityIndicator color="white" />
-              ) : (
-                <Text className="text-white font-sans-medium text-base">Guardar cambios</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      <TouchableOpacity
+        className="bg-primary rounded-xl py-4 items-center"
+        onPress={handleSaveEdit}
+        disabled={saving}
+      >
+        {saving ? (
+          <ActivityIndicator color="white" />
+        ) : (
+          <Text className="text-white font-sans-medium text-base">Guardar cambios</Text>
+        )}
+      </TouchableOpacity>
+    </View>
+  </View>
+</Modal>
     </View>
   );
 }
