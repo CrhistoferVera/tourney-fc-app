@@ -18,12 +18,12 @@ import { useAlert } from '../../../hooks/useAlert';
 
 export default function TeamsScreen() {
   const {
-  id: torneoId,
-  rol,
-  maxEquipos: maxEquiposParam,
-  estado,
-} = useLocalSearchParams<{ id: string; rol: string; maxEquipos: string; estado: string }>();
-console.log('ROL:', rol, 'ESTADO:', estado, 'MAX:', maxEquiposParam);
+    id: torneoId,
+    rol,
+    maxEquipos: maxEquiposParam,
+    estado,
+  } = useLocalSearchParams<{ id: string; rol: string; maxEquipos: string; estado: string }>();
+  console.log('ROL:', rol, 'ESTADO:', estado, 'MAX:', maxEquiposParam);
 
   const router = useRouter();
   const { usuario } = useAuthStore();
@@ -39,8 +39,8 @@ console.log('ROL:', rol, 'ESTADO:', estado, 'MAX:', maxEquiposParam);
   const [saving, setSaving] = useState(false);
 
   const enCursoOFinalizado = estado === 'EN_CURSO' || estado === 'FINALIZADO';
-const isOrganizadorOStaff = rol === 'ORGANIZADOR' || rol === 'STAFF';
-const puedeEliminar = isOrganizadorOStaff && !enCursoOFinalizado;
+  const isOrganizadorOStaff = rol === 'ORGANIZADOR' || rol === 'STAFF';
+  const puedeEliminar = isOrganizadorOStaff && !enCursoOFinalizado;
   const cupoLleno = maxEquipos !== null && teams.length >= maxEquipos;
 
   const fetchTeams = useCallback(async () => {
@@ -127,7 +127,7 @@ const puedeEliminar = isOrganizadorOStaff && !enCursoOFinalizado;
         <Text className="text-white text-xl font-sans-medium flex-1">
           Equipos{maxEquipos ? ` (${teams.length}/${maxEquipos})` : ''}
         </Text>
-       {!isOrganizadorOStaff && !cupoLleno && !enCursoOFinalizado && (
+        {!isOrganizadorOStaff && !cupoLleno && !enCursoOFinalizado && (
           <TouchableOpacity onPress={() => setShowForm(!showForm)}>
             <Feather name={showForm ? 'x' : 'plus'} size={22} color="white" />
           </TouchableOpacity>

@@ -12,6 +12,7 @@ import { Feather } from '@expo/vector-icons';
 import { updateTournament } from '../../../services/tournamentService';
 import CustomAlert from '../../../components/CustomAlert';
 import { useAlert } from '../../../hooks/useAlert';
+import DatePickerField from '../../../components/create-tournament/DatePickerField';
 
 export default function ManageScreen() {
   const {
@@ -30,6 +31,7 @@ export default function ManageScreen() {
   const router = useRouter();
   const { alertState, hideAlert, showError, showSuccess } = useAlert();
 
+  const [calendarOpen, setCalendarOpen] = useState<'inicio' | 'fin' | null>(null);
   const [nombre, setNombre] = useState(nombreInicial ?? '');
   const [descripcion, setDescripcion] = useState(descInicial ?? '');
   const [fechaInicio, setFechaInicio] = useState(fechaInicioInicial?.slice(0, 10) ?? '');
@@ -128,26 +130,23 @@ export default function ManageScreen() {
         <Text className="text-night font-sans-medium text-base mb-3">Fechas</Text>
         <View className="bg-white rounded-2xl px-4 py-4 mb-4">
           <View className="flex-row gap-3">
-            <View className="flex-1">
-              <Text className="text-carbon text-xs mb-1">Fecha inicio</Text>
-              <TextInput
-                className="bg-mist rounded-xl px-3 py-2 text-night text-sm"
-                value={fechaInicio}
-                onChangeText={setFechaInicio}
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor="#3D4F44"
-              />
-            </View>
-            <View className="flex-1">
-              <Text className="text-carbon text-xs mb-1">Fecha fin</Text>
-              <TextInput
-                className="bg-mist rounded-xl px-3 py-2 text-night text-sm"
-                value={fechaFin}
-                onChangeText={setFechaFin}
-                placeholder="YYYY-MM-DD"
-                placeholderTextColor="#3D4F44"
-              />
-            </View>
+            <DatePickerField
+              label="Fecha inicio"
+              value={fechaInicio}
+              onChange={(v) => setFechaInicio(v)}
+              visible={calendarOpen === 'inicio'}
+              onOpen={() => setCalendarOpen('inicio')}
+              onClose={() => setCalendarOpen(null)}
+            />
+            <DatePickerField
+              label="Fecha fin"
+              value={fechaFin}
+              onChange={(v) => setFechaFin(v)}
+              minDate={fechaInicio || undefined}
+              visible={calendarOpen === 'fin'}
+              onOpen={() => setCalendarOpen('fin')}
+              onClose={() => setCalendarOpen(null)}
+            />
           </View>
         </View>
 

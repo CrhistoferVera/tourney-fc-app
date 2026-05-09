@@ -3,6 +3,11 @@ const BASE_URL = process.env.EXPO_PUBLIC_API_URL;
 
 const handleResponse = async (response: Response) => {
   const data = await response.json();
+  if (response.status === 401) {
+    const { useAuthStore } = await import('../store/authStore');
+    useAuthStore.getState().clearAuth();
+    throw new Error('Sesión expirada');
+  }
   if (!response.ok) {
     const errorMessage = data.message || data.error || 'Error en la petición';
     throw new Error(errorMessage);

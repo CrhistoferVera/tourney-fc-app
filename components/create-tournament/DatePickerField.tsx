@@ -6,7 +6,7 @@ interface Props {
   value: string;
   onChange: (date: string) => void;
   minDate?: string;
-  
+
   error?: string;
   visible: boolean;
   onOpen: () => void;
