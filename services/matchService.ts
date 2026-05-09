@@ -20,3 +20,7 @@ export const updateMatch = async (id: string, dto: UpdateMatchDto) => {
 export const confirmMatch = async (id: string) => {
   return api.post(`/matches/${id}/confirm`, {}, getToken());
 };
+
+export const confirmAllMatches = async (torneoId: string) => {
+  return api.post(`/matches/tournament/${torneoId}/confirm-all`, {}, getToken());
+};

@@ -17,7 +17,8 @@ import {
   RondaFixture,
   Partido,
 } from '../../../services/fixtureService';
-import { updateMatch, confirmMatch } from '../../../services/matchService';
+import DatePickerField from '../../../components/create-tournament/DatePickerField';
+import { updateMatch, confirmMatch, confirmAllMatches } from '../../../services/matchService';
 import { getTeamsByTournament } from '../../../services/teamsService';
 import MatchCard from '../../../components/tournament/MatchCard';
 import CustomAlert from '../../../components/CustomAlert';
@@ -30,17 +31,22 @@ export default function FixtureScreen() {
     fechaInicio,
     fechaFin,
     maxEquipos: maxEquiposParam,
+    estado,
   } = useLocalSearchParams<{
     id: string;
     rol: string;
     fechaInicio: string;
     fechaFin: string;
     maxEquipos: string;
+    estado: string;
   }>();
+  console.log('ROL:', rol, 'ESTADO:', estado, 'MAX:', maxEquiposParam);
+
   const router = useRouter();
   const { alertState, hideAlert, showError, showSuccess, showConfirm } = useAlert();
   const maxEquipos = maxEquiposParam ? parseInt(maxEquiposParam, 10) : null;
-
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [confirmingAll, setConfirmingAll] = useState(false);
   const [rondas, setRondas] = useState<RondaFixture[]>([]);
   const [equiposInscritos, setEquiposInscritos] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -52,11 +58,14 @@ export default function FixtureScreen() {
   const [saving, setSaving] = useState(false);
 
   const isOrganizadorOStaff = rol === 'ORGANIZADOR' || rol === 'STAFF';
+  const enCursoOFinalizado = estado === 'EN_CURSO' || estado === 'FINALIZADO';
   const isCapitan = rol === 'CAPITAN';
   const canEdit = isOrganizadorOStaff || isCapitan;
   const cupoCompleto = maxEquipos !== null && equiposInscritos >= maxEquipos;
-  const puedeGenerar = maxEquipos === null || cupoCompleto;
-
+  const puedeGenerar =
+    rol === 'ORGANIZADOR'
+      ? !enCursoOFinalizado
+      : (maxEquipos === null || cupoCompleto) && !enCursoOFinalizado;
   const fetchFixture = useCallback(async () => {
     if (!torneoId) return;
     try {
@@ -119,8 +128,9 @@ export default function FixtureScreen() {
   const handleEditPartido = (partido: Partido) => {
     if (!canEdit) return;
     setSelectedPartido(partido);
-    setEditFecha(partido.fecha ? new Date(partido.fecha).toISOString().slice(0, 16) : '');
+    setEditFecha(partido.fecha ? new Date(partido.fecha).toISOString().slice(0, 10) : '');
     setEditModal(true);
+    console.log('fecha partido:', partido.fecha);
   };
 
   const handleSaveEdit = async () => {
@@ -128,7 +138,7 @@ export default function FixtureScreen() {
     setSaving(true);
     try {
       await updateMatch(selectedPartido.id, {
-        fecha: editFecha ? new Date(editFecha).toISOString() : undefined,
+        fecha: editFecha ? new Date(editFecha + 'T12:00:00.000Z').toISOString() : undefined,
       });
       setEditModal(false);
       await fetchFixture();
@@ -157,6 +167,27 @@ export default function FixtureScreen() {
     );
   };
 
+  const handleConfirmAll = () => {
+    showConfirm(
+      'Confirmar todos los partidos',
+      'Se confirmarán todos los partidos y el torneo pasará a "En curso". Ya no se podrán agregar ni quitar equipos.',
+      async () => {
+        setConfirmingAll(true);
+        try {
+          await confirmAllMatches(torneoId!);
+          showSuccess('¡Torneo iniciado!', 'Todos los partidos fueron confirmados.');
+          await fetchFixture();
+        } catch (e: any) {
+          showError('Error', e.message ?? 'No se pudo confirmar los partidos');
+        } finally {
+          setConfirmingAll(false);
+        }
+      },
+      'Confirmar todo',
+      'Cancelar',
+    );
+  };
+
   return (
     <View className="flex-1 bg-mist">
       <CustomAlert {...alertState} onConfirm={alertState.onConfirm} onCancel={hideAlert} />
@@ -167,7 +198,16 @@ export default function FixtureScreen() {
           <Feather name="arrow-left" size={22} color="white" />
         </TouchableOpacity>
         <Text className="text-white text-xl font-sans-medium flex-1">Fixture</Text>
-        {isOrganizadorOStaff && (
+        {isOrganizadorOStaff && !enCursoOFinalizado && rondas.length > 0 && (
+          <TouchableOpacity onPress={handleConfirmAll} disabled={confirmingAll}>
+            {confirmingAll ? (
+              <ActivityIndicator color="white" size="small" />
+            ) : (
+              <Feather name="check-circle" size={20} color="white" />
+            )}
+          </TouchableOpacity>
+        )}
+        {isOrganizadorOStaff && !enCursoOFinalizado && (
           <TouchableOpacity onPress={handleGenerate} disabled={generating}>
             {generating ? (
               <ActivityIndicator color="white" size="small" />
@@ -221,7 +261,7 @@ export default function FixtureScreen() {
             <Text className="text-carbon text-sm text-center mt-3">
               No hay fixture generado aún.
             </Text>
-            {isOrganizadorOStaff && (
+            {isOrganizadorOStaff && !enCursoOFinalizado && (
               <TouchableOpacity
                 className={`rounded-xl px-6 py-3 mt-4 ${puedeGenerar ? 'bg-primary' : 'bg-gray-200'}`}
                 onPress={handleGenerate}
@@ -282,14 +322,36 @@ export default function FixtureScreen() {
               </Text>
             )}
 
-            <Text className="text-night text-sm font-sans-medium mb-2">Fecha y hora</Text>
-            <TextInput
-              className="bg-mist rounded-xl px-4 py-3 text-night text-sm mb-4"
-              placeholder="YYYY-MM-DDTHH:MM"
-              placeholderTextColor="#3D4F44"
+            <DatePickerField
+              label="Fecha del partido"
               value={editFecha}
-              onChangeText={setEditFecha}
+              onChange={(date) => {
+                setEditFecha(date);
+                setCalendarOpen(false);
+                setEditModal(true);
+              }}
+              minDate={fechaInicio?.slice(0, 10)}
+              maxDate={fechaFin?.slice(0, 10)}
+              visible={calendarOpen}
+              onOpen={() => setCalendarOpen(true)}
+              onClose={() => {
+                setCalendarOpen(false);
+                setEditModal(true);
+              }}
             />
+
+            <Text className="text-carbon text-sm font-sans-medium mb-1">Fecha del partido</Text>
+            <TouchableOpacity
+              onPress={() => {
+                setEditModal(false);
+                setCalendarOpen(true);
+              }}
+              className="bg-mist rounded-xl px-4 py-3 border border-mist mb-4"
+            >
+              <Text className="text-night font-sans-medium text-sm">
+                {editFecha ? editFecha.split('-').reverse().join('/') : 'Seleccionar fecha'}
+              </Text>
+            </TouchableOpacity>
 
             <TouchableOpacity
               className="bg-primary rounded-xl py-4 items-center"

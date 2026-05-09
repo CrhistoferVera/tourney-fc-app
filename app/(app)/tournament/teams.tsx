@@ -18,10 +18,13 @@ import { useAlert } from '../../../hooks/useAlert';
 
 export default function TeamsScreen() {
   const {
-    id: torneoId,
-    rol,
-    maxEquipos: maxEquiposParam,
-  } = useLocalSearchParams<{ id: string; rol: string; maxEquipos: string }>();
+  id: torneoId,
+  rol,
+  maxEquipos: maxEquiposParam,
+  estado,
+} = useLocalSearchParams<{ id: string; rol: string; maxEquipos: string; estado: string }>();
+console.log('ROL:', rol, 'ESTADO:', estado, 'MAX:', maxEquiposParam);
+
   const router = useRouter();
   const { usuario } = useAuthStore();
   const { alertState, hideAlert, showError, showSuccess, showConfirm } = useAlert();
@@ -35,7 +38,9 @@ export default function TeamsScreen() {
   const [telefono, setTelefono] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const isOrganizadorOStaff = rol === 'ORGANIZADOR' || rol === 'STAFF';
+  const enCursoOFinalizado = estado === 'EN_CURSO' || estado === 'FINALIZADO';
+const isOrganizadorOStaff = rol === 'ORGANIZADOR' || rol === 'STAFF';
+const puedeEliminar = isOrganizadorOStaff && !enCursoOFinalizado;
   const cupoLleno = maxEquipos !== null && teams.length >= maxEquipos;
 
   const fetchTeams = useCallback(async () => {
@@ -122,7 +127,7 @@ export default function TeamsScreen() {
         <Text className="text-white text-xl font-sans-medium flex-1">
           Equipos{maxEquipos ? ` (${teams.length}/${maxEquipos})` : ''}
         </Text>
-        {!isOrganizadorOStaff && !cupoLleno && (
+       {!isOrganizadorOStaff && !cupoLleno && !enCursoOFinalizado && (
           <TouchableOpacity onPress={() => setShowForm(!showForm)}>
             <Feather name={showForm ? 'x' : 'plus'} size={22} color="white" />
           </TouchableOpacity>
@@ -156,7 +161,7 @@ export default function TeamsScreen() {
       )}
 
       {/* Formulario inscribir equipo */}
-      {showForm && !cupoLleno && (
+      {showForm && !cupoLleno && !enCursoOFinalizado && (
         <View className="bg-white px-4 py-4 border-b border-mist">
           <Text className="text-night font-sans-medium text-sm mb-3">Inscribir mi equipo</Text>
           <TextInput
@@ -225,7 +230,7 @@ export default function TeamsScreen() {
             <TeamCard
               key={team.id}
               team={team}
-              canDelete={isOrganizadorOStaff}
+              canDelete={puedeEliminar}
               onDelete={(teamId) => handleDelete(teamId, team.nombre)}
             />
           ))

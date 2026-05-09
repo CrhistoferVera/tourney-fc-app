@@ -7,33 +7,9 @@ import { useAlert } from '../../../hooks/useAlert';
 import {
   getTournamentById,
   publishTournament,
-  Tournament,
   startTournament,
+  Tournament,
 } from '../../../services/tournamentService';
-
-interface MatchResult {
-  id: string;
-  homeTeam: string;
-  awayTeam: string;
-  homeScore: number;
-  awayScore: number;
-  date: string;
-  venue: string;
-  status: 'Confirmado' | 'Pendiente';
-  homeEmoji: string;
-  awayEmoji: string;
-}
-
-interface UpcomingMatch {
-  id: string;
-  homeTeam: string;
-  awayTeam: string;
-  date: string;
-  venue: string;
-  status: 'Pendiente';
-  homeEmoji: string;
-  awayEmoji: string;
-}
 
 const FORMAT_LABEL: Record<string, string> = {
   LIGA: 'Liga',
@@ -42,16 +18,10 @@ const FORMAT_LABEL: Record<string, string> = {
   ELIMINATORIA: 'Eliminatoria',
 };
 
-const { alertState, hideAlert, showError, showConfirm } = useAlert();
-
 function formatDate(iso: string) {
   try {
     const d = new Date(iso);
-    return d.toLocaleDateString('es-BO', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-    });
+    return d.toLocaleDateString('es-BO', { day: '2-digit', month: 'short', year: 'numeric' });
   } catch {
     return iso;
   }
@@ -69,93 +39,12 @@ function QuickBtn({ icon, label, color, onPress }: QuickBtnProps) {
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={onPress ? 0.8 : 0.6}
-      className={`${color} rounded-2xl items-center justify-center py-4 ${!onPress ? 'opacity-50' : ''}`}
+      className={`${color} rounded-2xl items-center justify-center py-4 ${!onPress ? 'opacity-40' : ''}`}
       style={{ flex: 1, minHeight: 80 }}
     >
       <Feather name={icon as any} size={24} color="white" />
       <Text className="text-white text-xs font-sans-medium mt-1">{label}</Text>
     </TouchableOpacity>
-  );
-}
-
-function ResultCard({ match }: { match: MatchResult }) {
-  const isConfirmed = match.status === 'Confirmado';
-  return (
-    <View
-      className="bg-white rounded-2xl px-4 py-3 mb-3"
-      style={{ shadowColor: '#0F1A14', shadowOpacity: 0.05, shadowRadius: 6, elevation: 1 }}
-    >
-      <View className="flex-row items-center">
-        {/* Home */}
-        <View className="flex-1 flex-row items-center">
-          <Text style={{ fontSize: 28 }}>{match.homeEmoji}</Text>
-          <Text className="text-night font-sans-medium text-sm ml-2" numberOfLines={1}>
-            {match.homeTeam}
-          </Text>
-        </View>
-        {/* Score */}
-        <View className="px-3 items-center">
-          <Text className="text-night font-sans-medium text-lg">
-            {match.homeScore} - {match.awayScore}
-          </Text>
-        </View>
-        {/* Away */}
-        <View className="flex-1 flex-row items-center justify-end">
-          <Text className="text-night font-sans-medium text-sm mr-2" numberOfLines={1}>
-            {match.awayTeam}
-          </Text>
-          <View
-            className="w-5 h-5 rounded-full"
-            style={{ backgroundColor: isConfirmed ? '#1A73E8' : '#E53935' }}
-          />
-        </View>
-      </View>
-      <View className="flex-row items-center justify-between mt-2">
-        <Text className="text-carbon text-xs">
-          {match.date} · {match.venue}
-        </Text>
-        <View
-          className={`px-2 py-0.5 rounded-full ${
-            isConfirmed ? 'bg-primary-light' : 'bg-accent-soft'
-          }`}
-        >
-          <Text
-            className={`text-xs font-sans-medium ${isConfirmed ? 'text-primary' : 'text-accent'}`}
-          >
-            {match.status}
-          </Text>
-        </View>
-      </View>
-    </View>
-  );
-}
-
-function UpcomingCard({ match }: { match: UpcomingMatch }) {
-  return (
-    <View
-      className="bg-white rounded-2xl px-4 py-3 mb-3"
-      style={{ shadowColor: '#0F1A14', shadowOpacity: 0.05, shadowRadius: 6, elevation: 1 }}
-    >
-      <View className="flex-row items-center">
-        <Text style={{ fontSize: 24 }}>{match.homeEmoji}</Text>
-        <Text className="text-night font-sans-medium text-sm mx-2" numberOfLines={1}>
-          {match.homeTeam}
-        </Text>
-        <Text className="text-carbon text-xs mx-1">vs</Text>
-        <Text className="text-night font-sans-medium text-sm mx-2" numberOfLines={1}>
-          {match.awayTeam}
-        </Text>
-        <Text style={{ fontSize: 24 }}>{match.awayEmoji}</Text>
-      </View>
-      <View className="flex-row items-center justify-between mt-2">
-        <Text className="text-carbon text-xs">
-          {match.date} · {match.venue}
-        </Text>
-        <View className="bg-accent-soft px-2 py-0.5 rounded-full">
-          <Text className="text-accent text-xs font-sans-medium">Pendiente</Text>
-        </View>
-      </View>
-    </View>
   );
 }
 
@@ -168,8 +57,6 @@ export default function TournamentDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [publishing, setPublishing] = useState(false);
   const [starting, setStarting] = useState(false);
-  const recentResults: MatchResult[] = [];
-  const upcomingMatches: UpcomingMatch[] = [];
 
   useEffect(() => {
     if (!id) return;
@@ -181,10 +68,9 @@ export default function TournamentDetailScreen() {
 
   const handlePublish = async () => {
     if (!tournament) return;
-
     showConfirm(
       'Publicar torneo',
-      '¿Estás seguro? El torneo pasará a estado "En inscripción" y será visible para todos.',
+      'El torneo pasará a "En inscripción" y será visible para todos.',
       async () => {
         setPublishing(true);
         try {
@@ -196,7 +82,6 @@ export default function TournamentDetailScreen() {
           setPublishing(false);
         }
       },
-      undefined, // o una función onCancel si quieres
     );
   };
 
@@ -237,16 +122,17 @@ export default function TournamentDetailScreen() {
 
   const isDraft = tournament.estado === 'BORRADOR';
   const isInscripcion = tournament.estado === 'EN_INSCRIPCION';
+  const isEnCurso = tournament.estado === 'EN_CURSO';
   const isOrganizer = tournament.rolUsuario === 'ORGANIZADOR';
   const isStaff = tournament.rolUsuario === 'STAFF';
   const equiposFull = (tournament.equiposInscritos ?? 0) >= tournament.maxEquipos;
   const fixtureGenerado = (tournament.totalPartidos ?? 0) > 0;
-  const canGenerateFixture = (isOrganizer || isStaff) && isInscripcion && equiposFull;
-  const canStart = isOrganizer && isInscripcion && fixtureGenerado;
+  const canStart = isOrganizer && isInscripcion && fixtureGenerado && equiposFull;
 
   return (
     <View className="flex-1 bg-mist">
       <CustomAlert {...alertState} onConfirm={alertState.onConfirm} onCancel={hideAlert} />
+
       {/* Header */}
       <View className="bg-primary px-6 pt-14 pb-4">
         <View className="flex-row items-center mb-1">
@@ -260,11 +146,11 @@ export default function TournamentDetailScreen() {
         <View className="flex-row items-center gap-2 ml-6">
           <View className="bg-primary-dark px-2 py-0.5 rounded-full">
             <Text className="text-white text-xs">
-              {tournament.estado === 'EN_CURSO'
-                ? 'Activo'
-                : tournament.estado === 'EN_INSCRIPCION'
+              {isEnCurso
+                ? 'En curso'
+                : isInscripcion
                   ? 'Inscripción'
-                  : tournament.estado === 'BORRADOR'
+                  : isDraft
                     ? 'Borrador'
                     : 'Finalizado'}
             </Text>
@@ -281,13 +167,13 @@ export default function TournamentDetailScreen() {
         contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Publish banner (only for organizer in draft) */}
+        {/* Banner: borrador */}
         {isDraft && isOrganizer ? (
           <View className="bg-accent-soft border border-accent rounded-2xl px-4 py-3 mb-4 flex-row items-center justify-between">
             <View className="flex-1 mr-3">
               <Text className="text-accent font-sans-medium text-sm">Torneo en borrador</Text>
               <Text className="text-carbon text-xs mt-0.5">
-                Publícalo para que otros equipos puedan inscribirse.
+                Publícalo para que los equipos puedan inscribirse.
               </Text>
             </View>
             <TouchableOpacity
@@ -305,45 +191,17 @@ export default function TournamentDetailScreen() {
           </View>
         ) : null}
 
-        {isInscripcion && isOrganizer && !equiposFull ? (
+        {/* Banner: esperando equipos */}
+        {isInscripcion && (isOrganizer || isStaff) && !equiposFull ? (
           <View className="bg-primary-light border border-primary rounded-2xl px-4 py-3 mb-4">
             <Text className="text-primary font-sans-medium text-sm">Esperando equipos</Text>
             <Text className="text-carbon text-xs mt-0.5">
               {tournament.equiposInscritos ?? 0} de {tournament.maxEquipos} equipos inscritos.
-              Cuando se llene el cupo podrás generar el fixture.
             </Text>
           </View>
         ) : null}
 
-        {canGenerateFixture && !fixtureGenerado ? (
-          <View className="bg-primary-light border border-primary rounded-2xl px-4 py-3 mb-4 flex-row items-center justify-between">
-            <View className="flex-1 mr-3">
-              <Text className="text-primary font-sans-medium text-sm">¡Cupo completo!</Text>
-              <Text className="text-carbon text-xs mt-0.5">
-                Todos los equipos están inscritos. Ve a Fixture para generarlo.
-              </Text>
-            </View>
-            <TouchableOpacity
-              onPress={() =>
-                router.push({
-                  pathname: '/(app)/tournament/fixture',
-                  params: {
-                    id: tournament.id,
-                    rol: tournament.rolUsuario ?? '',
-                    fechaInicio: tournament.fechaInicio,
-                    fechaFin: tournament.fechaFin,
-                    maxEquipos: String(tournament.maxEquipos),
-                  },
-                } as never)
-              }
-              className="bg-primary rounded-xl px-3 py-2"
-              activeOpacity={0.85}
-            >
-              <Text className="text-white font-sans-medium text-xs">Ir a Fixture</Text>
-            </TouchableOpacity>
-          </View>
-        ) : null}
-
+        {/* Banner: iniciar torneo */}
         {canStart ? (
           <View className="bg-primary-light border border-primary rounded-2xl px-4 py-3 mb-4 flex-row items-center justify-between">
             <View className="flex-1 mr-3">
@@ -367,7 +225,7 @@ export default function TournamentDetailScreen() {
           </View>
         ) : null}
 
-        {/* Tournament info card */}
+        {/* Info card */}
         <View
           className="bg-white rounded-2xl px-4 py-4 mb-4"
           style={{ shadowColor: '#0F1A14', shadowOpacity: 0.05, shadowRadius: 6, elevation: 1 }}
@@ -392,22 +250,27 @@ export default function TournamentDetailScreen() {
         </View>
 
         {/* Acceso rápido */}
+        <Text className="text-night font-sans-medium text-base mb-3">Acceso rápido</Text>
         <View className="flex-row gap-2 mb-2">
           <QuickBtn
             icon="calendar"
             label="Fixture"
             color="bg-primary"
-            onPress={() =>
-              router.push({
-                pathname: '/(app)/tournament/fixture',
-                params: {
-                  id: tournament.id,
-                  rol: tournament.rolUsuario ?? '',
-                  fechaInicio: tournament.fechaInicio,
-                  fechaFin: tournament.fechaFin,
-                  maxEquipos: String(tournament.maxEquipos),
-                },
-              } as never)
+            onPress={
+              !isDraft
+                ? () =>
+                    router.push({
+                      pathname: '/(app)/tournament/fixture',
+                      params: {
+                        id: tournament.id,
+                        rol: tournament.rolUsuario ?? '',
+                        fechaInicio: tournament.fechaInicio,
+                        fechaFin: tournament.fechaFin,
+                        maxEquipos: String(tournament.maxEquipos),
+                        estado: tournament.estado,
+                      },
+                    } as never)
+                : undefined
             }
           />
           <QuickBtn icon="award" label="Tabla" color="bg-accent" />
@@ -415,15 +278,19 @@ export default function TournamentDetailScreen() {
             icon="users"
             label="Equipos"
             color="bg-info"
-            onPress={() =>
-              router.push({
-                pathname: '/(app)/tournament/teams',
-                params: {
-                  id: tournament.id,
-                  rol: tournament.rolUsuario ?? '',
-                  maxEquipos: String(tournament.maxEquipos),
-                },
-              } as never)
+            onPress={
+              !isDraft
+                ? () =>
+                    router.push({
+                      pathname: '/(app)/tournament/teams',
+                      params: {
+                        id: tournament.id,
+                        rol: tournament.rolUsuario ?? '',
+                        maxEquipos: String(tournament.maxEquipos),
+                        estado: tournament.estado,
+                      },
+                    } as never)
+                : undefined
             }
           />
         </View>
@@ -434,7 +301,7 @@ export default function TournamentDetailScreen() {
             label="Gestionar"
             color="bg-carbon"
             onPress={
-              isOrganizer && !['EN_CURSO', 'FINALIZADO'].includes(tournament.estado)
+              isOrganizer && (isDraft || isInscripcion)
                 ? () =>
                     router.push({
                       pathname: '/(app)/tournament/manage',
@@ -454,27 +321,19 @@ export default function TournamentDetailScreen() {
 
         {/* Últimos resultados */}
         <Text className="text-night font-sans-medium text-base mb-3">Últimos resultados</Text>
-        {recentResults.length === 0 ? (
-          <View className="bg-white rounded-2xl px-4 py-6 items-center mb-4">
-            <Text className="text-carbon text-sm text-center">
-              Aún no hay resultados registrados.
-            </Text>
-          </View>
-        ) : (
-          recentResults.map((m) => <ResultCard key={m.id} match={m} />)
-        )}
+        <View className="bg-white rounded-2xl px-4 py-6 items-center mb-4">
+          <Text className="text-carbon text-sm text-center">
+            Aún no hay resultados registrados.
+          </Text>
+        </View>
 
         {/* Próximos partidos */}
         <Text className="text-night font-sans-medium text-base mb-3 mt-1">Próximos partidos</Text>
-        {upcomingMatches.length === 0 ? (
-          <View className="bg-white rounded-2xl px-4 py-6 items-center">
-            <Text className="text-carbon text-sm text-center">
-              No hay partidos próximos programados.
-            </Text>
-          </View>
-        ) : (
-          upcomingMatches.map((m) => <UpcomingCard key={m.id} match={m} />)
-        )}
+        <View className="bg-white rounded-2xl px-4 py-6 items-center">
+          <Text className="text-carbon text-sm text-center">
+            No hay partidos próximos programados.
+          </Text>
+        </View>
       </ScrollView>
     </View>
   );
