@@ -201,23 +201,23 @@ export default function TournamentDetailScreen() {
   };
 
   const handleStart = async () => {
-  if (!tournament) return;
-  showConfirm(
-    'Iniciar torneo',
-    'El torneo pasará a "En curso". Ya no se podrán agregar equipos ni modificar la configuración.',
-    async () => {
-      setStarting(true);
-      try {
-        const updated = await startTournament(tournament.id);
-        setTournament(updated);
-      } catch {
-        showError('Error', 'No se pudo iniciar el torneo.');
-      } finally {
-        setStarting(false);
-      }
-    },
-  );
-};
+    if (!tournament) return;
+    showConfirm(
+      'Iniciar torneo',
+      'El torneo pasará a "En curso". Ya no se podrán agregar equipos ni modificar la configuración.',
+      async () => {
+        setStarting(true);
+        try {
+          const updated = await startTournament(tournament.id);
+          setTournament(updated);
+        } catch {
+          showError('Error', 'No se pudo iniciar el torneo.');
+        } finally {
+          setStarting(false);
+        }
+      },
+    );
+  };
 
   if (loading) {
     return (
@@ -236,13 +236,13 @@ export default function TournamentDetailScreen() {
   }
 
   const isDraft = tournament.estado === 'BORRADOR';
-const isInscripcion = tournament.estado === 'EN_INSCRIPCION';
-const isOrganizer = tournament.rolUsuario === 'ORGANIZADOR';
-const isStaff = tournament.rolUsuario === 'STAFF';
-const equiposFull = (tournament.equiposInscritos ?? 0) >= tournament.maxEquipos;
-const fixtureGenerado = (tournament.totalPartidos ?? 0) > 0;
-const canGenerateFixture = (isOrganizer || isStaff) && isInscripcion && equiposFull;
-const canStart = isOrganizer && isInscripcion && fixtureGenerado;
+  const isInscripcion = tournament.estado === 'EN_INSCRIPCION';
+  const isOrganizer = tournament.rolUsuario === 'ORGANIZADOR';
+  const isStaff = tournament.rolUsuario === 'STAFF';
+  const equiposFull = (tournament.equiposInscritos ?? 0) >= tournament.maxEquipos;
+  const fixtureGenerado = (tournament.totalPartidos ?? 0) > 0;
+  const canGenerateFixture = (isOrganizer || isStaff) && isInscripcion && equiposFull;
+  const canStart = isOrganizer && isInscripcion && fixtureGenerado;
 
   return (
     <View className="flex-1 bg-mist">
@@ -283,77 +283,89 @@ const canStart = isOrganizer && isInscripcion && fixtureGenerado;
       >
         {/* Publish banner (only for organizer in draft) */}
         {isDraft && isOrganizer ? (
-  <View className="bg-accent-soft border border-accent rounded-2xl px-4 py-3 mb-4 flex-row items-center justify-between">
-    <View className="flex-1 mr-3">
-      <Text className="text-accent font-sans-medium text-sm">Torneo en borrador</Text>
-      <Text className="text-carbon text-xs mt-0.5">
-        Publícalo para que otros equipos puedan inscribirse.
-      </Text>
-    </View>
-    <TouchableOpacity
-      onPress={handlePublish}
-      disabled={publishing}
-      className="bg-accent rounded-xl px-3 py-2"
-      activeOpacity={0.85}
-    >
-      {publishing ? (
-        <ActivityIndicator color="white" size="small" />
-      ) : (
-        <Text className="text-white font-sans-medium text-xs">Publicar</Text>
-      )}
-    </TouchableOpacity>
-  </View>
-) : null}
+          <View className="bg-accent-soft border border-accent rounded-2xl px-4 py-3 mb-4 flex-row items-center justify-between">
+            <View className="flex-1 mr-3">
+              <Text className="text-accent font-sans-medium text-sm">Torneo en borrador</Text>
+              <Text className="text-carbon text-xs mt-0.5">
+                Publícalo para que otros equipos puedan inscribirse.
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={handlePublish}
+              disabled={publishing}
+              className="bg-accent rounded-xl px-3 py-2"
+              activeOpacity={0.85}
+            >
+              {publishing ? (
+                <ActivityIndicator color="white" size="small" />
+              ) : (
+                <Text className="text-white font-sans-medium text-xs">Publicar</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        ) : null}
 
-{isInscripcion && isOrganizer && !equiposFull ? (
-  <View className="bg-primary-light border border-primary rounded-2xl px-4 py-3 mb-4">
-    <Text className="text-primary font-sans-medium text-sm">Esperando equipos</Text>
-    <Text className="text-carbon text-xs mt-0.5">
-      {tournament.equiposInscritos ?? 0} de {tournament.maxEquipos} equipos inscritos. Cuando se llene el cupo podrás generar el fixture.
-    </Text>
-  </View>
-) : null}
+        {isInscripcion && isOrganizer && !equiposFull ? (
+          <View className="bg-primary-light border border-primary rounded-2xl px-4 py-3 mb-4">
+            <Text className="text-primary font-sans-medium text-sm">Esperando equipos</Text>
+            <Text className="text-carbon text-xs mt-0.5">
+              {tournament.equiposInscritos ?? 0} de {tournament.maxEquipos} equipos inscritos.
+              Cuando se llene el cupo podrás generar el fixture.
+            </Text>
+          </View>
+        ) : null}
 
-{canGenerateFixture && !fixtureGenerado ? (
-  <View className="bg-primary-light border border-primary rounded-2xl px-4 py-3 mb-4 flex-row items-center justify-between">
-    <View className="flex-1 mr-3">
-      <Text className="text-primary font-sans-medium text-sm">¡Cupo completo!</Text>
-      <Text className="text-carbon text-xs mt-0.5">
-        Todos los equipos están inscritos. Ve a Fixture para generarlo.
-      </Text>
-    </View>
-    <TouchableOpacity
-      onPress={() => router.push({ pathname: '/(app)/tournament/fixture', params: { id: tournament.id, rol: tournament.rolUsuario ?? '', fechaInicio: tournament.fechaInicio, fechaFin: tournament.fechaFin, maxEquipos: String(tournament.maxEquipos) } } as never)}
-      className="bg-primary rounded-xl px-3 py-2"
-      activeOpacity={0.85}
-    >
-      <Text className="text-white font-sans-medium text-xs">Ir a Fixture</Text>
-    </TouchableOpacity>
-  </View>
-) : null}
+        {canGenerateFixture && !fixtureGenerado ? (
+          <View className="bg-primary-light border border-primary rounded-2xl px-4 py-3 mb-4 flex-row items-center justify-between">
+            <View className="flex-1 mr-3">
+              <Text className="text-primary font-sans-medium text-sm">¡Cupo completo!</Text>
+              <Text className="text-carbon text-xs mt-0.5">
+                Todos los equipos están inscritos. Ve a Fixture para generarlo.
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={() =>
+                router.push({
+                  pathname: '/(app)/tournament/fixture',
+                  params: {
+                    id: tournament.id,
+                    rol: tournament.rolUsuario ?? '',
+                    fechaInicio: tournament.fechaInicio,
+                    fechaFin: tournament.fechaFin,
+                    maxEquipos: String(tournament.maxEquipos),
+                  },
+                } as never)
+              }
+              className="bg-primary rounded-xl px-3 py-2"
+              activeOpacity={0.85}
+            >
+              <Text className="text-white font-sans-medium text-xs">Ir a Fixture</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
 
-{canStart ? (
-  <View className="bg-primary-light border border-primary rounded-2xl px-4 py-3 mb-4 flex-row items-center justify-between">
-    <View className="flex-1 mr-3">
-      <Text className="text-primary font-sans-medium text-sm">Fixture listo</Text>
-      <Text className="text-carbon text-xs mt-0.5">
-        Ya puedes iniciar el torneo oficialmente.
-      </Text>
-    </View>
-    <TouchableOpacity
-      onPress={handleStart}
-      disabled={starting}
-      className="bg-primary rounded-xl px-3 py-2"
-      activeOpacity={0.85}
-    >
-      {starting ? (
-        <ActivityIndicator color="white" size="small" />
-      ) : (
-        <Text className="text-white font-sans-medium text-xs">Iniciar torneo</Text>
-      )}
-    </TouchableOpacity>
-  </View>
-) : null}
+        {canStart ? (
+          <View className="bg-primary-light border border-primary rounded-2xl px-4 py-3 mb-4 flex-row items-center justify-between">
+            <View className="flex-1 mr-3">
+              <Text className="text-primary font-sans-medium text-sm">Fixture listo</Text>
+              <Text className="text-carbon text-xs mt-0.5">
+                Ya puedes iniciar el torneo oficialmente.
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={handleStart}
+              disabled={starting}
+              className="bg-primary rounded-xl px-3 py-2"
+              activeOpacity={0.85}
+            >
+              {starting ? (
+                <ActivityIndicator color="white" size="small" />
+              ) : (
+                <Text className="text-white font-sans-medium text-xs">Iniciar torneo</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        ) : null}
 
         {/* Tournament info card */}
         <View
@@ -393,7 +405,7 @@ const canStart = isOrganizer && isInscripcion && fixtureGenerado;
                   rol: tournament.rolUsuario ?? '',
                   fechaInicio: tournament.fechaInicio,
                   fechaFin: tournament.fechaFin,
-                  maxEquipos: String(tournament.maxEquipos)
+                  maxEquipos: String(tournament.maxEquipos),
                 },
               } as never)
             }
@@ -406,7 +418,11 @@ const canStart = isOrganizer && isInscripcion && fixtureGenerado;
             onPress={() =>
               router.push({
                 pathname: '/(app)/tournament/teams',
-                params: { id: tournament.id, rol: tournament.rolUsuario ?? '', maxEquipos: String(tournament.maxEquipos), },
+                params: {
+                  id: tournament.id,
+                  rol: tournament.rolUsuario ?? '',
+                  maxEquipos: String(tournament.maxEquipos),
+                },
               } as never)
             }
           />
@@ -417,10 +433,21 @@ const canStart = isOrganizer && isInscripcion && fixtureGenerado;
             icon="settings"
             label="Gestionar"
             color="bg-carbon"
-            onPress={isOrganizer && !['EN_CURSO', 'FINALIZADO'].includes(tournament.estado)
-  ? () => router.push({ pathname: '/(app)/tournament/manage', params: { id: tournament.id, nombre: tournament.nombre, descripcion: tournament.descripcion ?? '', fechaInicio: tournament.fechaInicio, fechaFin: tournament.fechaFin } } as never)
-  : undefined
-}
+            onPress={
+              isOrganizer && !['EN_CURSO', 'FINALIZADO'].includes(tournament.estado)
+                ? () =>
+                    router.push({
+                      pathname: '/(app)/tournament/manage',
+                      params: {
+                        id: tournament.id,
+                        nombre: tournament.nombre,
+                        descripcion: tournament.descripcion ?? '',
+                        fechaInicio: tournament.fechaInicio,
+                        fechaFin: tournament.fechaFin,
+                      },
+                    } as never)
+                : undefined
+            }
           />
           <QuickBtn icon="bell" label="Notificaciones" color="bg-accent" />
         </View>

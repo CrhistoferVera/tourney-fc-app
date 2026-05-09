@@ -11,7 +11,13 @@ interface Props {
 const formatFecha = (fecha: string | null) => {
   if (!fecha) return 'Sin fecha';
   const d = new Date(fecha);
-  return d.toLocaleDateString('es-BO', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleDateString('es-BO', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 };
 
 export default function MatchCard({ partido, canEdit, onPress }: Props) {
@@ -51,11 +57,13 @@ export default function MatchCard({ partido, canEdit, onPress }: Props) {
           )}
         </View>
         <View className="flex-row items-center gap-2">
-          {canEdit && (
-            <Feather name="edit-2" size={14} color="#3D4F44" />
-          )}
-          <View className={`px-2 py-0.5 rounded-full ${confirmado ? 'bg-primary-light' : 'bg-accent-soft'}`}>
-            <Text className={`text-xs font-sans-medium ${confirmado ? 'text-primary' : 'text-accent'}`}>
+          {canEdit && <Feather name="edit-2" size={14} color="#3D4F44" />}
+          <View
+            className={`px-2 py-0.5 rounded-full ${confirmado ? 'bg-primary-light' : 'bg-accent-soft'}`}
+          >
+            <Text
+              className={`text-xs font-sans-medium ${confirmado ? 'text-primary' : 'text-accent'}`}
+            >
               {confirmado ? 'Confirmado' : 'Pendiente'}
             </Text>
           </View>

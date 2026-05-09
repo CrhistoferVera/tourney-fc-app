@@ -22,7 +22,7 @@ export interface Tournament {
   createdAt: string;
   rolUsuario?: string;
   equiposInscritos?: number;
-totalPartidos?: number;
+  totalPartidos?: number;
 }
 
 export interface CreateTournamentDto {
@@ -89,5 +89,3 @@ export const startTournament = async (id: string): Promise<Tournament> => {
   const token = getToken();
   return api.patch(`/tournaments/${id}/start`, {}, token ?? undefined);
 };
-
-

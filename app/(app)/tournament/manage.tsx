@@ -1,4 +1,11 @@
-import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  ActivityIndicator,
+} from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Feather } from '@expo/vector-icons';
@@ -7,12 +14,19 @@ import CustomAlert from '../../../components/CustomAlert';
 import { useAlert } from '../../../hooks/useAlert';
 
 export default function ManageScreen() {
-  const { id: torneoId, nombre: nombreInicial, descripcion: descInicial,
-    fechaInicio: fechaInicioInicial, fechaFin: fechaFinInicial } =
-    useLocalSearchParams<{
-      id: string; nombre: string; descripcion: string;
-      fechaInicio: string; fechaFin: string;
-    }>();
+  const {
+    id: torneoId,
+    nombre: nombreInicial,
+    descripcion: descInicial,
+    fechaInicio: fechaInicioInicial,
+    fechaFin: fechaFinInicial,
+  } = useLocalSearchParams<{
+    id: string;
+    nombre: string;
+    descripcion: string;
+    fechaInicio: string;
+    fechaFin: string;
+  }>();
   const router = useRouter();
   const { alertState, hideAlert, showError, showSuccess } = useAlert();
 
@@ -38,7 +52,9 @@ export default function ManageScreen() {
         fechaInicio,
         fechaFin,
       });
-      showSuccess('Torneo actualizado', 'Los cambios fueron guardados exitosamente', () => router.back());
+      showSuccess('Torneo actualizado', 'Los cambios fueron guardados exitosamente', () =>
+        router.back(),
+      );
     } catch (e: any) {
       showError('Error', e.message ?? 'No se pudo actualizar el torneo');
     } finally {

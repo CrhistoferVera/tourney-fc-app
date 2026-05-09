@@ -1,4 +1,12 @@
-import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, RefreshControl } from 'react-native';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  ActivityIndicator,
+  RefreshControl,
+} from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState, useCallback } from 'react';
 import { Feather } from '@expo/vector-icons';
@@ -9,7 +17,11 @@ import CustomAlert from '../../../components/CustomAlert';
 import { useAlert } from '../../../hooks/useAlert';
 
 export default function TeamsScreen() {
-  const { id: torneoId, rol, maxEquipos: maxEquiposParam } = useLocalSearchParams<{id: string;rol: string;maxEquipos: string;}>();
+  const {
+    id: torneoId,
+    rol,
+    maxEquipos: maxEquiposParam,
+  } = useLocalSearchParams<{ id: string; rol: string; maxEquipos: string }>();
   const router = useRouter();
   const { usuario } = useAuthStore();
   const { alertState, hideAlert, showError, showSuccess, showConfirm } = useAlert();
@@ -119,13 +131,22 @@ export default function TeamsScreen() {
       {cupoLleno && !isOrganizadorOStaff && (
         <View className="bg-amber-50 border-b border-amber-200 px-4 py-3 flex-row items-center gap-2">
           <Feather name="alert-circle" size={15} color="#D97706" />
-          <Text className="text-amber-700 text-xs flex-1">El torneo alcanzó el máximo de {maxEquipos} equipos. No se aceptan más inscripciones.</Text>
+          <Text className="text-amber-700 text-xs flex-1">
+            El torneo alcanzó el máximo de {maxEquipos} equipos. No se aceptan más inscripciones.
+          </Text>
         </View>
       )}
       {isOrganizadorOStaff && maxEquipos !== null && (
-        <View className={`px-4 py-2 flex-row items-center gap-2 border-b ${
-            cupoLleno ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
-          <Feather name={cupoLleno ? 'check-circle' : 'users'} size={14} color={cupoLleno ? '#16A34A' : '#D97706'} />
+        <View
+          className={`px-4 py-2 flex-row items-center gap-2 border-b ${
+            cupoLleno ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'
+          }`}
+        >
+          <Feather
+            name={cupoLleno ? 'check-circle' : 'users'}
+            size={14}
+            color={cupoLleno ? '#16A34A' : '#D97706'}
+          />
           <Text className={`text-xs flex-1 ${cupoLleno ? 'text-green-700' : 'text-amber-700'}`}>
             {cupoLleno
               ? `Cupo completo: ${teams.length}/${maxEquipos} equipos inscritos.`
@@ -179,7 +200,14 @@ export default function TeamsScreen() {
         className="flex-1"
         contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0D7A3E" colors={['#0D7A3E']} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#0D7A3E"
+            colors={['#0D7A3E']}
+          />
+        }
       >
         {loading ? (
           <View className="flex-1 items-center justify-center py-12">
