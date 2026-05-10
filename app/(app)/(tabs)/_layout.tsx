@@ -1,7 +1,7 @@
 import { Pressable, View, Text, Image } from 'react-native';
-import { Tabs, useRouter } from 'expo-router';
+import { router, Tabs, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { Trophy } from 'lucide-react-native';
+import { Inbox, Link, Trophy } from 'lucide-react-native';
 import BottomTabBar from '../../../components/DrawerMenu';
 import { useAuthStore } from '../../../store/authStore';
 
@@ -60,8 +60,9 @@ const HeaderAvatar = () => {
 
 const HeaderRight = () => (
   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginRight: 4 }}>
-    <Pressable onPress={() => {}} style={{ padding: 4 }}>
-      <Feather name="bell" size={24} color="#FFFFFF" />
+    
+    <Pressable onPress={() => {router.push('/inbox')}} style={{ padding: 4 }}>
+      <Inbox size={24} color="#FFFFFF" />
     </Pressable>
     <HeaderAvatar />
   </View>
