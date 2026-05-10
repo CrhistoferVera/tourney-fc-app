@@ -40,7 +40,7 @@ export default function Step3({ maxEquipos, campos, onChangeEquipos, onChangeCam
         <Text className="text-carbon text-sm font-sans-medium mb-3">Número de equipos</Text>
         <View className="flex-row items-center gap-6">
           <TouchableOpacity
-            onPress={() => onChangeEquipos(Math.max(2, maxEquipos - 1))}
+            onPress={() => onChangeEquipos(Math.max(2, maxEquipos - 2))}
             className="w-10 h-10 rounded-full bg-white border border-mist items-center justify-center"
           >
             <Text className="text-primary text-xl font-sans-medium">−</Text>
@@ -49,7 +49,7 @@ export default function Step3({ maxEquipos, campos, onChangeEquipos, onChangeCam
             {maxEquipos}
           </Text>
           <TouchableOpacity
-            onPress={() => onChangeEquipos(maxEquipos + 1)}
+            onPress={() => onChangeEquipos(maxEquipos + 2)}
             className="w-10 h-10 rounded-full bg-white border border-mist items-center justify-center"
           >
             <Text className="text-primary text-xl font-sans-medium">＋</Text>

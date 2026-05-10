@@ -6,10 +6,12 @@ interface Props {
   value: string;
   onChange: (date: string) => void;
   minDate?: string;
+
   error?: string;
   visible: boolean;
   onOpen: () => void;
   onClose: () => void;
+  maxDate?: string;
 }
 
 function toDisplayDate(iso: string) {
@@ -23,6 +25,7 @@ export default function DatePickerField({
   value,
   onChange,
   minDate,
+  maxDate,
   error,
   visible,
   onOpen,
@@ -60,6 +63,7 @@ export default function DatePickerField({
             <Calendar
               current={value || today}
               minDate={minDate ?? today}
+              maxDate={maxDate}
               onDayPress={handleDayPress}
               markedDates={value ? { [value]: { selected: true, selectedColor: '#0D7A3E' } } : {}}
               theme={{

@@ -21,6 +21,8 @@ export interface Tournament {
   zona: string;
   createdAt: string;
   rolUsuario?: string;
+  equiposInscritos?: number;
+  totalPartidos?: number;
 }
 
 export interface CreateTournamentDto {
@@ -81,4 +83,9 @@ export const publishTournament = async (id: string): Promise<Tournament> => {
 export const deleteTournament = async (id: string): Promise<void> => {
   const token = getToken();
   await api.delete(`/tournaments/${id}`, token ?? undefined);
+};
+
+export const startTournament = async (id: string): Promise<Tournament> => {
+  const token = getToken();
+  return api.patch(`/tournaments/${id}/start`, {}, token ?? undefined);
 };

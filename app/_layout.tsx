@@ -1,7 +1,6 @@
-
-import { Inter_400Regular, Inter_500Medium, useFonts } from "@expo-google-fonts/inter";
-import { useEffect } from "react";
-import "../global.css";
+import { Inter_400Regular, Inter_500Medium, useFonts } from '@expo-google-fonts/inter';
+import { useEffect } from 'react';
+import '../global.css';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useAuthStore } from '../store/authStore';

@@ -1,21 +1,54 @@
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, Modal, TextInput } from 'react-native';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+  RefreshControl,
+  Modal,
+  TextInput,
+} from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState, useCallback } from 'react';
 import { Feather } from '@expo/vector-icons';
-import { getFixture, generateFixture, RondaFixture, Partido } from '../../../services/fixtureService';
-import { updateMatch, confirmMatch } from '../../../services/matchService';
+import {
+  getFixture,
+  generateFixture,
+  RondaFixture,
+  Partido,
+} from '../../../services/fixtureService';
+import DatePickerField from '../../../components/create-tournament/DatePickerField';
+import { updateMatch, confirmMatch, confirmAllMatches } from '../../../services/matchService';
+import { getTeamsByTournament } from '../../../services/teamsService';
 import MatchCard from '../../../components/tournament/MatchCard';
 import CustomAlert from '../../../components/CustomAlert';
 import { useAlert } from '../../../hooks/useAlert';
 
 export default function FixtureScreen() {
-  const { id: torneoId, rol, fechaInicio, fechaFin } = useLocalSearchParams<{
-    id: string; rol: string; fechaInicio: string; fechaFin: string;
+  const {
+    id: torneoId,
+    rol,
+    fechaInicio,
+    fechaFin,
+    maxEquipos: maxEquiposParam,
+    estado,
+  } = useLocalSearchParams<{
+    id: string;
+    rol: string;
+    fechaInicio: string;
+    fechaFin: string;
+    maxEquipos: string;
+    estado: string;
   }>();
+  console.log('ROL:', rol, 'ESTADO:', estado, 'MAX:', maxEquiposParam);
+
   const router = useRouter();
   const { alertState, hideAlert, showError, showSuccess, showConfirm } = useAlert();
-
+  const maxEquipos = maxEquiposParam ? parseInt(maxEquiposParam, 10) : null;
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [confirmingAll, setConfirmingAll] = useState(false);
   const [rondas, setRondas] = useState<RondaFixture[]>([]);
+  const [equiposInscritos, setEquiposInscritos] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -25,9 +58,14 @@ export default function FixtureScreen() {
   const [saving, setSaving] = useState(false);
 
   const isOrganizadorOStaff = rol === 'ORGANIZADOR' || rol === 'STAFF';
+  const enCursoOFinalizado = estado === 'EN_CURSO' || estado === 'FINALIZADO';
   const isCapitan = rol === 'CAPITAN';
   const canEdit = isOrganizadorOStaff || isCapitan;
-
+  const cupoCompleto = maxEquipos !== null && equiposInscritos >= maxEquipos;
+  const puedeGenerar =
+    rol === 'ORGANIZADOR'
+      ? !enCursoOFinalizado
+      : (maxEquipos === null || cupoCompleto) && !enCursoOFinalizado;
   const fetchFixture = useCallback(async () => {
     if (!torneoId) return;
     try {
@@ -37,18 +75,34 @@ export default function FixtureScreen() {
       setRondas([]);
     }
   }, [torneoId]);
+  const fetchEquipos = useCallback(async () => {
+    if (!torneoId) return;
+    try {
+      const teams = await getTeamsByTournament(torneoId);
+      setEquiposInscritos(Array.isArray(teams) ? teams.length : 0);
+    } catch {
+      setEquiposInscritos(0);
+    }
+  }, [torneoId]);
 
   useEffect(() => {
-    fetchFixture().finally(() => setLoading(false));
-  }, [fetchFixture]);
+    Promise.all([fetchFixture(), fetchEquipos()]).finally(() => setLoading(false));
+  }, [fetchFixture, fetchEquipos]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await fetchFixture();
+    await Promise.all([fetchFixture(), fetchEquipos()]);
     setRefreshing(false);
-  }, [fetchFixture]);
+  }, [fetchFixture, fetchEquipos]);
 
   const handleGenerate = () => {
+    if (!puedeGenerar) {
+      showError(
+        'Equipos insuficientes',
+        `Se necesitan ${maxEquipos} equipos para generar el fixture. Actualmente hay ${equiposInscritos} inscrito${equiposInscritos !== 1 ? 's' : ''}.`,
+      );
+      return;
+    }
     showConfirm(
       'Generar fixture',
       rondas.length > 0
@@ -74,8 +128,9 @@ export default function FixtureScreen() {
   const handleEditPartido = (partido: Partido) => {
     if (!canEdit) return;
     setSelectedPartido(partido);
-    setEditFecha(partido.fecha ? new Date(partido.fecha).toISOString().slice(0, 16) : '');
+    setEditFecha(partido.fecha ? new Date(partido.fecha).toISOString().slice(0, 10) : '');
     setEditModal(true);
+    console.log('fecha partido:', partido.fecha);
   };
 
   const handleSaveEdit = async () => {
@@ -83,7 +138,7 @@ export default function FixtureScreen() {
     setSaving(true);
     try {
       await updateMatch(selectedPartido.id, {
-        fecha: editFecha ? new Date(editFecha).toISOString() : undefined,
+        fecha: editFecha ? new Date(editFecha + 'T12:00:00.000Z').toISOString() : undefined,
       });
       setEditModal(false);
       await fetchFixture();
@@ -112,6 +167,27 @@ export default function FixtureScreen() {
     );
   };
 
+  const handleConfirmAll = () => {
+    showConfirm(
+      'Confirmar todos los partidos',
+      'Se confirmarán todos los partidos y el torneo pasará a "En curso". Ya no se podrán agregar ni quitar equipos.',
+      async () => {
+        setConfirmingAll(true);
+        try {
+          await confirmAllMatches(torneoId!);
+          showSuccess('¡Torneo iniciado!', 'Todos los partidos fueron confirmados.');
+          await fetchFixture();
+        } catch (e: any) {
+          showError('Error', e.message ?? 'No se pudo confirmar los partidos');
+        } finally {
+          setConfirmingAll(false);
+        }
+      },
+      'Confirmar todo',
+      'Cancelar',
+    );
+  };
+
   return (
     <View className="flex-1 bg-mist">
       <CustomAlert {...alertState} onConfirm={alertState.onConfirm} onCancel={hideAlert} />
@@ -122,22 +198,58 @@ export default function FixtureScreen() {
           <Feather name="arrow-left" size={22} color="white" />
         </TouchableOpacity>
         <Text className="text-white text-xl font-sans-medium flex-1">Fixture</Text>
-        {isOrganizadorOStaff && (
+        {isOrganizadorOStaff && !enCursoOFinalizado && rondas.length > 0 && (
+          <TouchableOpacity onPress={handleConfirmAll} disabled={confirmingAll}>
+            {confirmingAll ? (
+              <ActivityIndicator color="white" size="small" />
+            ) : (
+              <Feather name="check-circle" size={20} color="white" />
+            )}
+          </TouchableOpacity>
+        )}
+        {isOrganizadorOStaff && !enCursoOFinalizado && (
           <TouchableOpacity onPress={handleGenerate} disabled={generating}>
             {generating ? (
               <ActivityIndicator color="white" size="small" />
             ) : (
-              <Feather name="refresh-cw" size={20} color="white" />
+              <Feather
+                name="refresh-cw"
+                size={20}
+                color={puedeGenerar ? 'white' : 'rgba(255,255,255,0.35)'}
+              />
             )}
           </TouchableOpacity>
         )}
       </View>
+      {isOrganizadorOStaff && maxEquipos !== null && (
+        <View
+          className={`px-4 py-2 flex-row items-center gap-2 border-b ${cupoCompleto ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}
+        >
+          <Feather
+            name={cupoCompleto ? 'check-circle' : 'alert-circle'}
+            size={14}
+            color={cupoCompleto ? '#16A34A' : '#D97706'}
+          />
+          <Text className={`text-xs flex-1 ${cupoCompleto ? 'text-green-700' : 'text-amber-700'}`}>
+            {cupoCompleto
+              ? `Cupo completo (${equiposInscritos}/${maxEquipos}). Puedes generar el fixture.`
+              : `Equipos inscritos: ${equiposInscritos}/${maxEquipos}. Faltan ${maxEquipos - equiposInscritos} para poder generar el fixture.`}
+          </Text>
+        </View>
+      )}
 
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0D7A3E" colors={['#0D7A3E']} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#0D7A3E"
+            colors={['#0D7A3E']}
+          />
+        }
       >
         {loading ? (
           <View className="py-12 items-center">
@@ -149,13 +261,19 @@ export default function FixtureScreen() {
             <Text className="text-carbon text-sm text-center mt-3">
               No hay fixture generado aún.
             </Text>
-            {isOrganizadorOStaff && (
+            {isOrganizadorOStaff && !enCursoOFinalizado && (
               <TouchableOpacity
-                className="bg-primary rounded-xl px-6 py-3 mt-4"
+                className={`rounded-xl px-6 py-3 mt-4 ${puedeGenerar ? 'bg-primary' : 'bg-gray-200'}`}
                 onPress={handleGenerate}
                 disabled={generating}
               >
-                <Text className="text-white font-sans-medium text-sm">Generar fixture</Text>
+                <Text
+                  className={`font-sans-medium text-sm ${puedeGenerar ? 'text-white' : 'text-gray-400'}`}
+                >
+                  {puedeGenerar
+                    ? 'Generar fixture'
+                    : `Faltan ${maxEquipos !== null ? maxEquipos - equiposInscritos : '?'} equipos`}
+                </Text>
               </TouchableOpacity>
             )}
           </View>
@@ -175,7 +293,9 @@ export default function FixtureScreen() {
                       className="bg-primary-light rounded-xl py-2 items-center mb-3 -mt-1"
                       onPress={() => handleConfirm(partido)}
                     >
-                      <Text className="text-primary text-xs font-sans-medium">Confirmar partido</Text>
+                      <Text className="text-primary text-xs font-sans-medium">
+                        Confirmar partido
+                      </Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -186,6 +306,26 @@ export default function FixtureScreen() {
       </ScrollView>
 
       {/* Modal editar fecha */}
+      {calendarOpen && (
+        <DatePickerField
+          label="Fecha del partido"
+          value={editFecha}
+          onChange={(date) => {
+            setEditFecha(date);
+            setCalendarOpen(false);
+            setEditModal(true);
+          }}
+          minDate={fechaInicio?.slice(0, 10)}
+          maxDate={fechaFin?.slice(0, 10)}
+          visible={calendarOpen}
+          onOpen={() => setCalendarOpen(true)}
+          onClose={() => {
+            setCalendarOpen(false);
+            setEditModal(true);
+          }}
+        />
+      )}
+
       <Modal visible={editModal} transparent animationType="slide">
         <View className="flex-1 bg-black/50 justify-end">
           <View className="bg-white rounded-t-3xl px-6 py-6">
@@ -202,14 +342,18 @@ export default function FixtureScreen() {
               </Text>
             )}
 
-            <Text className="text-night text-sm font-sans-medium mb-2">Fecha y hora</Text>
-            <TextInput
-              className="bg-mist rounded-xl px-4 py-3 text-night text-sm mb-4"
-              placeholder="YYYY-MM-DDTHH:MM"
-              placeholderTextColor="#3D4F44"
-              value={editFecha}
-              onChangeText={setEditFecha}
-            />
+            <Text className="text-carbon text-sm font-sans-medium mb-1">Fecha del partido</Text>
+            <TouchableOpacity
+              onPress={() => {
+                setEditModal(false);
+                setCalendarOpen(true);
+              }}
+              className="bg-mist rounded-xl px-4 py-3 border border-mist mb-4"
+            >
+              <Text className="text-night font-sans-medium text-sm">
+                {editFecha ? editFecha.split('-').reverse().join('/') : 'Seleccionar fecha'}
+              </Text>
+            </TouchableOpacity>
 
             <TouchableOpacity
               className="bg-primary rounded-xl py-4 items-center"

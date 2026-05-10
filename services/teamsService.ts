@@ -21,6 +21,7 @@ export interface CreateTeamDto {
   nombre: string;
   escudo?: string;
   telefonoCapitan?: string;
+  cantidadJugadores?: number;
 }
 
 const getToken = () => useAuthStore.getState().token ?? undefined;

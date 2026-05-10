@@ -43,6 +43,9 @@ export const getFixture = async (torneoId: string): Promise<RondaFixture[]> => {
   return api.get(`/fixtures/tournament/${torneoId}`, getToken());
 };
 
-export const getFixtureByEquipo = async (torneoId: string, equipoId: string): Promise<Partido[]> => {
+export const getFixtureByEquipo = async (
+  torneoId: string,
+  equipoId: string,
+): Promise<Partido[]> => {
   return api.get(`/fixtures/tournament/${torneoId}/equipo/${equipoId}`, getToken());
 };
