@@ -74,9 +74,16 @@ export const api = {
   },
 
   getWithParams: async (endpoint: string, params?: Record<string, string>, token?: string) => {
-    const url = new URL(`${BASE_URL}${endpoint}`);
-    if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.append(k, v));
-    const response = await fetch(url.toString(), {
+    // Construir query string manualmente — new URL() no es confiable en React Native
+    let url = `${BASE_URL}${endpoint}`;
+    if (params) {
+      const queryString = Object.entries(params)
+        .filter(([, v]) => v !== undefined && v !== null && v !== '')
+        .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+        .join('&');
+      if (queryString) url = `${url}?${queryString}`;
+    }
+    const response = await fetch(url, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
