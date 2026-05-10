@@ -99,12 +99,14 @@ export default function TeamsScreen() {
         telefonoCapitan: telefono.trim() || undefined,
         cantidadJugadores: jugadoresNum,
       });
-      setTeams((prev) => [...prev, team]);
       setShowForm(false);
       setNombre('');
       setTelefono('');
       setCantidadJugadores('');
-      showSuccess('Equipo inscrito', 'Tu equipo fue inscrito exitosamente');
+      showSuccess(
+        'Solicitud enviada',
+        'Tu solicitud fue enviada. El organizador la revisará pronto.',
+      );
     } catch (e: any) {
       showError('Error', e.message ?? 'No se pudo inscribir el equipo');
     } finally {
