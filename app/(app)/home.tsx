@@ -17,14 +17,12 @@ import {
 } from '../../services/tournamentService';
 import TournamentCard from '../../components/tournament/TournamentCard';
 import SectionHeader from '../../components/tournament/SectionHeader';
-import DrawerMenu, { DrawerSection } from '../../components/DrawerMenu';
+import BottomTabBar, { TabSection } from '../../components/DrawerMenu';
 import { useDashboard } from '../../hooks/useDashboard';
 import ProximoPartidoCard from '../../components/dashboard/ProximoPartidoCard';
 import TorneoResumenCard from '../../components/dashboard/TorneoResumenCard';
 import ResultadoCard from '../../components/dashboard/ResultadoCard';
 import { Feather } from '@expo/vector-icons';
-import { Animated } from 'react-native';
-import { useRef } from 'react';
 
 // ─── Dashboard ────────────────────────────────────────────────
 function DashboardSection({ onPressTorneo }: { onPressTorneo: (id: string) => void }) {
@@ -78,7 +76,9 @@ function DashboardSection({ onPressTorneo }: { onPressTorneo: (id: string) => vo
       )}
       {data?.torneos && data.torneos.length > 0 ? (
         <View className="mb-4">
-          <Text className="text-night font-sans-medium text-base px-4 mb-3">Mis torneos</Text>
+          <View className="bg-primary h-1 rounded-full mb-3">
+            <Text className="text-night font-sans-medium text-base px-4 mb-3">Mis torneos</Text>
+          </View>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -299,10 +299,103 @@ function ExplorarSection({
   );
 }
 
+// ─── Mis torneos ──────────────────────────────────────────────
+function MisTorneosSection({
+  tournaments,
+  loading,
+  error,
+  onRetry,
+  onPress,
+  onRefresh,
+  refreshing,
+}: {
+  tournaments: Tournament[];
+  loading: boolean;
+  error: string | null;
+  onRetry: () => void;
+  onPress: (id: string) => void;
+  onRefresh: () => void;
+  refreshing: boolean;
+}) {
+  const router = useRouter();
+  const active = tournaments.filter((t) => t.estado !== 'BORRADOR');
+  const drafts = tournaments.filter((t) => t.estado === 'BORRADOR');
+
+  if (loading)
+    return (
+      <View className="flex-1 items-center justify-center">
+        <ActivityIndicator color="#0D7A3E" size="large" />
+      </View>
+    );
+
+  if (error)
+    return (
+      <View className="flex-1 items-center justify-center px-8">
+        <Text className="text-danger text-sm text-center mb-3">{error}</Text>
+        <TouchableOpacity onPress={onRetry}>
+          <Text className="text-primary font-sans-medium text-sm">Reintentar</Text>
+        </TouchableOpacity>
+      </View>
+    );
+
+  return (
+    <ScrollView
+      className="flex-1"
+      contentContainerStyle={{ paddingBottom: 32 }}
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor="#0D7A3E"
+          colors={['#0D7A3E']}
+        />
+      }
+    >
+      <View className="px-4 mt-4 mb-4">
+        <TouchableOpacity
+          onPress={() => router.push('/(app)/create-tournament')}
+          className="bg-primary rounded-2xl px-4 py-3 items-center justify-center"
+          activeOpacity={0.85}
+        >
+          <Text className="text-white font-sans-medium text-sm">＋ Crear torneo</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View className="px-4">
+        <SectionHeader title="Activos" count={active.length} />
+        {active.length === 0 ? (
+          <View className="bg-white rounded-2xl px-4 py-6 items-center mb-3">
+            <Text className="text-carbon text-sm text-center">No tienes torneos activos.</Text>
+          </View>
+        ) : (
+          active.map((item) => (
+            <TournamentCard key={item.id} item={item} onPress={() => onPress(item.id)} />
+          ))
+        )}
+      </View>
+
+      <View className="px-4 mt-2">
+        <SectionHeader title="Borradores" count={drafts.length} />
+        {drafts.length === 0 ? (
+          <View className="bg-white rounded-2xl px-4 py-6 items-center">
+            <Text className="text-carbon text-sm text-center">No tienes borradores.</Text>
+          </View>
+        ) : (
+          drafts.map((item) => (
+            <TournamentCard key={item.id} item={item} onPress={() => onPress(item.id)} />
+          ))
+        )}
+      </View>
+    </ScrollView>
+  );
+}
+
 // ─── Home ─────────────────────────────────────────────────────
-const SECTION_TITLES: Record<DrawerSection, string> = {
-  explorar: 'Explorar torneos',
-  dashboard: 'Dashboard',
+const SECTION_TITLES: Record<TabSection, string> = {
+  home: 'Inicio',
+  explorar: 'Explorar',
+  'mis-torneos': 'Mis torneos',
 };
 
 export default function HomeScreen() {
@@ -312,27 +405,7 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState<DrawerSection>('explorar');
-  const menuScale = useRef(new Animated.Value(1)).current;
-
-  const handleMenuPressIn = () => {
-    Animated.spring(menuScale, {
-      toValue: 0.85,
-      useNativeDriver: true,
-      speed: 50,
-      bounciness: 8,
-    }).start();
-  };
-
-  const handleMenuPressOut = () => {
-    Animated.spring(menuScale, {
-      toValue: 1,
-      useNativeDriver: true,
-      speed: 30,
-      bounciness: 10,
-    }).start();
-  };
+  const [activeSection, setActiveSection] = useState<TabSection>('home');
 
   const fetchData = useCallback(async () => {
     try {
@@ -359,30 +432,13 @@ export default function HomeScreen() {
 
   return (
     <View className="flex-1 bg-mist">
-      <View className="bg-primary px-6 pt-14 pb-4 flex-row items-center">
-        <TouchableOpacity
-          onPress={() => setDrawerOpen(true)}
-          onPressIn={handleMenuPressIn}
-          onPressOut={handleMenuPressOut}
-          className="mr-4"
-          activeOpacity={1}
-        >
-          <Animated.View
-            style={{ transform: [{ scale: menuScale }] }}
-            className="w-9 h-9 rounded-xl bg-primary-dark items-center justify-center"
-          >
-            <View className="gap-1">
-              <View className="w-5 h-0.5 bg-white rounded-full" />
-              <View className="w-5 h-0.5 bg-white rounded-full" />
-              <View className="w-3 h-0.5 bg-white rounded-full" />
-            </View>
-          </Animated.View>
-        </TouchableOpacity>
-        <Text className="text-white text-xl font-sans-medium flex-1">
+      <View className="bg-primary px-6 pt-14 pb-4">
+        <Text className="text-white text-xl font-sans-medium">
           {SECTION_TITLES[activeSection]}
         </Text>
       </View>
 
+      {activeSection === 'home' && <DashboardSection onPressTorneo={goToTournament} />}
       {activeSection === 'explorar' && (
         <ExplorarSection
           myTournaments={myTournaments}
@@ -395,14 +451,19 @@ export default function HomeScreen() {
           refreshing={refreshing}
         />
       )}
-      {activeSection === 'dashboard' && <DashboardSection onPressTorneo={goToTournament} />}
+      {activeSection === 'mis-torneos' && (
+        <MisTorneosSection
+          tournaments={myTournaments}
+          loading={loading}
+          error={error}
+          onRetry={fetchData}
+          onPress={goToTournament}
+          onRefresh={onRefresh}
+          refreshing={refreshing}
+        />
+      )}
 
-      <DrawerMenu
-        visible={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        activeSection={activeSection}
-        onSelectSection={setActiveSection}
-      />
+      <BottomTabBar activeSection={activeSection} onSelectSection={setActiveSection} />
     </View>
   );
 }

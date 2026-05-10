@@ -1,4 +1,5 @@
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Image } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { useProfile } from '../../hooks/useProfile';
@@ -41,7 +42,14 @@ export default function ProfileScreen() {
     <ScrollView className="flex-1 bg-mist">
       <CustomAlert {...alertState} onConfirm={alertState.onConfirm} onCancel={hideAlert} />
 
-      <View className="bg-primary px-6 pt-16 pb-8 items-center">
+      <View className="bg-primary px-6 pt-14 pb-8 items-center">
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={{ position: 'absolute', top: 52, left: 20 }}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Feather name="chevron-left" size={26} color="#FFFFFF" />
+        </TouchableOpacity>
         {usuario?.fotoPerfil ? (
           <Image source={{ uri: usuario.fotoPerfil }} className="w-24 h-24 rounded-full mb-3" />
         ) : (
@@ -77,8 +85,8 @@ export default function ProfileScreen() {
           </Text>
         </View>
 
-        <TouchableOpacity className="items-center py-4 mt-2" onPress={handleLogout}>
-          <Text className="text-danger text-base font-sans-medium">Cerrar sesión</Text>
+        <TouchableOpacity className="items-center py-4 mt-2 bg-danger rounded-full" onPress={handleLogout}>
+          <Text className="text-white  text-base font-sans-medium">Cerrar sesión</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
