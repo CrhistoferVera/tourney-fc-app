@@ -20,7 +20,7 @@ function AuthGuard() {
       router.replace('/welcome');
     }
     if (token && (inAuth || segments[0] === undefined)) {
-      router.replace('/(app)/home');
+      router.replace('/(app)/(tabs)/home');
     }
   }, [token, segments]);
 

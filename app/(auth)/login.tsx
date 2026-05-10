@@ -61,7 +61,7 @@ export default function LoginScreen() {
           fotoPerfil: data.fotoPerfil,
           zona: data.zona,
         });
-        router.replace('/(app)/home');
+        router.replace('/(app)/(tabs)/home');
       } else {
         showError(
           'Error al iniciar sesión',

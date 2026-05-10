@@ -131,7 +131,7 @@ export default function CreateTournamentScreen() {
         message: 'Tu torneo fue guardado como borrador.',
         onConfirm: () => {
           hideAlert();
-          router.replace('/(app)/home');
+          router.replace('/(app)/(tabs)/home');
         },
       });
     } catch {
@@ -164,7 +164,7 @@ export default function CreateTournamentScreen() {
             message: 'Tu torneo ya está disponible para inscripciones.',
             onConfirm: () => {
               hideAlert();
-              router.replace('/(app)/home');
+              router.replace('/(app)/(tabs)/home');
             },
           });
         } catch {

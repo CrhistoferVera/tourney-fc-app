@@ -20,8 +20,6 @@ const FILTROS: { key: Filtro; label: string }[] = [
   { key: 'todos', label: 'Todos' },
   { key: 'liga', label: 'Liga' },
   { key: 'copa', label: 'Copa' },
-  { key: 'publicado', label: 'Publicados' },
-  { key: 'borrador', label: 'Borradores' },
 ];
 
 type Props = {
@@ -141,15 +139,6 @@ export default function ExplorarSection({
         ))}
       </ScrollView>
 
-      <View className="px-4 mb-4">
-        <TouchableOpacity
-          onPress={() => router.push('/(app)/create-tournament')}
-          className="bg-primary rounded-2xl px-4 py-3 flex-row items-center justify-center"
-          activeOpacity={0.85}
-        >
-          <Text className="text-white font-sans-medium text-sm">＋ Crear torneo</Text>
-        </TouchableOpacity>
-      </View>
 
       {error ? (
         <View className="bg-white rounded-2xl mx-4 px-4 py-6 items-center mb-3">
@@ -162,7 +151,7 @@ export default function ExplorarSection({
 
       {showPublished && (
         <View className="px-4">
-          <SectionHeader title="Torneos publicados" count={filteredPublished.length} />
+          <SectionHeader title="Torneos " count={filteredPublished.length} />
           {filteredPublished.length === 0 ? (
             <View className="bg-white rounded-2xl px-4 py-6 items-center mb-3">
               <Text className="text-carbon text-sm text-center">
@@ -179,22 +168,6 @@ export default function ExplorarSection({
         </View>
       )}
 
-      {showDrafts && (
-        <View className="px-4 mt-2">
-          <SectionHeader title="Mis borradores" count={filteredDrafts.length} />
-          {filteredDrafts.length === 0 ? (
-            <View className="bg-white rounded-2xl px-4 py-6 items-center">
-              <Text className="text-carbon text-sm text-center">
-                {search ? 'No hay borradores que coincidan.' : 'No tienes borradores guardados.'}
-              </Text>
-            </View>
-          ) : (
-            filteredDrafts.map((item) => (
-              <TournamentCard key={item.id} item={item} onPress={() => onPress(item.id)} />
-            ))
-          )}
-        </View>
-      )}
     </ScrollView>
   );
 }
