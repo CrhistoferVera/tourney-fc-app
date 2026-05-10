@@ -1,24 +1,18 @@
 import { View, Text, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, usePathname } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-export type TabSection = 'home' | 'explorar' | 'mis-torneos';
+const TABS = [
+  { key: 'home', label: 'Home', icon: 'home', href: '/(app)/(tabs)/home' },
+  { key: 'explorar', label: 'Explorar', icon: 'search', href: '/(app)/(tabs)/explorar' },
+  { key: 'mis-torneos', label: 'Mis torneos', icon: 'award', href: '/(app)/(tabs)/mis-torneos' },
+  { key: 'perfil', label: 'Perfil', icon: 'user', href: '/(profile)' },
+] as const;
 
-interface Props {
-  readonly activeSection: TabSection;
-  readonly onSelectSection: (section: TabSection) => void;
-}
-
-const TABS: { key: string; label: string; icon: string }[] = [
-  { key: 'home', label: 'Home', icon: 'home' },
-  { key: 'explorar', label: 'Explorar', icon: 'search' },
-  { key: 'mis-torneos', label: 'Mis torneos', icon: 'award' },
-  { key: 'perfil', label: 'Perfil', icon: 'user' },
-];
-
-export default function BottomTabBar({ activeSection, onSelectSection }: Props) {
+export default function BottomTabBar() {
   const router = useRouter();
+  const pathname = usePathname();
   const { bottom } = useSafeAreaInsets();
 
   return (
@@ -38,27 +32,19 @@ export default function BottomTabBar({ activeSection, onSelectSection }: Props) 
       }}
     >
       {TABS.map((tab) => {
-        const isPerfil = tab.key === 'perfil';
-        const isActive = !isPerfil && activeSection === tab.key;
+        const isActive =
+          tab.key === 'home'
+            ? pathname === '/home' || pathname === '/'
+            : pathname.includes(`/${tab.key}`);
 
         return (
           <TouchableOpacity
             key={tab.key}
             style={{ flex: 1, alignItems: 'center' }}
-            onPress={() => {
-              if (isPerfil) {
-                router.push('/(profile)');
-              } else {
-                onSelectSection(tab.key as TabSection);
-              }
-            }}
+            onPress={() => router.navigate(tab.href as never)}
             activeOpacity={0.7}
           >
-            <Feather
-              name={tab.icon as any}
-              size={22}
-              color={isActive ? '#0D7A3E' : '#8A9E92'}
-            />
+            <Feather name={tab.icon as any} size={22} color={isActive ? '#0D7A3E' : '#8A9E92'} />
             <Text
               style={{
                 fontSize: 11,
