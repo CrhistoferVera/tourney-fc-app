@@ -51,6 +51,17 @@ export const api = {
     return handleResponse(response);
   },
 
+  patchMultipart: async (endpoint: string, formData: FormData, token?: string) => {
+    const response = await fetch(`${BASE_URL}${endpoint}`, {
+      method: 'PATCH',
+      headers: {
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+      body: formData,
+    });
+    return handleResponse(response);
+  },
+
   delete: async (endpoint: string, token?: string) => {
     const response = await fetch(`${BASE_URL}${endpoint}`, {
       method: 'DELETE',
