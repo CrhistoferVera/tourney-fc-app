@@ -5,6 +5,7 @@ import { api } from '../../services/api';
 import CustomAlert from '../../components/CustomAlert';
 import { useAlert } from '../../hooks/useAlert';
 import CodeInput from '../../components/CodeInput';
+import { Trophy } from 'lucide-react-native';
 
 export default function VerifyCodeScreen() {
   const router = useRouter();
@@ -72,7 +73,7 @@ export default function VerifyCodeScreen() {
         {/* Logo */}
         <View className="items-center mb-10">
           <View className="w-20 h-20 rounded-full bg-primary items-center justify-center mb-4">
-            <Text className="text-white text-4xl">🏆</Text>
+            <Trophy color="white" size={38} />
           </View>
           <Text className="text-primary text-2xl font-sans-medium">TourneyFC</Text>
         </View>

@@ -1,5 +1,6 @@
 import { View, Text, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Trophy } from 'lucide-react-native';
 
 export default function WelcomeScreen() {
   const router = useRouter();
@@ -9,7 +10,7 @@ export default function WelcomeScreen() {
       {/* Logo centrado */}
       <View className="flex-1 items-center justify-center">
         <View className="w-24 h-24 rounded-full bg-primary items-center justify-center mb-6">
-          <Text className="text-white text-5xl">🏆</Text>
+          <Trophy color="white" size={48} />
         </View>
         <Text className="text-primary text-3xl font-sans-medium mb-3">TourneyFC</Text>
         <Text className="text-carbon text-base text-center leading-6">
@@ -18,7 +19,7 @@ export default function WelcomeScreen() {
       </View>
 
       {/* Botones abajo */}
-      <View className="pb-12 gap-3">
+      <View className="pb-32 gap-3">
         <TouchableOpacity
           className="bg-primary rounded-xl py-4 items-center"
           onPress={() => router.push('/(auth)/register')}
