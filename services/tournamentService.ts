@@ -19,6 +19,7 @@ export interface Tournament {
   fechaInicio: string;
   fechaFin: string;
   zona: string;
+  imagen?: string;
   createdAt: string;
   rolUsuario?: string;
   equiposInscritos?: number;
@@ -34,6 +35,7 @@ export interface CreateTournamentDto {
   fechaFin: string;
   zona: string;
   campos: Campo[];
+  imagen?: string;
 }
 
 const getToken = () => useAuthStore.getState().token;
@@ -88,4 +90,21 @@ export const deleteTournament = async (id: string): Promise<void> => {
 export const startTournament = async (id: string): Promise<Tournament> => {
   const token = getToken();
   return api.patch(`/tournaments/${id}/start`, {}, token ?? undefined);
+};
+
+export const uploadTournamentImage = async (uri: string): Promise<{ url: string }> => {
+  const token = getToken();
+  const formData = new FormData();
+
+  const filename = uri.split('/').pop() || 'tournament_photo.jpg';
+  const match = /\.(\w+)$/.exec(filename);
+  const type = match ? `image/${match[1]}` : 'image/jpeg';
+
+  formData.append('image', {
+    uri,
+    name: filename,
+    type,
+  } as any);
+
+  return api.postMultipart('/tournaments/upload-image', formData, token ?? undefined);
 };

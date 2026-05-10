@@ -1,9 +1,20 @@
 import { View, Text, TouchableOpacity } from 'react-native';
+import { Trophy, ListOrdered } from 'lucide-react-native';
 import { TournamentFormat } from '../../services/tournamentService';
 
-const FORMATS: { value: TournamentFormat; label: string; desc: string }[] = [
-  { value: 'LIGA', label: 'Liga', desc: 'Todos contra todos, tabla de posiciones' },
-  { value: 'COPA', label: 'Copa', desc: 'Eliminación directa, partido único' },
+const FORMATS: { value: TournamentFormat; label: string; desc: string; icon: any }[] = [
+  { 
+    value: 'LIGA', 
+    label: 'Liga', 
+    desc: 'Todos contra todos, tabla de posiciones', 
+    icon: ListOrdered 
+  },
+  { 
+    value: 'COPA', 
+    label: 'Copa', 
+    desc: 'Eliminación directa, partido único', 
+    icon: Trophy 
+  },
 ];
 
 interface Props {
@@ -20,23 +31,25 @@ export default function Step2({ formato, onChange, error }: Props) {
       </Text>
       {FORMATS.map((f) => {
         const selected = formato === f.value;
+        const Icon = f.icon;
         return (
           <TouchableOpacity
             key={f.value}
             onPress={() => onChange(f.value)}
             activeOpacity={0.8}
-            className={`border rounded-2xl px-4 py-4 mb-3 flex-row items-center ${
+            className={`border rounded-2xl px-4 py-5 mb-4 flex-row items-center ${
               selected ? 'border-primary bg-primary-light' : 'border-mist bg-white'
             }`}
+            style={!selected ? { shadowColor: '#0F1A14', shadowOpacity: 0.03, shadowRadius: 8, elevation: 2 } : {}}
           >
             <View
-              className={`w-5 h-5 rounded-full border-2 mr-3 items-center justify-center ${
-                selected ? 'border-primary' : 'border-carbon'
+              className={`w-12 h-12 rounded-full items-center justify-center mr-4 ${
+                selected ? 'bg-white' : 'bg-mist'
               }`}
             >
-              {selected ? <View className="w-2.5 h-2.5 rounded-full bg-primary" /> : null}
+              <Icon size={24} color={selected ? '#0D7A3E' : '#3D4F44'} />
             </View>
-            <View>
+            <View className="flex-1">
               <Text
                 className={`font-sans-medium text-sm ${selected ? 'text-primary' : 'text-night'}`}
               >

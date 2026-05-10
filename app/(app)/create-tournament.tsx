@@ -1,21 +1,14 @@
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-  ActivityIndicator,
-} from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { useAuthStore } from '../../store/authStore';
 import {
-  createTournament,
-  publishTournament,
-  TournamentFormat,
-  Campo,
-} from '../../services/tournamentService';
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import CustomAlert from '../../components/CustomAlert';
 import ProgressBar from '../../components/create-tournament/ProgressBar';
 import Step1, { Step1Errors } from '../../components/create-tournament/Step1';
@@ -23,6 +16,14 @@ import Step2 from '../../components/create-tournament/Step2';
 import Step3 from '../../components/create-tournament/Step3';
 import Step4 from '../../components/create-tournament/Step4';
 import Step5 from '../../components/create-tournament/Step5';
+import {
+  Campo,
+  createTournament,
+  publishTournament,
+  TournamentFormat,
+  uploadTournamentImage,
+} from '../../services/tournamentService';
+import { useAuthStore } from '../../store/authStore';
 
 interface FormData {
   nombre: string;
@@ -34,6 +35,8 @@ interface FormData {
   maxEquipos: number;
   campos: Campo[];
   staffEmails: string[];
+  imagen?: string;
+  imagenLocal?: string;
 }
 
 const INITIAL_FORM: FormData = {
@@ -110,7 +113,7 @@ export default function CreateTournamentScreen() {
     else router.back();
   };
 
-  const buildDto = () => ({
+  const buildDto = (imageUrl?: string) => ({
     nombre: form.nombre,
     descripcion: form.descripcion,
     formato: form.formato as TournamentFormat,
@@ -118,13 +121,28 @@ export default function CreateTournamentScreen() {
     fechaInicio: form.fechaInicio,
     fechaFin: form.fechaFin,
     zona: form.zona,
+    imagen: imageUrl || form.imagen,
     campos: form.campos.filter((c) => c.nombre.trim()),
   });
+
+  const handleUploadImage = async (): Promise<string | undefined> => {
+    if (!form.imagenLocal) return form.imagen;
+    // Si ya tenemos una URL de cloudinary y la imagen local no cambió (poco probable pero por si acaso)
+    // En este caso, siempre subimos si hay imagenLocal nueva
+    try {
+      const { url } = await uploadTournamentImage(form.imagenLocal);
+      return url;
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      throw new Error('Error al subir la imagen');
+    }
+  };
 
   const handleSaveDraft = async () => {
     setSaving(true);
     try {
-      await createTournament(buildDto());
+      const imageUrl = await handleUploadImage();
+      await createTournament(buildDto(imageUrl));
       showAlert({
         type: 'success',
         title: 'Borrador guardado',
@@ -134,11 +152,11 @@ export default function CreateTournamentScreen() {
           router.replace('/(app)/(tabs)/home');
         },
       });
-    } catch {
+    } catch (error: any) {
       showAlert({
         type: 'error',
         title: 'Error',
-        message: 'No se pudo guardar el torneo. Intenta de nuevo.',
+        message: error.message || 'No se pudo guardar el torneo. Intenta de nuevo.',
         onConfirm: hideAlert,
       });
     } finally {
@@ -156,7 +174,8 @@ export default function CreateTournamentScreen() {
         hideAlert();
         setSaving(true);
         try {
-          const created = await createTournament(buildDto());
+          const imageUrl = await handleUploadImage();
+          const created = await createTournament(buildDto(imageUrl));
           await publishTournament(created.id);
           showAlert({
             type: 'success',
@@ -167,11 +186,11 @@ export default function CreateTournamentScreen() {
               router.replace('/(app)/(tabs)/home');
             },
           });
-        } catch {
+        } catch (error: any) {
           showAlert({
             type: 'error',
             title: 'Error',
-            message: 'No se pudo publicar el torneo. Intenta de nuevo.',
+            message: error.message || 'No se pudo publicar el torneo. Intenta de nuevo.',
             onConfirm: hideAlert,
           });
         } finally {
@@ -211,6 +230,7 @@ export default function CreateTournamentScreen() {
             zona={form.zona}
             fechaInicio={form.fechaInicio}
             fechaFin={form.fechaFin}
+            imagenLocal={form.imagenLocal}
             errors={step1Errors}
             onChange={onChange}
             calendarOpen={calendarOpen}
@@ -221,7 +241,17 @@ export default function CreateTournamentScreen() {
         {step === 2 && (
           <Step2
             formato={form.formato}
-            onChange={(v) => onChange('formato', v)}
+            onChange={(v) => {
+              onChange('formato', v);
+              if (v === 'COPA' && ![4, 8, 16, 32].includes(form.maxEquipos)) {
+                // Find nearest valid power of 2 for Copa, default to 8
+                const validCopa = [4, 8, 16, 32];
+                const closest = validCopa.reduce((prev, curr) =>
+                  Math.abs(curr - form.maxEquipos) < Math.abs(prev - form.maxEquipos) ? curr : prev,
+                );
+                onChange('maxEquipos', closest);
+              }
+            }}
             error={step2Error}
           />
         )}
@@ -229,6 +259,7 @@ export default function CreateTournamentScreen() {
           <Step3
             maxEquipos={form.maxEquipos}
             campos={form.campos}
+            formato={form.formato}
             onChangeEquipos={(n) => onChange('maxEquipos', n)}
             onChangeCampos={(c) => onChange('campos', c)}
           />
@@ -249,6 +280,7 @@ export default function CreateTournamentScreen() {
             zona={form.zona}
             campos={form.campos}
             staffEmails={form.staffEmails}
+            imagenLocal={form.imagenLocal}
           />
         )}
 
