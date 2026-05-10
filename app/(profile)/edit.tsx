@@ -22,6 +22,7 @@ export default function EditProfileScreen() {
   const [zona, setZona] = useState('');
   const [fotoPerfil, setFotoPerfil] = useState<string | null>(null);
   const [nombreError, setNombreError] = useState('');
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   useEffect(() => {
     if (usuario) {
@@ -49,8 +50,14 @@ export default function EditProfileScreen() {
   };
 
   const handlePickPhoto = async () => {
+    setUploadingPhoto(true);
     const url = await pickAndUploadPhoto();
-    if (url) setFotoPerfil(url);
+    setUploadingPhoto(false);
+    if (url) {
+      setFotoPerfil(url);
+    } else {
+      showError('Error al subir foto', 'No se pudo subir la imagen. Intenta nuevamente');
+    }
   };
 
   const handleSave = async () => {
@@ -78,7 +85,7 @@ export default function EditProfileScreen() {
       <ScrollView className="flex-1 bg-mist">
         {/* Header */}
         <View className="bg-primary px-6 pt-16 pb-8 items-center">
-          <TouchableOpacity onPress={handlePickPhoto} className="relative mb-3">
+          <TouchableOpacity onPress={handlePickPhoto} disabled={uploadingPhoto} className="relative mb-3">
             {fotoPerfil ? (
               <Image source={{ uri: fotoPerfil }} className="w-24 h-24 rounded-full" />
             ) : (
@@ -88,9 +95,15 @@ export default function EditProfileScreen() {
                 </Text>
               </View>
             )}
-            <View className="absolute bottom-0 right-0 bg-accent rounded-full w-7 h-7 items-center justify-center">
-              <Text className="text-white text-xs">✎</Text>
-            </View>
+            {uploadingPhoto ? (
+              <View className="absolute inset-0 rounded-full bg-black/50 items-center justify-center">
+                <ActivityIndicator color="#FFFFFF" />
+              </View>
+            ) : (
+              <View className="absolute bottom-0 right-0 bg-accent rounded-full w-7 h-7 items-center justify-center">
+                <Text className="text-white text-xs">✎</Text>
+              </View>
+            )}
           </TouchableOpacity>
           <Text className="text-white text-lg font-sans-medium">{usuario?.nombre}</Text>
         </View>
@@ -131,7 +144,7 @@ export default function EditProfileScreen() {
           <TouchableOpacity
             className="bg-primary rounded-2xl py-4 items-center mt-2"
             onPress={handleSave}
-            disabled={loading}
+            disabled={loading || uploadingPhoto}
           >
             {loading ? (
               <ActivityIndicator color="#FFFFFF" />

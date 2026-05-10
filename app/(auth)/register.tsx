@@ -2,16 +2,18 @@ import {
   View,
   Text,
   TextInput,
-  TouchableOpacity,
+  Pressable,
   ActivityIndicator,
   ScrollView,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { api } from '../../services/api';
 import CustomAlert from '../../components/CustomAlert';
 import { useAlert } from '../../hooks/useAlert';
-import { Feather } from '@expo/vector-icons';
+import { Trophy, Eye, EyeOff } from 'lucide-react-native';
+import { Colors } from '../../constants/Colors';
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -92,41 +94,44 @@ export default function RegisterScreen() {
   };
 
   return (
-    <ScrollView className="flex-1 bg-white" contentContainerStyle={{ flexGrow: 1 }}>
+    <KeyboardAvoidingView behavior="padding" className="flex-1 bg-white">
       <CustomAlert {...alertState} onConfirm={alertState.onConfirm} onCancel={hideAlert} />
-
-      <View className="flex-1 px-6 pt-20 pb-8">
-        <View className="items-center mb-10">
-          <View className="w-20 h-20 rounded-full bg-primary items-center justify-center mb-4">
-            <Text className="text-white text-4xl">🏆</Text>
+      <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
+        <View className="items-center mt-20">
+          <View className="rounded-full bg-primary p-6">
+            <Trophy color={Colors.white} size={38} />
           </View>
-          <Text className="text-primary text-2xl font-sans-medium">TourneyFC</Text>
+          <Text className="text-4xl font-sans-medium text-primary mt-4">TourneyFC</Text>
         </View>
 
-        <Text className="text-night text-3xl font-sans-medium mb-1">Crear cuenta</Text>
-        <Text className="text-carbon text-sm mb-8">Completa el formulario para registrarte</Text>
+        <Text className="mt-3 text-3xl pt-10 text-night font-sans text-center">Crear cuenta</Text>
+        <Text className="text-lg text-carbon font-sans text-center">
+          Completa el formulario para registrarte
+        </Text>
 
-        <View className="mb-4">
-          <Text className="text-night text-sm font-sans-medium mb-2">Nombre completo</Text>
+        <View className="w-full px-8 mt-8">
+          <Text className="text-night mb-2">Nombre completo</Text>
           <TextInput
-            className="bg-mist rounded-xl px-4 py-4 text-night text-base"
+            className="w-full bg-mist rounded-md px-4 py-4 mb-1 text-night text-base"
             placeholder="Juan Pérez"
-            placeholderTextColor="#3D4F44"
+            placeholderTextColor={Colors.carbon}
             value={nombre}
             onChangeText={(v) => {
               setNombre(v);
               validateNombre(v);
             }}
           />
-          {nombreError ? <Text className="text-danger text-xs mt-1">{nombreError}</Text> : null}
-        </View>
+          {nombreError ? (
+            <Text className="text-danger text-xs mb-3">{nombreError}</Text>
+          ) : (
+            <View className="mb-4" />
+          )}
 
-        <View className="mb-4">
-          <Text className="text-night text-sm font-sans-medium mb-2">Correo electrónico</Text>
+          <Text className="text-night mb-2">Correo electrónico</Text>
           <TextInput
-            className="bg-mist rounded-xl px-4 py-4 text-night text-base"
-            placeholder="tu@email.com"
-            placeholderTextColor="#3D4F44"
+            className="w-full bg-mist rounded-md px-4 py-4 mb-1 text-night text-base"
+            placeholder="correo@ejemplo.com"
+            placeholderTextColor={Colors.carbon}
             keyboardType="email-address"
             autoCapitalize="none"
             value={email}
@@ -135,16 +140,18 @@ export default function RegisterScreen() {
               validateEmail(v);
             }}
           />
-          {emailError ? <Text className="text-danger text-xs mt-1">{emailError}</Text> : null}
-        </View>
+          {emailError ? (
+            <Text className="text-danger text-xs mb-3">{emailError}</Text>
+          ) : (
+            <View className="mb-4" />
+          )}
 
-        <View className="mb-4">
-          <Text className="text-night text-sm font-sans-medium mb-2">Contraseña</Text>
-          <View className="bg-mist rounded-xl px-4 py-4 flex-row items-center">
+          <Text className="text-night mb-2">Contraseña</Text>
+          <View className="w-full bg-mist rounded-md flex-row items-center mb-1">
             <TextInput
-              className="flex-1 text-night text-base"
+              className="flex-1 px-4 py-4 text-night text-base"
               placeholder="••••••••"
-              placeholderTextColor="#3D4F44"
+              placeholderTextColor={Colors.carbon}
               secureTextEntry={!showPassword}
               value={password}
               onChangeText={(v) => {
@@ -152,20 +159,26 @@ export default function RegisterScreen() {
                 validatePassword(v);
               }}
             />
-            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-              <Feather name={showPassword ? 'eye-off' : 'eye'} size={22} color="#3D4F44" />
-            </TouchableOpacity>
+            <Pressable onPress={() => setShowPassword(!showPassword)} className="pr-4">
+              {showPassword ? (
+                <EyeOff color={Colors.carbon} size={20} />
+              ) : (
+                <Eye color={Colors.carbon} size={20} />
+              )}
+            </Pressable>
           </View>
-          {passwordError ? <Text className="text-danger text-xs mt-1">{passwordError}</Text> : null}
-        </View>
+          {passwordError ? (
+            <Text className="text-danger text-xs mb-3">{passwordError}</Text>
+          ) : (
+            <View className="mb-4" />
+          )}
 
-        <View className="mb-8">
-          <Text className="text-night text-sm font-sans-medium mb-2">Confirmar contraseña</Text>
-          <View className="bg-mist rounded-xl px-4 py-4 flex-row items-center">
+          <Text className="text-night mb-2">Confirmar contraseña</Text>
+          <View className="w-full bg-mist rounded-md flex-row items-center mb-1">
             <TextInput
-              className="flex-1 text-night text-base"
+              className="flex-1 px-4 py-4 text-night text-base"
               placeholder="••••••••"
-              placeholderTextColor="#3D4F44"
+              placeholderTextColor={Colors.carbon}
               secureTextEntry={!showConfirm}
               value={confirmPassword}
               onChangeText={(v) => {
@@ -173,36 +186,47 @@ export default function RegisterScreen() {
                 validateConfirm(v);
               }}
             />
-            <TouchableOpacity onPress={() => setShowConfirm(!showConfirm)}>
-              <Feather name={showConfirm ? 'eye-off' : 'eye'} size={22} color="#3D4F44" />
-            </TouchableOpacity>
+            <Pressable onPress={() => setShowConfirm(!showConfirm)} className="pr-4">
+              {showConfirm ? (
+                <EyeOff color={Colors.carbon} size={20} />
+              ) : (
+                <Eye color={Colors.carbon} size={20} />
+              )}
+            </Pressable>
           </View>
-          {confirmError ? <Text className="text-danger text-xs mt-1">{confirmError}</Text> : null}
-        </View>
-
-        <TouchableOpacity
-          className="bg-primary rounded-xl py-4 items-center mb-6"
-          onPress={handleRegister}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#FFFFFF" />
+          {confirmError ? (
+            <Text className="text-danger text-xs mb-3">{confirmError}</Text>
           ) : (
-            <Text className="text-white font-sans-medium text-base">Crear cuenta</Text>
+            <View className="mb-8" />
           )}
-        </TouchableOpacity>
 
-        <View className="flex-row justify-center mb-4">
-          <Text className="text-carbon text-sm">¿Ya tienes cuenta? </Text>
-          <TouchableOpacity onPress={() => router.replace('/(auth)/login')}>
-            <Text className="text-primary text-sm font-sans-medium">Iniciar sesión</Text>
-          </TouchableOpacity>
+          <Pressable
+            className={`py-4 rounded-md active:opacity-80 ${loading ? 'bg-primary/70' : 'bg-primary'}`}
+            onPress={handleRegister}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color={Colors.white} />
+            ) : (
+              <Text className="text-white text-center font-sans-bold">Crear cuenta</Text>
+            )}
+          </Pressable>
+
+          <Text className="text-night text-center mt-4 mb-4">
+            ¿Ya tienes cuenta?{' '}
+            <Text
+              className="text-primary font-sans-bold"
+              onPress={() => router.replace('/(auth)/login')}
+            >
+              Iniciar sesión
+            </Text>
+          </Text>
+
+          <Text className="text-carbon text-xs text-center">
+            Al crear una cuenta, aceptas nuestros términos de servicio y política de privacidad
+          </Text>
         </View>
-
-        <Text className="text-carbon text-xs text-center">
-          Al crear una cuenta, aceptas nuestros términos de servicio y política de privacidad
-        </Text>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
