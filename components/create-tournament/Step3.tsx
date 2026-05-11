@@ -1,16 +1,23 @@
 import { useState } from 'react';
-import { View, Text, TouchableOpacity, TextInput } from 'react-native';
-import { Campo } from '../../services/tournamentService';
+import { Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Campo, TournamentFormat } from '../../services/tournamentService';
 import MapPickerModal from './MapPickerModal';
 
 interface Props {
   maxEquipos: number;
   campos: Campo[];
+  formato: TournamentFormat | '';
   onChangeEquipos: (n: number) => void;
   onChangeCampos: (campos: Campo[]) => void;
 }
 
-export default function Step3({ maxEquipos, campos, onChangeEquipos, onChangeCampos }: Props) {
+export default function Step3({
+  maxEquipos,
+  campos,
+  formato,
+  onChangeEquipos,
+  onChangeCampos,
+}: Props) {
   const [mapOpen, setMapOpen] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
@@ -34,25 +41,45 @@ export default function Step3({ maxEquipos, campos, onChangeEquipos, onChangeCam
     setEditingIndex(null);
   };
 
+  const validCopa = [4, 8, 16, 32];
+
+  const handleMinus = () => {
+    if (formato === 'COPA') {
+      const idx = validCopa.indexOf(maxEquipos);
+      if (idx > 0) onChangeEquipos(validCopa[idx - 1]);
+    } else {
+      onChangeEquipos(Math.max(2, maxEquipos - 2));
+    }
+  };
+
+  const handlePlus = () => {
+    if (formato === 'COPA') {
+      const idx = validCopa.indexOf(maxEquipos);
+      if (idx < validCopa.length - 1) onChangeEquipos(validCopa[idx + 1]);
+    } else {
+      onChangeEquipos(Math.min(32, maxEquipos + 2)); // Limit to 32
+    }
+  };
+
   return (
     <>
       <View className="items-center mb-6">
         <Text className="text-carbon text-sm font-sans-medium mb-3">Número de equipos</Text>
         <View className="flex-row items-center gap-6">
           <TouchableOpacity
-            onPress={() => onChangeEquipos(Math.max(2, maxEquipos - 2))}
-            className="w-10 h-10 rounded-full bg-white border border-mist items-center justify-center"
+            onPress={handleMinus}
+            className="w-12 h-12 rounded-full bg-white border border-mist items-center justify-center shadow-sm"
           >
-            <Text className="text-primary text-xl font-sans-medium">−</Text>
+            <Text className="text-primary text-2xl font-sans-medium">−</Text>
           </TouchableOpacity>
-          <Text className="text-primary text-3xl font-sans-medium w-12 text-center">
+          <Text className="text-primary text-4xl font-sans-bold w-16 text-center">
             {maxEquipos}
           </Text>
           <TouchableOpacity
-            onPress={() => onChangeEquipos(maxEquipos + 2)}
-            className="w-10 h-10 rounded-full bg-white border border-mist items-center justify-center"
+            onPress={handlePlus}
+            className="w-12 h-12 rounded-full bg-white border border-mist items-center justify-center shadow-sm"
           >
-            <Text className="text-primary text-xl font-sans-medium">＋</Text>
+            <Text className="text-primary text-2xl font-sans-medium">+</Text>
           </TouchableOpacity>
         </View>
       </View>

@@ -62,6 +62,17 @@ export const api = {
     return handleResponse(response);
   },
 
+  postMultipart: async (endpoint: string, formData: FormData, token?: string) => {
+    const response = await fetch(`${BASE_URL}${endpoint}`, {
+      method: 'POST',
+      headers: {
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+      body: formData,
+    });
+    return handleResponse(response);
+  },
+
   delete: async (endpoint: string, token?: string) => {
     const response = await fetch(`${BASE_URL}${endpoint}`, {
       method: 'DELETE',
