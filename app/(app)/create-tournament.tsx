@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -8,7 +8,9 @@ import {
   Text,
   TouchableOpacity,
   View,
+  BackHandler,
 } from 'react-native';
+import { ChevronLeft } from 'lucide-react-native';
 import CustomAlert from '../../components/CustomAlert';
 import ProgressBar from '../../components/create-tournament/ProgressBar';
 import Step1, { Step1Errors } from '../../components/create-tournament/Step1';
@@ -109,9 +111,31 @@ export default function CreateTournamentScreen() {
   };
 
   const back = () => {
-    if (step > 1) setStep(step - 1);
-    else router.back();
+    if (step > 1) {
+      setStep(step - 1);
+    } else {
+      showAlert({
+        type: 'confirm',
+        title: 'Cancelar creación',
+        message: '¿Estás seguro de que deseas salir? Perderás todos los datos del torneo.',
+        onConfirm: () => {
+          hideAlert();
+          router.back();
+        },
+        onCancel: hideAlert,
+      });
+    }
   };
+
+  useEffect(() => {
+    const onBackPress = () => {
+      back();
+      return true; // prevent default behavior
+    };
+
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => backHandler.remove();
+  }, [step]); // Dependencias: step (para que `back` use el valor actual de step)
 
   const buildDto = (imageUrl?: string) => ({
     nombre: form.nombre,
@@ -208,8 +232,8 @@ export default function CreateTournamentScreen() {
       {/* Header */}
       <View className="bg-primary px-6 pt-14 pb-4">
         <View className="flex-row items-center">
-          <TouchableOpacity onPress={back} className="mr-3">
-            <Text className="text-white text-base">‹</Text>
+          <TouchableOpacity onPress={back} className="mr-3 p-1">
+            <ChevronLeft size={28} color="white" />
           </TouchableOpacity>
           <Text className="text-white text-xl font-sans-medium">Crear torneo</Text>
         </View>
@@ -307,33 +331,33 @@ export default function CreateTournamentScreen() {
           <View className="flex-row gap-2 mt-6">
             <TouchableOpacity
               onPress={back}
-              className="flex-1 border border-primary rounded-2xl py-3 items-center"
+              className="flex-1 border border-primary rounded-2xl py-3 justify-center items-center"
               activeOpacity={0.8}
             >
-              <Text className="text-primary font-sans-medium text-sm">Anterior</Text>
+              <Text className="text-primary font-sans-medium text-xs text-center">Anterior</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={handleSaveDraft}
               disabled={saving}
-              className="flex-1 border border-primary rounded-2xl py-3 items-center"
+              className="flex-1 border border-primary rounded-2xl py-3 justify-center items-center px-1"
               activeOpacity={0.8}
             >
               {saving ? (
                 <ActivityIndicator color="#0D7A3E" size="small" />
               ) : (
-                <Text className="text-primary font-sans-medium text-sm">Guardar borrador</Text>
+                <Text className="text-primary font-sans-medium text-xs text-center leading-tight">Guardar borrador</Text>
               )}
             </TouchableOpacity>
             <TouchableOpacity
               onPress={handlePublish}
               disabled={saving}
-              className="flex-1 bg-primary rounded-2xl py-3 items-center"
+              className="flex-1 bg-primary rounded-2xl py-3 justify-center items-center px-1"
               activeOpacity={0.85}
             >
               {saving ? (
                 <ActivityIndicator color="white" size="small" />
               ) : (
-                <Text className="text-white font-sans-medium text-sm">Publicar torneo</Text>
+                <Text className="text-white font-sans-medium text-xs text-center leading-tight">Publicar torneo</Text>
               )}
             </TouchableOpacity>
           </View>

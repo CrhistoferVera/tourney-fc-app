@@ -1,7 +1,7 @@
 import { api } from './api';
 import { useAuthStore } from '../store/authStore';
 
-export type TournamentFormat = 'LIGA' | ' COPA' | 'GRUPOS' | 'ELIMINATORIA';
+export type TournamentFormat = 'LIGA' | 'COPA' | 'GRUPOS' | 'ELIMINATORIA';
 export type TournamentStatus = 'BORRADOR' | 'EN_INSCRIPCION' | 'EN_CURSO' | 'FINALIZADO';
 
 export interface Campo {

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, TouchableOpacity, TextInput } from 'react-native';
+import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Campo, TournamentFormat } from '../../services/tournamentService';
 import MapPickerModal from './MapPickerModal';
 
@@ -11,7 +11,13 @@ interface Props {
   onChangeCampos: (campos: Campo[]) => void;
 }
 
-export default function Step3({ maxEquipos, campos, formato, onChangeEquipos, onChangeCampos }: Props) {
+export default function Step3({
+  maxEquipos,
+  campos,
+  formato,
+  onChangeEquipos,
+  onChangeCampos,
+}: Props) {
   const [mapOpen, setMapOpen] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
@@ -58,9 +64,7 @@ export default function Step3({ maxEquipos, campos, formato, onChangeEquipos, on
   return (
     <>
       <View className="items-center mb-6">
-        <Text className="text-carbon text-sm font-sans-medium mb-3">
-          Número de equipos {formato === 'COPA' ? '(Solo 4, 8, 16, 32)' : ''}
-        </Text>
+        <Text className="text-carbon text-sm font-sans-medium mb-3">Número de equipos</Text>
         <View className="flex-row items-center gap-6">
           <TouchableOpacity
             onPress={handleMinus}
