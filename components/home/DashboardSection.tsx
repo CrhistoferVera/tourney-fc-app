@@ -60,22 +60,16 @@ export default function DashboardSection({ onPressTorneo }: { onPressTorneo: (id
       )}
 
       {data?.torneos && data.torneos.length > 0 && (
-        <View className="mb-4">
-          <View className="flex-row items-center justify-between px-4 mb-3">
-            <Text className="text-night font-sans-medium text-base px-4 mb-3">Mis torneos</Text>
-            <Link href="/(app)/mis-torneos">
+        <View className="mb-4 px-4">
+          <View className="flex-row items-center justify-between mb-3">
+            <Text className="text-night font-sans-medium text-base">Mis torneos</Text>
+            <Link href="/mis-torneos">
               <Text className="text-primary font-sans-medium text-sm">Ver todos</Text>
             </Link>
           </View>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingLeft: 16, paddingRight: 8 }}
-          >
-            {data.torneos.map((t) => (
-              <TorneoResumenCard key={t.id} torneo={t} onPress={onPressTorneo} />
-            ))}
-          </ScrollView>
+          {data.torneos.map((t) => (
+            <TorneoResumenCard key={t.id} torneo={t} onPress={onPressTorneo} />
+          ))}
         </View>
       )}
 

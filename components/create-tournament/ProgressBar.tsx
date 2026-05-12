@@ -1,6 +1,6 @@
 import { View, Text } from 'react-native';
 
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 4;
 
 interface Props {
   step: number;

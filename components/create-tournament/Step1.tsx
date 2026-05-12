@@ -6,6 +6,7 @@ import InputField from './InputField';
 
 export interface Step1Errors {
   nombre?: string;
+  zona?: string;
   fechaInicio?: string;
   fechaFin?: string;
 }
@@ -89,10 +90,11 @@ export default function Step1({
         multiline
       />
       <InputField
-        label="Zona / Ciudad"
+        label="Zona / Ciudad *"
         placeholder="Ej: Cochabamba"
         value={zona}
         onChangeText={(v) => onChange('zona', v)}
+        error={errors.zona}
       />
       <View className="flex-row gap-3">
         <DatePickerField
