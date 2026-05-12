@@ -1,4 +1,4 @@
-import { View, Text } from 'react-native';
+import { View, Text, Image } from 'react-native';
 import { TournamentFormat, Campo } from '../../services/tournamentService';
 
 const FORMAT_LABEL: Record<string, string> = {
@@ -15,6 +15,7 @@ interface Props {
   zona: string;
   campos: Campo[];
   staffEmails: string[];
+  imagenLocal?: string;
 }
 
 function toDisplayDate(iso: string) {
@@ -32,6 +33,7 @@ export default function Step5({
   zona,
   campos,
   staffEmails,
+  imagenLocal,
 }: Props) {
   const rows = [
     { label: 'Nombre', value: nombre || '—' },
@@ -55,6 +57,13 @@ export default function Step5({
   return (
     <>
       <Text className="text-night font-sans-medium text-base mb-4">Resumen del torneo</Text>
+
+      {imagenLocal && (
+        <View className="mb-4 rounded-2xl overflow-hidden border border-mist bg-white">
+          <Image source={{ uri: imagenLocal }} className="w-full h-32" resizeMode="cover" />
+        </View>
+      )}
+
       <View
         className="bg-white rounded-2xl px-4 py-2 border border-mist"
         style={{ shadowColor: '#0F1A14', shadowOpacity: 0.04, shadowRadius: 6, elevation: 1 }}
