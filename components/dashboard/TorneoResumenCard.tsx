@@ -23,7 +23,7 @@ const ROL_TEXT: Record<string, string> = {
 export default function TorneoResumenCard({ torneo, onPress }: Props) {
   return (
     <TouchableOpacity
-      className="bg-white rounded-2xl p-4 mr-3 w-48"
+      className="bg-white rounded-2xl p-4 mb-3"
       onPress={() => onPress(torneo.id)}
       activeOpacity={0.85}
     >

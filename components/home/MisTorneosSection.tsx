@@ -67,7 +67,7 @@ export default function MisTorneosSection({
     >
       <View className="px-4 mt-4 mb-4">
         <TouchableOpacity
-          onPress={() => router.push('/(app)/create-tournament')}
+          onPress={() => router.push('/create-tournament')}
           className="bg-primary rounded-2xl px-4 py-3 items-center justify-center"
           activeOpacity={0.85}
         >

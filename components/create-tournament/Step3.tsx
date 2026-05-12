@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { MapPin } from 'lucide-react-native';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Campo, TournamentFormat } from '../../services/tournamentService';
 import MapPickerModal from './MapPickerModal';
@@ -124,9 +125,10 @@ export default function Step3({
               />
               <TouchableOpacity
                 onPress={() => openMap(i)}
-                className="ml-2 bg-primary-light rounded-lg px-2 py-1"
+                className="ml-2 bg-primary-light rounded-lg px-2 py-1 flex-row items-center gap-1"
               >
-                <Text className="text-primary text-xs">📍 Mapa</Text>
+                <MapPin size={14} color="#0D7A3E" />
+                <Text className="text-primary text-xs font-sans-medium">Mapa</Text>
               </TouchableOpacity>
             </View>
           </View>

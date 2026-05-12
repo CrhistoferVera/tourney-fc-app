@@ -16,7 +16,6 @@ import ProgressBar from '../../components/create-tournament/ProgressBar';
 import Step1, { Step1Errors } from '../../components/create-tournament/Step1';
 import Step2 from '../../components/create-tournament/Step2';
 import Step3 from '../../components/create-tournament/Step3';
-import Step4 from '../../components/create-tournament/Step4';
 import Step5 from '../../components/create-tournament/Step5';
 import {
   Campo,
@@ -90,6 +89,7 @@ export default function CreateTournamentScreen() {
     if (step === 1) {
       const errors: Step1Errors = {};
       if (!form.nombre.trim()) errors.nombre = 'El nombre es obligatorio';
+      if (!form.zona.trim()) errors.zona = 'La zona es obligatoria';
       if (!form.fechaInicio) errors.fechaInicio = 'Selecciona la fecha de inicio';
       if (!form.fechaFin) errors.fechaFin = 'Selecciona la fecha de fin';
       setStep1Errors(errors);
@@ -107,23 +107,28 @@ export default function CreateTournamentScreen() {
 
   const next = () => {
     if (!validateStep()) return;
-    if (step < 5) setStep(step + 1);
+    if (step < 4) setStep(step + 1);
   };
 
   const back = () => {
     if (step > 1) {
       setStep(step - 1);
     } else {
-      showAlert({
-        type: 'confirm',
-        title: 'Cancelar creación',
-        message: '¿Estás seguro de que deseas salir? Perderás todos los datos del torneo.',
-        onConfirm: () => {
-          hideAlert();
-          router.back();
-        },
-        onCancel: hideAlert,
-      });
+      const hasData = form.nombre !== '' || form.descripcion !== '' || form.zona !== '' || form.fechaInicio !== '' || form.fechaFin !== '' || form.formato !== '' || form.campos.length > 0 || form.imagenLocal !== undefined;
+      if (hasData) {
+        showAlert({
+          type: 'confirm',
+          title: 'Cancelar creación',
+          message: '¿Estás seguro de que deseas salir? Perderás todos los datos del torneo.',
+          onConfirm: () => {
+            hideAlert();
+            router.back();
+          },
+          onCancel: hideAlert,
+        });
+      } else {
+        router.back();
+      }
     }
   };
 
@@ -173,7 +178,7 @@ export default function CreateTournamentScreen() {
         message: 'Tu torneo fue guardado como borrador.',
         onConfirm: () => {
           hideAlert();
-          router.replace('/(app)/(tabs)/home');
+          router.replace('/home');
         },
       });
     } catch (error: any) {
@@ -207,7 +212,7 @@ export default function CreateTournamentScreen() {
             message: 'Tu torneo ya está disponible para inscripciones.',
             onConfirm: () => {
               hideAlert();
-              router.replace('/(app)/(tabs)/home');
+              router.replace('/home');
             },
           });
         } catch (error: any) {
@@ -289,12 +294,6 @@ export default function CreateTournamentScreen() {
           />
         )}
         {step === 4 && (
-          <Step4
-            staffEmails={form.staffEmails}
-            onChange={(emails) => onChange('staffEmails', emails)}
-          />
-        )}
-        {step === 5 && (
           <Step5
             nombre={form.nombre}
             formato={form.formato}
@@ -308,7 +307,7 @@ export default function CreateTournamentScreen() {
           />
         )}
 
-        {step < 5 ? (
+        {step < 4 ? (
           <View className="flex-row gap-3 mt-6">
             {step > 1 ? (
               <TouchableOpacity
