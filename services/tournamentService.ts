@@ -23,7 +23,9 @@ export interface Tournament {
   createdAt: string;
   rolUsuario?: string;
   equiposInscritos?: number;
+  equiposAprobados?: number;
   totalPartidos?: number;
+  tieneSolicitudPendiente?: boolean;
 }
 
 export interface CreateTournamentDto {

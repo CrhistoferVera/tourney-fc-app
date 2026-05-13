@@ -1,15 +1,18 @@
-import { View, Text, TouchableOpacity, Image } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Team } from '../../services/teamsService';
+import ShieldDisplay from './ShieldDisplay';
 
 interface Props {
-  team: Team;
-  canDelete?: boolean;
-  onDelete?: (id: string) => void;
-  onPress?: (id: string) => void;
+  readonly team: Team;
+  readonly canDelete?: boolean;
+  readonly onDelete?: (id: string) => void;
+  readonly onPress?: (id: string) => void;
 }
 
 export default function TeamCard({ team, canDelete, onDelete, onPress }: Props) {
+  const suffix = team.cantidadJugadores === 1 ? '' : 'es';
+
   return (
     <TouchableOpacity
       onPress={() => onPress?.(team.id)}
@@ -19,19 +22,15 @@ export default function TeamCard({ team, canDelete, onDelete, onPress }: Props) 
     >
       <View className="flex-row items-center justify-between">
         <View className="flex-row items-center flex-1">
-          {team.escudo ? (
-            <Image source={{ uri: team.escudo }} className="w-10 h-10 rounded-full mr-3" />
-          ) : (
-            <View className="w-10 h-10 rounded-full bg-primary-light items-center justify-center mr-3">
-              <Feather name="shield" size={18} color="#0D7A3E" />
-            </View>
-          )}
+          <View className="mr-3">
+            <ShieldDisplay escudo={team.escudo} size={40} />
+          </View>
           <View className="flex-1">
             <Text className="text-night font-sans-medium text-sm" numberOfLines={1}>
               {team.nombre}
             </Text>
             <Text className="text-carbon text-xs mt-0.5">
-              {team.cantidadJugadores} jugador{team.cantidadJugadores !== 1 ? 'es' : ''}
+              {team.cantidadJugadores} jugador{suffix}
             </Text>
           </View>
         </View>

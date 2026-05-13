@@ -5,6 +5,32 @@ export interface Jugador {
   id: string;
   nombre: string;
   fotoPerfil: string | null;
+  email?: string;
+}
+
+export interface PlayerInvitacion {
+  id: string;
+  email: string;
+  createdAt: string;
+}
+
+export interface UsuarioEquipoRow {
+  id: string;
+  usuarioId: string;
+  equipoId: string;
+  createdAt: string;
+  usuario: Jugador;
+}
+
+export interface MyTeam {
+  id: string;
+  nombre: string;
+  escudo: string | null;
+  telefonoCapitan: string | null;
+  cantidadJugadores: number | null;
+  jugadores: UsuarioEquipoRow[];
+  invitaciones: PlayerInvitacion[];
+  capitanId: string | null;
 }
 
 export interface Team {
@@ -44,4 +70,16 @@ export const deleteTeam = async (id: string): Promise<void> => {
 
 export const joinTeam = async (equipoId: string): Promise<void> => {
   await api.post(`/teams/${equipoId}/join`, {}, getToken());
+};
+
+export const uploadEscudo = async (formData: FormData): Promise<{ url: string }> => {
+  return api.postMultipart('/teams/upload-escudo', formData, getToken());
+};
+
+export const getMyTeam = async (torneoId: string): Promise<MyTeam> => {
+  return api.get(`/teams/tournament/${torneoId}/my-team`, getToken());
+};
+
+export const invitePlayer = async (teamId: string, email: string): Promise<{ mensaje: string }> => {
+  return api.post(`/teams/${teamId}/invite-player`, { email }, getToken());
 };

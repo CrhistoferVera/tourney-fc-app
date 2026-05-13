@@ -5,8 +5,12 @@ const handleResponse = async (response: Response) => {
   const data = await response.json();
   if (response.status === 401) {
     const { useAuthStore } = await import('../store/authStore');
-    useAuthStore.getState().clearAuth();
-    throw new Error('Sesión expirada');
+    const currentToken = useAuthStore.getState().token;
+    if (currentToken) {
+      useAuthStore.getState().clearAuth();
+      throw new Error('Sesión expirada');
+    }
+    throw new Error(data.message || data.error || 'Correo electrónico o contraseña incorrectos');
   }
   if (!response.ok) {
     const errorMessage = data.message || data.error || 'Error en la petición';

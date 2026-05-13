@@ -23,14 +23,14 @@ const FILTROS: { key: Filtro; label: string }[] = [
 ];
 
 type Props = {
-  myTournaments: Tournament[];
-  publicTournaments: Tournament[];
-  loading: boolean;
-  error: string | null;
-  onRetry: () => void;
-  onPress: (id: string) => void;
-  onRefresh: () => void;
-  refreshing: boolean;
+  readonly myTournaments: Tournament[];
+  readonly publicTournaments: Tournament[];
+  readonly loading: boolean;
+  readonly error: string | null;
+  readonly onRetry: () => void;
+  readonly onPress: (id: string) => void;
+  readonly onRefresh: () => void;
+  readonly refreshing: boolean;
 };
 
 export default function ExplorarSection({
@@ -47,7 +47,6 @@ export default function ExplorarSection({
   const [search, setSearch] = useState('');
   const [filtro, setFiltro] = useState<Filtro>('todos');
 
-  const myDrafts = myTournaments.filter((t) => t.estado === 'BORRADOR');
   const myActive = myTournaments.filter((t) => t.estado !== 'BORRADOR');
   const myIds = new Set(myTournaments.map((t) => t.id));
   const otherPublic = publicTournaments.filter((t) => !myIds.has(t.id));
@@ -70,13 +69,7 @@ export default function ExplorarSection({
     return applySearch(applyFormatFilter(allPublished));
   }, [search, filtro, myTournaments, publicTournaments]);
 
-  const filteredDrafts = useMemo(() => {
-    if (filtro === 'publicado' || filtro === 'liga' || filtro === 'copa') return [];
-    return applySearch(myDrafts);
-  }, [search, filtro, myTournaments]);
-
   const showPublished = filtro !== 'borrador';
-  const showDrafts = filtro === 'todos' || filtro === 'borrador';
 
   if (loading)
     return (
@@ -162,7 +155,20 @@ export default function ExplorarSection({
             </View>
           ) : (
             filteredPublished.map((item) => (
-              <TournamentCard key={item.id} item={item} onPress={() => onPress(item.id)} />
+              <TournamentCard
+                key={item.id}
+                item={item}
+                onPress={() => onPress(item.id)}
+                onInscribirse={
+                  !item.rolUsuario && item.estado === 'EN_INSCRIPCION'
+                    ? () =>
+                        router.push({
+                          pathname: '/(app)/tournament/inscribirse',
+                          params: { id: item.id },
+                        } as never)
+                    : undefined
+                }
+              />
             ))
           )}
         </View>

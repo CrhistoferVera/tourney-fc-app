@@ -3,14 +3,13 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  TextInput,
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState, useCallback } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useState, useCallback } from 'react';
 import { Feather } from '@expo/vector-icons';
-import { getTeamsByTournament, createTeam, deleteTeam, Team } from '../../../services/teamsService';
+import { getTeamsByTournament, deleteTeam, Team } from '../../../services/teamsService';
 import {
   getInscripciones,
   actualizarEstadoInscripcion,
@@ -30,22 +29,18 @@ export default function TeamsScreen() {
 
   const router = useRouter();
   const { alertState, hideAlert, showError, showSuccess, showConfirm } = useAlert();
-  const maxEquipos = maxEquiposParam ? parseInt(maxEquiposParam, 10) : null;
+  const maxEquipos = maxEquiposParam ? Number.parseInt(maxEquiposParam, 10) : null;
 
   const [teams, setTeams] = useState<Team[]>([]);
   const [inscripciones, setInscripciones] = useState<Inscripcion[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [showForm, setShowForm] = useState(false);
-  const [nombre, setNombre] = useState('');
-  const [telefono, setTelefono] = useState('');
-  const [cantidadJugadores, setCantidadJugadores] = useState('');
-  const [saving, setSaving] = useState(false);
 
   const enCursoOFinalizado = estado === 'EN_CURSO' || estado === 'FINALIZADO';
   const isOrganizadorOStaff = rol === 'ORGANIZADOR' || rol === 'STAFF';
   const puedeEliminar = isOrganizadorOStaff && !enCursoOFinalizado;
   const cupoLleno = maxEquipos !== null && teams.length >= maxEquipos;
+  const puedeInscribir = !rol && estado === 'EN_INSCRIPCION' && !cupoLleno;
 
   const fetchTeams = useCallback(async () => {
     if (!torneoId) return;
@@ -67,9 +62,12 @@ export default function TeamsScreen() {
     }
   }, [torneoId, isOrganizadorOStaff]);
 
-  useEffect(() => {
-    Promise.all([fetchTeams(), fetchInscripciones()]).finally(() => setLoading(false));
-  }, [fetchTeams, fetchInscripciones]);
+  useFocusEffect(
+    useCallback(() => {
+      setLoading(true);
+      Promise.all([fetchTeams(), fetchInscripciones()]).finally(() => setLoading(false));
+    }, [fetchTeams, fetchInscripciones]),
+  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -77,95 +75,52 @@ export default function TeamsScreen() {
     setRefreshing(false);
   }, [fetchTeams, fetchInscripciones]);
 
-  const handleCreate = async () => {
-    if (!nombre.trim()) {
-      showError('Campo requerido', 'Ingresa el nombre del equipo');
-      return;
-    }
-    if (cupoLleno) {
-      showError('Cupo lleno', `El torneo ya tiene el máximo de ${maxEquipos} equipos inscritos`);
-      return;
-    }
-    const jugadoresNum = cantidadJugadores.trim() ? parseInt(cantidadJugadores, 10) : undefined;
-    if (cantidadJugadores.trim() && (isNaN(jugadoresNum!) || jugadoresNum! < 1)) {
-      showError('Cantidad inválida', 'Ingresa un número de jugadores válido');
-      return;
-    }
-    if (!torneoId) return;
-    setSaving(true);
+  const goToInscribirse = () =>
+    router.push({
+      pathname: '/(app)/tournament/inscribirse',
+      params: { id: torneoId },
+    } as never);
+
+  const doDelete = async (teamId: string) => {
     try {
-      const team = await createTeam(torneoId, {
-        nombre: nombre.trim(),
-        telefonoCapitan: telefono.trim() || undefined,
-        cantidadJugadores: jugadoresNum,
-      });
-      setShowForm(false);
-      setNombre('');
-      setTelefono('');
-      setCantidadJugadores('');
-      showSuccess(
-        'Solicitud enviada',
-        'Tu solicitud fue enviada. El organizador la revisará pronto.',
-      );
+      await deleteTeam(teamId);
+      setTeams((prev) => prev.filter((t) => t.id !== teamId));
     } catch (e: any) {
-      showError('Error', e.message ?? 'No se pudo inscribir el equipo');
-    } finally {
-      setSaving(false);
+      showError('Error', e.message ?? 'No se pudo eliminar el equipo');
     }
   };
 
   const handleDelete = (teamId: string, teamNombre: string) => {
-    showConfirm(
-      'Eliminar equipo',
-      `¿Eliminar "${teamNombre}" del torneo?`,
-      async () => {
-        try {
-          await deleteTeam(teamId);
-          setTeams((prev) => prev.filter((t) => t.id !== teamId));
-        } catch (e: any) {
-          showError('Error', e.message ?? 'No se pudo eliminar el equipo');
-        }
-      },
-      'Eliminar',
-      'Cancelar',
-    );
+    showConfirm('Eliminar equipo', `¿Eliminar "${teamNombre}" del torneo?`, () => doDelete(teamId), 'Eliminar', 'Cancelar');
+  };
+
+  const doAprobar = async (inscripcion: Inscripcion) => {
+    try {
+      await actualizarEstadoInscripcion(inscripcion.id, 'APROBADA');
+      setInscripciones((prev) => prev.filter((i) => i.id !== inscripcion.id));
+      await fetchTeams();
+      showSuccess('Aprobado', `"${inscripcion.equipo.nombre}" fue aprobado.`);
+    } catch (e: any) {
+      showError('Error', e.message ?? 'No se pudo aprobar la inscripción');
+    }
   };
 
   const handleAprobar = (inscripcion: Inscripcion) => {
-    showConfirm(
-      'Aprobar solicitud',
-      `¿Aprobar la inscripción de "${inscripcion.equipo.nombre}"?`,
-      async () => {
-        try {
-          await actualizarEstadoInscripcion(inscripcion.id, 'APROBADA');
-          setInscripciones((prev) => prev.filter((i) => i.id !== inscripcion.id));
-          await fetchTeams();
-          showSuccess('Aprobado', `"${inscripcion.equipo.nombre}" fue aprobado.`);
-        } catch (e: any) {
-          showError('Error', e.message ?? 'No se pudo aprobar la inscripción');
-        }
-      },
-      'Aprobar',
-      'Cancelar',
-    );
+    showConfirm('Aprobar solicitud', `¿Aprobar la inscripción de "${inscripcion.equipo.nombre}"?`, () => doAprobar(inscripcion), 'Aprobar', 'Cancelar');
+  };
+
+  const doRechazar = async (inscripcion: Inscripcion) => {
+    try {
+      await actualizarEstadoInscripcion(inscripcion.id, 'RECHAZADA');
+      setInscripciones((prev) => prev.filter((i) => i.id !== inscripcion.id));
+      showSuccess('Rechazado', `La solicitud de "${inscripcion.equipo.nombre}" fue rechazada.`);
+    } catch (e: any) {
+      showError('Error', e.message ?? 'No se pudo rechazar la inscripción');
+    }
   };
 
   const handleRechazar = (inscripcion: Inscripcion) => {
-    showConfirm(
-      'Rechazar solicitud',
-      `¿Rechazar la inscripción de "${inscripcion.equipo.nombre}"?`,
-      async () => {
-        try {
-          await actualizarEstadoInscripcion(inscripcion.id, 'RECHAZADA');
-          setInscripciones((prev) => prev.filter((i) => i.id !== inscripcion.id));
-          showSuccess('Rechazado', `La solicitud de "${inscripcion.equipo.nombre}" fue rechazada.`);
-        } catch (e: any) {
-          showError('Error', e.message ?? 'No se pudo rechazar la inscripción');
-        }
-      },
-      'Rechazar',
-      'Cancelar',
-    );
+    showConfirm('Rechazar solicitud', `¿Rechazar la inscripción de "${inscripcion.equipo.nombre}"?`, () => doRechazar(inscripcion), 'Rechazar', 'Cancelar');
   };
 
   return (
@@ -180,9 +135,9 @@ export default function TeamsScreen() {
         <Text className="text-white text-xl font-sans-medium flex-1">
           Equipos{maxEquipos ? ` (${teams.length}/${maxEquipos})` : ''}
         </Text>
-        {!isOrganizadorOStaff && !cupoLleno && !enCursoOFinalizado && (
-          <TouchableOpacity onPress={() => setShowForm(!showForm)}>
-            <Feather name={showForm ? 'x' : 'plus'} size={22} color="white" />
+        {puedeInscribir && (
+          <TouchableOpacity onPress={goToInscribirse}>
+            <Feather name="plus" size={22} color="white" />
           </TouchableOpacity>
         )}
       </View>
@@ -210,47 +165,6 @@ export default function TeamsScreen() {
               ? `Cupo completo: ${teams.length}/${maxEquipos} equipos inscritos.`
               : `${teams.length}/${maxEquipos} equipos. Faltan ${maxEquipos - teams.length} para completar el cupo.`}
           </Text>
-        </View>
-      )}
-
-      {/* Formulario inscribir equipo */}
-      {showForm && !cupoLleno && !enCursoOFinalizado && (
-        <View className="bg-white px-4 py-4 border-b border-mist">
-          <Text className="text-night font-sans-medium text-sm mb-3">Inscribir mi equipo</Text>
-          <TextInput
-            className="bg-mist rounded-xl px-4 py-3 text-night text-sm mb-3"
-            placeholder="Nombre del equipo *"
-            placeholderTextColor="#3D4F44"
-            value={nombre}
-            onChangeText={setNombre}
-          />
-          <TextInput
-            className="bg-mist rounded-xl px-4 py-3 text-night text-sm mb-3"
-            placeholder="Teléfono del capitán (opcional)"
-            placeholderTextColor="#3D4F44"
-            keyboardType="phone-pad"
-            value={telefono}
-            onChangeText={setTelefono}
-          />
-          <TextInput
-            className="bg-mist rounded-xl px-4 py-3 text-night text-sm mb-3"
-            placeholder="Cantidad de jugadores"
-            placeholderTextColor="#3D4F44"
-            keyboardType="number-pad"
-            value={cantidadJugadores}
-            onChangeText={setCantidadJugadores}
-          />
-          <TouchableOpacity
-            className="bg-primary rounded-xl py-3 items-center"
-            onPress={handleCreate}
-            disabled={saving}
-          >
-            {saving ? (
-              <ActivityIndicator color="white" />
-            ) : (
-              <Text className="text-white font-sans-medium text-sm">Inscribir equipo</Text>
-            )}
-          </TouchableOpacity>
         </View>
       )}
 
@@ -290,12 +204,7 @@ export default function TeamsScreen() {
                   <View
                     key={insc.id}
                     className="bg-white rounded-2xl px-4 py-3 mb-3 border border-accent-soft"
-                    style={{
-                      elevation: 1,
-                      shadowColor: '#0F1A14',
-                      shadowOpacity: 0.05,
-                      shadowRadius: 6,
-                    }}
+                    style={{ elevation: 1, shadowColor: '#0F1A14', shadowOpacity: 0.05, shadowRadius: 6 }}
                   >
                     <View className="flex-row items-center mb-3">
                       <View className="w-10 h-10 rounded-full bg-accent-soft items-center justify-center mr-3">
@@ -305,17 +214,17 @@ export default function TeamsScreen() {
                         <Text className="text-night font-sans-medium text-sm">
                           {insc.equipo.nombre}
                         </Text>
-                        {insc.equipo.cantidadJugadores ? (
+                        {!!insc.equipo.cantidadJugadores && (
                           <Text className="text-carbon text-xs mt-0.5">
                             {insc.equipo.cantidadJugadores} jugador
                             {insc.equipo.cantidadJugadores !== 1 ? 'es' : ''}
                           </Text>
-                        ) : null}
-                        {insc.equipo.telefonoCapitan ? (
+                        )}
+                        {!!insc.equipo.telefonoCapitan && (
                           <Text className="text-carbon text-xs">
                             📞 {insc.equipo.telefonoCapitan}
                           </Text>
-                        ) : null}
+                        )}
                       </View>
                     </View>
                     <View className="flex-row gap-2">
@@ -339,7 +248,7 @@ export default function TeamsScreen() {
               </View>
             )}
 
-            {/* Equipos inscritos */}
+            {/* Encabezado de equipos inscritos */}
             {isOrganizadorOStaff && (
               <View className="flex-row items-center mb-3">
                 <Text className="text-night font-sans-medium text-base flex-1">
