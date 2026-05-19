@@ -9,6 +9,12 @@ export interface Campo {
   direccion: string;
 }
 
+export interface CampoDetalle {
+  id: string;
+  nombre: string;
+  direccion: string | null;
+}
+
 export interface Tournament {
   id: string;
   nombre: string;
@@ -92,6 +98,11 @@ export const deleteTournament = async (id: string): Promise<void> => {
 export const startTournament = async (id: string): Promise<Tournament> => {
   const token = getToken();
   return api.patch(`/tournaments/${id}/start`, {}, token ?? undefined);
+};
+
+export const getCamposByTournament = async (torneoId: string): Promise<CampoDetalle[]> => {
+  const token = getToken();
+  return api.get(`/tournaments/${torneoId}/campos`, token ?? undefined);
 };
 
 export const uploadTournamentImage = async (uri: string): Promise<{ url: string }> => {

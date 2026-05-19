@@ -211,6 +211,7 @@ export default function TournamentDetailScreen() {
         fechaFin: tournament!.fechaFin,
         maxEquipos: String(tournament!.maxEquipos),
         estado: tournament!.estado,
+        formato: tournament!.formato,
       },
     } as never);
 

@@ -5,67 +5,70 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
-  Modal,
-  TextInput,
 } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState, useCallback } from 'react';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
+import { useState, useCallback, useRef } from 'react';
 import { Feather } from '@expo/vector-icons';
-import {
-  getFixture,
-  generateFixture,
-  RondaFixture,
-  Partido,
-} from '../../../services/fixtureService';
-import DatePickerField from '../../../components/create-tournament/DatePickerField';
-import { updateMatch, confirmMatch, confirmAllMatches } from '../../../services/matchService';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { getFixture, generateFixture, RondaFixture } from '../../../services/fixtureService';
+import { confirmAllMatches } from '../../../services/matchService';
 import { getTeamsByTournament } from '../../../services/teamsService';
 import MatchCard from '../../../components/tournament/MatchCard';
+import BracketView from '../../../components/tournament/BracketView';
 import CustomAlert from '../../../components/CustomAlert';
 import { useAlert } from '../../../hooks/useAlert';
 
+type ScheduleMode = 'programar' | 'editar';
+
 export default function FixtureScreen() {
-  const {
-    id: torneoId,
-    rol,
-    fechaInicio,
-    fechaFin,
-    maxEquipos: maxEquiposParam,
-    estado,
-  } = useLocalSearchParams<{
-    id: string;
-    rol: string;
-    fechaInicio: string;
-    fechaFin: string;
-    maxEquipos: string;
-    estado: string;
-  }>();
-  console.log('ROL:', rol, 'ESTADO:', estado, 'MAX:', maxEquiposParam);
+  const { id: torneoId, rol, maxEquipos: maxEquiposParam, estado, formato, fechaInicio, fechaFin } =
+    useLocalSearchParams<{
+      id: string;
+      rol: string;
+      maxEquipos: string;
+      estado: string;
+      formato: string;
+      fechaInicio: string;
+      fechaFin: string;
+    }>();
 
   const router = useRouter();
+  const { bottom } = useSafeAreaInsets();
   const { alertState, hideAlert, showError, showSuccess, showConfirm } = useAlert();
-  const maxEquipos = maxEquiposParam ? parseInt(maxEquiposParam, 10) : null;
-  const [calendarOpen, setCalendarOpen] = useState(false);
+  const maxEquipos = maxEquiposParam ? Number.parseInt(maxEquiposParam, 10) : null;
+
+  const [estadoLocal, setEstadoLocal] = useState(estado ?? '');
   const [confirmingAll, setConfirmingAll] = useState(false);
   const [rondas, setRondas] = useState<RondaFixture[]>([]);
   const [equiposInscritos, setEquiposInscritos] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [generating, setGenerating] = useState(false);
-  const [editModal, setEditModal] = useState(false);
-  const [selectedPartido, setSelectedPartido] = useState<Partido | null>(null);
-  const [editFecha, setEditFecha] = useState('');
-  const [saving, setSaving] = useState(false);
+  const [rondaActual, setRondaActual] = useState(0);
 
+  const isBracket = formato === 'COPA' || formato === 'ELIMINATORIA';
   const isOrganizadorOStaff = rol === 'ORGANIZADOR' || rol === 'STAFF';
-  const enCursoOFinalizado = estado === 'EN_CURSO' || estado === 'FINALIZADO';
-  const isCapitan = rol === 'CAPITAN';
-  const canEdit = isOrganizadorOStaff || isCapitan;
+  const enCursoOFinalizado = estadoLocal === 'EN_CURSO' || estadoLocal === 'FINALIZADO';
   const cupoCompleto = maxEquipos !== null && equiposInscritos >= maxEquipos;
   const puedeGenerar =
     rol === 'ORGANIZADOR'
       ? !enCursoOFinalizado
       : (maxEquipos === null || cupoCompleto) && !enCursoOFinalizado;
+  const showFloatingConfirm = isOrganizadorOStaff && !enCursoOFinalizado && rondas.length > 0;
+
+  // Determine the schedule button type for the currently viewed Liga round
+  const floatingScheduleBtn = (() => {
+    if (isBracket || !isOrganizadorOStaff || !enCursoOFinalizado) return null;
+    const current = rondas[rondaActual];
+    if (!current) return null;
+    const allScheduled = current.partidos.every((p) => p.fecha !== null);
+    if (allScheduled) return { mode: 'editar' as ScheduleMode, ronda: current };
+    const prev = rondaActual > 0 ? rondas[rondaActual - 1] : null;
+    const prevDone = !prev || prev.partidos.every((p) => p.fecha !== null);
+    if (prevDone) return { mode: 'programar' as ScheduleMode, ronda: current };
+    return null;
+  })();
+
   const fetchFixture = useCallback(async () => {
     if (!torneoId) return;
     try {
@@ -75,6 +78,7 @@ export default function FixtureScreen() {
       setRondas([]);
     }
   }, [torneoId]);
+
   const fetchEquipos = useCallback(async () => {
     if (!torneoId) return;
     try {
@@ -85,9 +89,17 @@ export default function FixtureScreen() {
     }
   }, [torneoId]);
 
-  useEffect(() => {
-    Promise.all([fetchFixture(), fetchEquipos()]).finally(() => setLoading(false));
-  }, [fetchFixture, fetchEquipos]);
+  const isFirstLoad = useRef(true);
+  useFocusEffect(
+    useCallback(() => {
+      if (isFirstLoad.current) {
+        isFirstLoad.current = false;
+        Promise.all([fetchFixture(), fetchEquipos()]).finally(() => setLoading(false));
+      } else {
+        Promise.all([fetchFixture(), fetchEquipos()]);
+      }
+    }, [fetchFixture, fetchEquipos]),
+  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -111,8 +123,9 @@ export default function FixtureScreen() {
       async () => {
         setGenerating(true);
         try {
-          const data = await generateFixture(torneoId!);
+          const data = await generateFixture(torneoId);
           setRondas(data);
+          setRondaActual(0);
           showSuccess('Fixture generado', 'El fixture fue generado exitosamente');
         } catch (e: any) {
           showError('Error', e.message ?? 'No se pudo generar el fixture');
@@ -125,48 +138,6 @@ export default function FixtureScreen() {
     );
   };
 
-  const handleEditPartido = (partido: Partido) => {
-    if (!canEdit) return;
-    setSelectedPartido(partido);
-    setEditFecha(partido.fecha ? new Date(partido.fecha).toISOString().slice(0, 10) : '');
-    setEditModal(true);
-    console.log('fecha partido:', partido.fecha);
-  };
-
-  const handleSaveEdit = async () => {
-    if (!selectedPartido) return;
-    setSaving(true);
-    try {
-      await updateMatch(selectedPartido.id, {
-        fecha: editFecha ? new Date(editFecha + 'T12:00:00.000Z').toISOString() : undefined,
-      });
-      setEditModal(false);
-      await fetchFixture();
-      showSuccess('Partido actualizado', 'Los cambios fueron guardados');
-    } catch (e: any) {
-      showError('Error', e.message ?? 'No se pudo actualizar el partido');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleConfirm = (partido: Partido) => {
-    showConfirm(
-      'Confirmar partido',
-      `¿Confirmar el partido ${partido.equipoLocal.nombre} vs ${partido.equipoVisitante.nombre}?`,
-      async () => {
-        try {
-          await confirmMatch(partido.id);
-          await fetchFixture();
-        } catch (e: any) {
-          showError('Error', e.message ?? 'No se pudo confirmar el partido');
-        }
-      },
-      'Confirmar',
-      'Cancelar',
-    );
-  };
-
   const handleConfirmAll = () => {
     showConfirm(
       'Confirmar todos los partidos',
@@ -174,7 +145,8 @@ export default function FixtureScreen() {
       async () => {
         setConfirmingAll(true);
         try {
-          await confirmAllMatches(torneoId!);
+          await confirmAllMatches(torneoId);
+          setEstadoLocal('EN_CURSO');
           showSuccess('¡Torneo iniciado!', 'Todos los partidos fueron confirmados.');
           await fetchFixture();
         } catch (e: any) {
@@ -188,6 +160,60 @@ export default function FixtureScreen() {
     );
   };
 
+  const goToScheduleRound = (ronda: RondaFixture, mode: ScheduleMode) =>
+    router.push({
+      pathname: '/(app)/tournament/schedule-round',
+      params: {
+        torneoId,
+        ronda: String(ronda.ronda),
+        label: ronda.label,
+        fechaInicio: fechaInicio ?? '',
+        fechaFin: fechaFin ?? '',
+        mode,
+      },
+    } as never);
+
+  // ── Empty state ───────────────────────────────────────────────────────────
+  const renderEmpty = () => (
+    <View className="bg-white rounded-2xl px-4 py-8 items-center mx-4 mt-4">
+      <Feather name="calendar" size={32} color="#3D4F44" />
+      <Text className="text-carbon text-sm text-center mt-3">No hay fixture generado aún.</Text>
+      {isOrganizadorOStaff && !enCursoOFinalizado && (
+        <TouchableOpacity
+          className={`rounded-xl px-6 py-3 mt-4 ${puedeGenerar ? 'bg-primary' : 'bg-gray-200'}`}
+          onPress={handleGenerate}
+          disabled={generating}
+        >
+          <Text className={`font-sans-medium text-sm ${puedeGenerar ? 'text-white' : 'text-gray-400'}`}>
+            {puedeGenerar
+              ? 'Generar fixture'
+              : `Faltan ${maxEquipos !== null ? maxEquipos - equiposInscritos : '?'} equipos`}
+          </Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+
+  // ── Regenerate button ─────────────────────────────────────────────────────
+  const renderRegenBtn = (extraClass = '') => (
+    <TouchableOpacity
+      className={`flex-row items-center justify-center gap-2 bg-white border border-carbon/20 rounded-2xl py-3 ${extraClass}`}
+      onPress={handleGenerate}
+      disabled={generating}
+    >
+      {generating ? (
+        <ActivityIndicator color="#3D4F44" size="small" />
+      ) : (
+        <>
+          <Feather name="refresh-cw" size={15} color="#3D4F44" />
+          <Text className="text-carbon font-sans-medium text-sm">Volver a generar fixture</Text>
+        </>
+      )}
+    </TouchableOpacity>
+  );
+
+  const hasFloatingBtn = showFloatingConfirm || floatingScheduleBtn !== null;
+
   return (
     <View className="flex-1 bg-mist">
       <CustomAlert {...alertState} onConfirm={alertState.onConfirm} onCancel={hideAlert} />
@@ -198,32 +224,14 @@ export default function FixtureScreen() {
           <Feather name="arrow-left" size={22} color="white" />
         </TouchableOpacity>
         <Text className="text-white text-xl font-sans-medium flex-1">Fixture</Text>
-        {isOrganizadorOStaff && !enCursoOFinalizado && rondas.length > 0 && (
-          <TouchableOpacity onPress={handleConfirmAll} disabled={confirmingAll}>
-            {confirmingAll ? (
-              <ActivityIndicator color="white" size="small" />
-            ) : (
-              <Feather name="check-circle" size={20} color="white" />
-            )}
-          </TouchableOpacity>
-        )}
-        {isOrganizadorOStaff && !enCursoOFinalizado && (
-          <TouchableOpacity onPress={handleGenerate} disabled={generating}>
-            {generating ? (
-              <ActivityIndicator color="white" size="small" />
-            ) : (
-              <Feather
-                name="refresh-cw"
-                size={20}
-                color={puedeGenerar ? 'white' : 'rgba(255,255,255,0.35)'}
-              />
-            )}
-          </TouchableOpacity>
-        )}
       </View>
-      {isOrganizadorOStaff && maxEquipos !== null && (
+
+      {/* Cupo info bar */}
+      {isOrganizadorOStaff && maxEquipos !== null && !enCursoOFinalizado && (
         <View
-          className={`px-4 py-2 flex-row items-center gap-2 border-b ${cupoCompleto ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}
+          className={`px-4 py-2 flex-row items-center gap-2 border-b ${
+            cupoCompleto ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'
+          }`}
         >
           <Feather
             name={cupoCompleto ? 'check-circle' : 'alert-circle'}
@@ -238,137 +246,141 @@ export default function FixtureScreen() {
         </View>
       )}
 
-      <ScrollView
-        className="flex-1"
-        contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor="#0D7A3E"
-            colors={['#0D7A3E']}
-          />
-        }
-      >
-        {loading ? (
-          <View className="py-12 items-center">
-            <ActivityIndicator color="#0D7A3E" size="large" />
-          </View>
-        ) : rondas.length === 0 ? (
-          <View className="bg-white rounded-2xl px-4 py-8 items-center">
-            <Feather name="calendar" size={32} color="#3D4F44" />
-            <Text className="text-carbon text-sm text-center mt-3">
-              No hay fixture generado aún.
+      {/* Liga: round navigation bar */}
+      {!isBracket && !loading && rondas.length > 1 && (
+        <View className="flex-row items-center justify-between px-4 py-2 bg-white border-b border-mist">
+          <TouchableOpacity
+            onPress={() => setRondaActual((r) => Math.max(0, r - 1))}
+            disabled={rondaActual === 0}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Feather name="chevron-left" size={22} color={rondaActual === 0 ? '#CBD5CB' : '#0F1A14'} />
+          </TouchableOpacity>
+          <Text className="text-night font-sans-medium text-sm">
+            {rondas[rondaActual]?.label}
+            {'  '}
+            <Text className="text-carbon font-sans text-xs">
+              {rondaActual + 1} / {rondas.length}
             </Text>
-            {isOrganizadorOStaff && !enCursoOFinalizado && (
-              <TouchableOpacity
-                className={`rounded-xl px-6 py-3 mt-4 ${puedeGenerar ? 'bg-primary' : 'bg-gray-200'}`}
-                onPress={handleGenerate}
-                disabled={generating}
-              >
-                <Text
-                  className={`font-sans-medium text-sm ${puedeGenerar ? 'text-white' : 'text-gray-400'}`}
-                >
-                  {puedeGenerar
-                    ? 'Generar fixture'
-                    : `Faltan ${maxEquipos !== null ? maxEquipos - equiposInscritos : '?'} equipos`}
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        ) : (
-          rondas.map((ronda) => (
-            <View key={ronda.ronda} className="mb-4">
-              <Text className="text-night font-sans-medium text-base mb-2">{ronda.label}</Text>
-              {ronda.partidos.map((partido) => (
-                <View key={partido.id}>
-                  <MatchCard
-                    partido={partido}
-                    canEdit={canEdit && partido.estado === 'PENDIENTE'}
-                    onPress={canEdit ? handleEditPartido : undefined}
-                  />
-                  {isOrganizadorOStaff && partido.estado === 'PENDIENTE' && (
-                    <TouchableOpacity
-                      className="bg-primary-light rounded-xl py-2 items-center mb-3 -mt-1"
-                      onPress={() => handleConfirm(partido)}
-                    >
-                      <Text className="text-primary text-xs font-sans-medium">
-                        Confirmar partido
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              ))}
-            </View>
-          ))
-        )}
-      </ScrollView>
-
-      {/* Modal editar fecha */}
-      {calendarOpen && (
-        <DatePickerField
-          label="Fecha del partido"
-          value={editFecha}
-          onChange={(date) => {
-            setEditFecha(date);
-            setCalendarOpen(false);
-            setEditModal(true);
-          }}
-          minDate={fechaInicio?.slice(0, 10)}
-          maxDate={fechaFin?.slice(0, 10)}
-          visible={calendarOpen}
-          onOpen={() => setCalendarOpen(true)}
-          onClose={() => {
-            setCalendarOpen(false);
-            setEditModal(true);
-          }}
-        />
+          </Text>
+          <TouchableOpacity
+            onPress={() => setRondaActual((r) => Math.min(rondas.length - 1, r + 1))}
+            disabled={rondaActual === rondas.length - 1}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Feather
+              name="chevron-right"
+              size={22}
+              color={rondaActual === rondas.length - 1 ? '#CBD5CB' : '#0F1A14'}
+            />
+          </TouchableOpacity>
+        </View>
       )}
 
-      <Modal visible={editModal} transparent animationType="slide">
-        <View className="flex-1 bg-black/50 justify-end">
-          <View className="bg-white rounded-t-3xl px-6 py-6">
-            <View className="flex-row items-center justify-between mb-4">
-              <Text className="text-night font-sans-medium text-base">Editar partido</Text>
-              <TouchableOpacity onPress={() => setEditModal(false)}>
-                <Feather name="x" size={20} color="#3D4F44" />
-              </TouchableOpacity>
-            </View>
-
-            {selectedPartido && (
-              <Text className="text-carbon text-sm mb-4">
-                {selectedPartido.equipoLocal.nombre} vs {selectedPartido.equipoVisitante.nombre}
-              </Text>
-            )}
-
-            <Text className="text-carbon text-sm font-sans-medium mb-1">Fecha del partido</Text>
-            <TouchableOpacity
-              onPress={() => {
-                setEditModal(false);
-                setCalendarOpen(true);
-              }}
-              className="bg-mist rounded-xl px-4 py-3 border border-mist mb-4"
-            >
-              <Text className="text-night font-sans-medium text-sm">
-                {editFecha ? editFecha.split('-').reverse().join('/') : 'Seleccionar fecha'}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              className="bg-primary rounded-xl py-4 items-center"
-              onPress={handleSaveEdit}
-              disabled={saving}
-            >
-              {saving ? (
-                <ActivityIndicator color="white" />
-              ) : (
-                <Text className="text-white font-sans-medium text-base">Guardar cambios</Text>
-              )}
-            </TouchableOpacity>
-          </View>
+      {/* Main content */}
+      {loading ? (
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator color="#0D7A3E" size="large" />
         </View>
-      </Modal>
+      ) : isBracket ? (
+        rondas.length === 0 ? (
+          renderEmpty()
+        ) : (
+          <View className="flex-1">
+            {isOrganizadorOStaff && !enCursoOFinalizado && (
+              <View className="mx-4 mt-4">{renderRegenBtn()}</View>
+            )}
+            <View className="flex-1 mt-4">
+              <BracketView
+                rondas={rondas}
+                maxEquipos={maxEquipos ?? 8}
+                isOrganizador={isOrganizadorOStaff}
+                estadoTorneo={estadoLocal}
+                onScheduleRound={(rondaNum, label, mode) => {
+                  const r = rondas.find((x) => x.ronda === rondaNum);
+                  goToScheduleRound(
+                    r ?? { ronda: rondaNum, label, partidos: [] },
+                    mode,
+                  );
+                }}
+              />
+            </View>
+          </View>
+        )
+      ) : (
+        <ScrollView
+          className="flex-1"
+          contentContainerStyle={{
+            padding: 16,
+            paddingBottom: hasFloatingBtn ? bottom + 88 : 32,
+          }}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor="#0D7A3E"
+              colors={['#0D7A3E']}
+            />
+          }
+        >
+          {rondas.length === 0 ? (
+            renderEmpty()
+          ) : (
+            <>
+              {isOrganizadorOStaff && !enCursoOFinalizado && (
+                <View className="mb-4">{renderRegenBtn()}</View>
+              )}
+              {rondas[rondaActual]?.partidos.map((partido) => (
+                <MatchCard key={partido.id} partido={partido} />
+              ))}
+            </>
+          )}
+        </ScrollView>
+      )}
+
+      {/* Floating confirm button */}
+      {showFloatingConfirm && (
+        <View style={{ position: 'absolute', bottom: bottom + 16, left: 16, right: 16 }}>
+          <TouchableOpacity
+            className="bg-primary rounded-2xl py-4 items-center flex-row justify-center gap-2"
+            style={{ shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 10, elevation: 6 }}
+            onPress={handleConfirmAll}
+            disabled={confirmingAll}
+          >
+            {confirmingAll ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <>
+                <Feather name="check-circle" size={18} color="white" />
+                <Text className="text-white font-sans-medium text-base">Confirmar fixture</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Floating schedule/edit button — tracks the currently viewed round */}
+      {floatingScheduleBtn && (
+        <View style={{ position: 'absolute', bottom: bottom + 16, left: 16, right: 16 }}>
+          <TouchableOpacity
+            className="bg-primary rounded-2xl py-4 items-center flex-row justify-center gap-2"
+            style={{ shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 10, elevation: 6 }}
+            onPress={() => goToScheduleRound(floatingScheduleBtn.ronda, floatingScheduleBtn.mode)}
+          >
+            <Feather
+              name={floatingScheduleBtn.mode === 'editar' ? 'edit-2' : 'clock'}
+              size={18}
+              color="white"
+            />
+            <Text className="text-white font-sans-medium text-base">
+              {floatingScheduleBtn.mode === 'editar'
+                ? `Editar Horarios ${floatingScheduleBtn.ronda.label}`
+                : `Programar ${floatingScheduleBtn.ronda.label}`}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 }
