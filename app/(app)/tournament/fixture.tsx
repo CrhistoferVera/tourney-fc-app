@@ -332,7 +332,11 @@ export default function FixtureScreen() {
                 <View className="mb-4">{renderRegenBtn()}</View>
               )}
               {rondas[rondaActual]?.partidos.map((partido) => (
-                <MatchCard key={partido.id} partido={partido} />
+                <MatchCard
+                  key={partido.id}
+                  partido={partido}
+                  onIniciar={isOrganizadorOStaff ? () => {} : undefined}
+                />
               ))}
             </>
           )}

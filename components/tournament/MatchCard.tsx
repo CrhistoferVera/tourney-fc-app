@@ -5,6 +5,7 @@ interface Props {
   readonly partido: Partido;
   readonly canEdit?: boolean;
   readonly onPress?: (partido: Partido) => void;
+  readonly onIniciar?: (partido: Partido) => void;
 }
 
 const formatFecha = (fecha: string | null) => {
@@ -47,7 +48,7 @@ function Shield({ escudo, nombre }: { readonly escudo: string | null; readonly n
   );
 }
 
-export default function MatchCard({ partido, canEdit, onPress }: Props) {
+export default function MatchCard({ partido, canEdit, onPress, onIniciar }: Props) {
   const confirmado = partido.estado === 'CONFIRMADO';
   const tieneMarcador = partido.golesLocal !== null && partido.golesVisitante !== null;
 
@@ -107,6 +108,17 @@ export default function MatchCard({ partido, canEdit, onPress }: Props) {
           </View>
         </View>
       </View>
+
+      {/* Iniciar partido — solo visible para organizador/staff cuando hay fecha asignada */}
+      {onIniciar && partido.fecha && (
+        <TouchableOpacity
+          onPress={() => onIniciar(partido)}
+          className="mt-3 bg-primary rounded-xl py-2 items-center"
+          activeOpacity={0.8}
+        >
+          <Text className="text-white text-xs font-sans-medium">Iniciar partido</Text>
+        </TouchableOpacity>
+      )}
     </TouchableOpacity>
   );
 }
