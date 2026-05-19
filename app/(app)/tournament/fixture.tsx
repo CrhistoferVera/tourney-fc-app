@@ -19,6 +19,7 @@ import CustomAlert from '../../../components/CustomAlert';
 import { useAlert } from '../../../hooks/useAlert';
 
 type ScheduleMode = 'programar' | 'editar';
+type BracketTab = 'lista' | 'bracket';
 
 export default function FixtureScreen() {
   const { id: torneoId, rol, maxEquipos: maxEquiposParam, estado, formato, fechaInicio, fechaFin } =
@@ -45,6 +46,7 @@ export default function FixtureScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [rondaActual, setRondaActual] = useState(0);
+  const [bracketTab, setBracketTab] = useState<BracketTab>('bracket');
 
   const isBracket = formato === 'COPA' || formato === 'ELIMINATORIA';
   const isOrganizadorOStaff = rol === 'ORGANIZADOR' || rol === 'STAFF';
@@ -56,9 +58,12 @@ export default function FixtureScreen() {
       : (maxEquipos === null || cupoCompleto) && !enCursoOFinalizado;
   const showFloatingConfirm = isOrganizadorOStaff && !enCursoOFinalizado && rondas.length > 0;
 
-  // Determine the schedule button type for the currently viewed Liga round
+  // Lista view active: Liga always, Copa only when lista tab is selected
+  const isListaView = !isBracket || bracketTab === 'lista';
+
+  // Floating schedule/edit button tracks the currently viewed round (only for lista views)
   const floatingScheduleBtn = (() => {
-    if (isBracket || !isOrganizadorOStaff || !enCursoOFinalizado) return null;
+    if (!isOrganizadorOStaff || !enCursoOFinalizado || !isListaView) return null;
     const current = rondas[rondaActual];
     if (!current) return null;
     const allScheduled = current.partidos.every((p) => p.fecha !== null);
@@ -212,7 +217,76 @@ export default function FixtureScreen() {
     </TouchableOpacity>
   );
 
-  const hasFloatingBtn = showFloatingConfirm || floatingScheduleBtn !== null;
+  // ── Round navigation bar (shared between Liga and Copa lista) ─────────────
+  const renderRoundNav = () => {
+    if (rondas.length <= 1) return null;
+    return (
+      <View className="flex-row items-center justify-between px-4 py-2 bg-white border-b border-mist">
+        <TouchableOpacity
+          onPress={() => setRondaActual((r) => Math.max(0, r - 1))}
+          disabled={rondaActual === 0}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Feather name="chevron-left" size={22} color={rondaActual === 0 ? '#CBD5CB' : '#0F1A14'} />
+        </TouchableOpacity>
+        <Text className="text-night font-sans-medium text-sm">
+          {rondas[rondaActual]?.label}
+          {'  '}
+          <Text className="text-carbon font-sans text-xs">
+            {rondaActual + 1} / {rondas.length}
+          </Text>
+        </Text>
+        <TouchableOpacity
+          onPress={() => setRondaActual((r) => Math.min(rondas.length - 1, r + 1))}
+          disabled={rondaActual === rondas.length - 1}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Feather
+            name="chevron-right"
+            size={22}
+            color={rondaActual === rondas.length - 1 ? '#CBD5CB' : '#0F1A14'}
+          />
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
+  // ── Lista view (Liga or Copa lista tab) ───────────────────────────────────
+  const renderListaView = () => {
+    const hasBtn = showFloatingConfirm || floatingScheduleBtn !== null;
+    return (
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{ padding: 16, paddingBottom: hasBtn ? bottom + 88 : 32 }}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#0D7A3E"
+            colors={['#0D7A3E']}
+          />
+        }
+      >
+        {rondas.length === 0 ? (
+          renderEmpty()
+        ) : (
+          <>
+            {isOrganizadorOStaff && !enCursoOFinalizado && (
+              <View className="mb-4">{renderRegenBtn()}</View>
+            )}
+            {rondas[rondaActual]?.partidos.map((partido) => (
+              <MatchCard
+                key={partido.id}
+                partido={partido}
+                onIniciar={isOrganizadorOStaff ? () => {} : undefined}
+              />
+            ))}
+          </>
+        )}
+      </ScrollView>
+    );
+  };
 
   return (
     <View className="flex-1 bg-mist">
@@ -246,36 +320,8 @@ export default function FixtureScreen() {
         </View>
       )}
 
-      {/* Liga: round navigation bar */}
-      {!isBracket && !loading && rondas.length > 1 && (
-        <View className="flex-row items-center justify-between px-4 py-2 bg-white border-b border-mist">
-          <TouchableOpacity
-            onPress={() => setRondaActual((r) => Math.max(0, r - 1))}
-            disabled={rondaActual === 0}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Feather name="chevron-left" size={22} color={rondaActual === 0 ? '#CBD5CB' : '#0F1A14'} />
-          </TouchableOpacity>
-          <Text className="text-night font-sans-medium text-sm">
-            {rondas[rondaActual]?.label}
-            {'  '}
-            <Text className="text-carbon font-sans text-xs">
-              {rondaActual + 1} / {rondas.length}
-            </Text>
-          </Text>
-          <TouchableOpacity
-            onPress={() => setRondaActual((r) => Math.min(rondas.length - 1, r + 1))}
-            disabled={rondaActual === rondas.length - 1}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Feather
-              name="chevron-right"
-              size={22}
-              color={rondaActual === rondas.length - 1 ? '#CBD5CB' : '#0F1A14'}
-            />
-          </TouchableOpacity>
-        </View>
-      )}
+      {/* Round navigation bar — Liga always, Copa only on lista tab */}
+      {isListaView && !loading && renderRoundNav()}
 
       {/* Main content */}
       {loading ? (
@@ -283,64 +329,76 @@ export default function FixtureScreen() {
           <ActivityIndicator color="#0D7A3E" size="large" />
         </View>
       ) : isBracket ? (
+        /* ── Copa / Eliminatoria ── */
         rondas.length === 0 ? (
           renderEmpty()
         ) : (
           <View className="flex-1">
+            {/* Regen button above tabs */}
             {isOrganizadorOStaff && !enCursoOFinalizado && (
-              <View className="mx-4 mt-4">{renderRegenBtn()}</View>
+              <View className="mx-4 mt-3">{renderRegenBtn()}</View>
             )}
-            <View className="flex-1 mt-4">
-              <BracketView
-                rondas={rondas}
-                maxEquipos={maxEquipos ?? 8}
-                isOrganizador={isOrganizadorOStaff}
-                estadoTorneo={estadoLocal}
-                onScheduleRound={(rondaNum, label, mode) => {
-                  const r = rondas.find((x) => x.ronda === rondaNum);
-                  goToScheduleRound(
-                    r ?? { ronda: rondaNum, label, partidos: [] },
-                    mode,
-                  );
-                }}
-              />
+
+            {/* Tab selector */}
+            <View
+              style={{
+                flexDirection: 'row',
+                margin: 16,
+                marginBottom: 8,
+                backgroundColor: '#E4EBE6',
+                borderRadius: 12,
+                padding: 3,
+              }}
+            >
+              {(['lista', 'bracket'] as BracketTab[]).map((tab) => (
+                <TouchableOpacity
+                  key={tab}
+                  onPress={() => setBracketTab(tab)}
+                  style={{
+                    flex: 1,
+                    paddingVertical: 8,
+                    alignItems: 'center',
+                    borderRadius: 10,
+                    backgroundColor: bracketTab === tab ? 'white' : 'transparent',
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      fontWeight: bracketTab === tab ? '600' : '400',
+                      color: bracketTab === tab ? '#0F1A14' : '#3D4F44',
+                    }}
+                  >
+                    {tab === 'lista' ? 'Lista' : 'Bracket'}
+                  </Text>
+                </TouchableOpacity>
+              ))}
             </View>
+
+            {bracketTab === 'lista' ? (
+              renderListaView()
+            ) : (
+              <View className="flex-1">
+                <BracketView
+                  rondas={rondas}
+                  maxEquipos={maxEquipos ?? 8}
+                  isOrganizador={isOrganizadorOStaff}
+                  estadoTorneo={estadoLocal}
+                  onScheduleRound={(rondaNum, label, mode) => {
+                    const r = rondas.find((x) => x.ronda === rondaNum);
+                    goToScheduleRound(
+                      r ?? { ronda: rondaNum, label, partidos: [] },
+                      mode,
+                    );
+                  }}
+                />
+              </View>
+            )}
           </View>
         )
       ) : (
-        <ScrollView
-          className="flex-1"
-          contentContainerStyle={{
-            padding: 16,
-            paddingBottom: hasFloatingBtn ? bottom + 88 : 32,
-          }}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor="#0D7A3E"
-              colors={['#0D7A3E']}
-            />
-          }
-        >
-          {rondas.length === 0 ? (
-            renderEmpty()
-          ) : (
-            <>
-              {isOrganizadorOStaff && !enCursoOFinalizado && (
-                <View className="mb-4">{renderRegenBtn()}</View>
-              )}
-              {rondas[rondaActual]?.partidos.map((partido) => (
-                <MatchCard
-                  key={partido.id}
-                  partido={partido}
-                  onIniciar={isOrganizadorOStaff ? () => {} : undefined}
-                />
-              ))}
-            </>
-          )}
-        </ScrollView>
+        /* ── Liga / Grupos ── */
+        renderListaView()
       )}
 
       {/* Floating confirm button */}
