@@ -11,11 +11,14 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import {
   getStandings,
+  getFixture,
   FilaTablaPosiciones,
   TablaPosicionesResponse,
+  RondaFixture,
 } from '../../../services/fixtureService';
 import { getMyTeam } from '../../../services/teamsService';
 import ShieldDisplay from '../../../components/tournament/ShieldDisplay';
+import BracketView from '../../../components/tournament/BracketView';
 import CustomAlert from '../../../components/CustomAlert';
 import { useAlert } from '../../../hooks/useAlert';
 
@@ -245,15 +248,29 @@ function TablaPosiciones({
 }
 
 export default function TablaScreen() {
-  const { id: torneoId, nombre: torneoNombre, rol } = useLocalSearchParams<{
+  const {
+    id: torneoId,
+    nombre: torneoNombre,
+    rol,
+    formato,
+    maxEquipos: maxEquiposParam,
+    estado,
+  } = useLocalSearchParams<{
     id: string;
     nombre?: string;
     rol?: string;
+    formato?: string;
+    maxEquipos?: string;
+    estado?: string;
   }>();
   const router = useRouter();
   const { alertState, hideAlert, showError } = useAlert();
 
+  const isBracket = formato === 'COPA' || formato === 'ELIMINATORIA';
+  const maxEquipos = maxEquiposParam ? Number.parseInt(maxEquiposParam, 10) : 8;
+
   const [data, setData] = useState<TablaPosicionesResponse | null>(null);
+  const [rondas, setRondas] = useState<RondaFixture[]>([]);
   const [miEquipoId, setMiEquipoId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -273,7 +290,7 @@ export default function TablaScreen() {
     }
   }, [torneoId, esCapitanOJugador]);
 
-  const fetchTabla = useCallback(async () => {
+  const fetchTablaLiga = useCallback(async () => {
     if (!torneoId) return;
     try {
       const result = await getStandings(torneoId);
@@ -284,9 +301,25 @@ export default function TablaScreen() {
     }
   }, [torneoId]);
 
+  const fetchBracket = useCallback(async () => {
+    if (!torneoId) return;
+    try {
+      const fixture = await getFixture(torneoId);
+      setRondas(Array.isArray(fixture) ? fixture : []);
+    } catch (e: any) {
+      showError('Error', e.message ?? 'No se pudo cargar el bracket');
+      setRondas([]);
+    }
+  }, [torneoId]);
+
   const loadAll = useCallback(async () => {
-    await Promise.all([fetchTabla(), fetchMiEquipo()]);
-  }, [fetchTabla, fetchMiEquipo]);
+    await fetchMiEquipo();
+    if (isBracket) {
+      await fetchBracket();
+    } else {
+      await fetchTablaLiga();
+    }
+  }, [fetchMiEquipo, fetchBracket, fetchTablaLiga, isBracket]);
 
   useFocusEffect(
     useCallback(() => {
@@ -321,7 +354,7 @@ export default function TablaScreen() {
           <Feather name="arrow-left" size={22} color="white" />
         </TouchableOpacity>
         <Text className="text-white text-xl font-sans-medium flex-1" numberOfLines={1}>
-          Tabla
+          {isBracket ? 'Bracket' : 'Tabla'}
         </Text>
       </View>
 
@@ -346,16 +379,46 @@ export default function TablaScreen() {
           <Text className="text-night font-sans-medium text-base mb-1" numberOfLines={2}>
             {titulo}
           </Text>
-          <Text className="text-carbon text-xs mb-2">Partidos confirmados · Toca un equipo para ver detalle</Text>
+          <Text className="text-carbon text-xs mb-2">
+            {isBracket
+              ? 'Desliza el bracket · Los goles aparecen al cargar el resultado · Toca un equipo'
+              : 'Partidos confirmados · Toca un equipo para ver detalle'}
+          </Text>
 
           {miEquipoId && (
             <View className="flex-row items-center gap-2 mb-3 bg-primary-light rounded-xl px-3 py-2">
-              <View className="w-3 h-3 rounded-sm" style={{ backgroundColor: HIGHLIGHT_BG, borderWidth: 1, borderColor: '#0D7A3E' }} />
+              <View
+                className="w-3 h-3 rounded-sm"
+                style={{ backgroundColor: HIGHLIGHT_BG, borderWidth: 1, borderColor: '#0D7A3E' }}
+              />
               <Text className="text-primary text-xs flex-1">Resaltado: tu equipo en este torneo</Text>
             </View>
           )}
 
-          {filas.length === 0 ? (
+          {isBracket ? (
+            rondas.length === 0 ? (
+              <View
+                className="bg-white rounded-2xl px-4 py-8 items-center"
+                style={{ elevation: 1, shadowColor: '#0F1A14', shadowOpacity: 0.05, shadowRadius: 6 }}
+              >
+                <Feather name="git-branch" size={32} color="#3D4F44" />
+                <Text className="text-carbon text-sm text-center mt-3">
+                  Aún no hay fixture generado para este torneo.
+                </Text>
+              </View>
+            ) : (
+              <View className="bg-white rounded-2xl overflow-hidden py-3">
+                <BracketView
+                  rondas={rondas}
+                  maxEquipos={maxEquipos}
+                  estadoTorneo={estado}
+                  showScheduleControls={false}
+                  miEquipoId={miEquipoId}
+                  onPressTeam={handlePressTeam}
+                />
+              </View>
+            )
+          ) : filas.length === 0 ? (
             <View
               className="bg-white rounded-2xl px-4 py-8 items-center"
               style={{ elevation: 1, shadowColor: '#0F1A14', shadowOpacity: 0.05, shadowRadius: 6 }}
@@ -373,17 +436,19 @@ export default function TablaScreen() {
             />
           )}
 
-          <View className="mt-4 bg-white rounded-2xl px-4 py-3">
-            <Text className="text-night font-sans-medium text-sm mb-2">Criterios de desempate</Text>
-            <Text className="text-carbon text-xs mb-2 leading-5">
-              Si dos o más equipos tienen los mismos puntos, el orden se define así (en orden):
-            </Text>
-            {criterios.map((c, i) => (
-              <Text key={c} className="text-carbon text-xs leading-5">
-                {i + 1}. {c}
+          {!isBracket && (
+            <View className="mt-4 bg-white rounded-2xl px-4 py-3">
+              <Text className="text-night font-sans-medium text-sm mb-2">Criterios de desempate</Text>
+              <Text className="text-carbon text-xs mb-2 leading-5">
+                Si dos o más equipos tienen los mismos puntos, el orden se define así (en orden):
               </Text>
-            ))}
-          </View>
+              {criterios.map((c, i) => (
+                <Text key={c} className="text-carbon text-xs leading-5">
+                  {i + 1}. {c}
+                </Text>
+              ))}
+            </View>
+          )}
         </ScrollView>
       )}
     </View>

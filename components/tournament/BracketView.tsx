@@ -34,28 +34,40 @@ function roundLabel(roundIdx: number, totalRounds: number) {
   return `Ronda ${roundIdx + 1}`;
 }
 
+const HIGHLIGHT_BG = '#D1FAE5';
+
+function hasMarcador(
+  score1: number | null | undefined,
+  score2: number | null | undefined,
+): boolean {
+  return score1 !== null && score1 !== undefined && score2 !== null && score2 !== undefined;
+}
+
 // ── Team row inside bracket slot ─────────────────────────────────────────────
 interface TeamRowProps {
   nombre: string;
   escudo: string | null;
   score: number | null | undefined;
+  scoreOponente?: number | null;
   tbd: boolean;
   border?: boolean;
+  isMine?: boolean;
+  onPress?: () => void;
 }
 
-function TeamRow({ nombre, escudo, score, tbd, border }: TeamRowProps) {
-  return (
-    <View
-      style={{
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 6,
-        borderBottomWidth: border ? 0.5 : 0,
-        borderBottomColor: '#EBF0EC',
-        gap: 5,
-      }}
-    >
+function TeamRow({
+  nombre,
+  escudo,
+  score,
+  scoreOponente,
+  tbd,
+  border,
+  isMine,
+  onPress,
+}: TeamRowProps) {
+  const marcador = hasMarcador(score, scoreOponente);
+  const content = (
+    <>
       {tbd ? (
         <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: '#F3F4F6' }} />
       ) : escudo ? (
@@ -81,17 +93,50 @@ function TeamRow({ nombre, escudo, score, tbd, border }: TeamRowProps) {
         style={{
           flex: 1,
           fontSize: 10,
-          color: tbd ? '#9CA3AF' : '#0F1A14',
+          color: tbd ? '#9CA3AF' : isMine ? '#0D7A3E' : '#0F1A14',
+          fontWeight: isMine ? '600' : '400',
           fontStyle: tbd ? 'italic' : 'normal',
         }}
       >
         {nombre}
       </Text>
-      {!tbd && score !== null && score !== undefined && (
-        <Text style={{ fontSize: 11, fontWeight: '700', color: '#0D7A3E' }}>{score}</Text>
+      {marcador && (
+        <View
+          style={{
+            minWidth: 22,
+            paddingHorizontal: 6,
+            paddingVertical: 2,
+            borderRadius: 6,
+            backgroundColor: '#EBF5EF',
+            alignItems: 'center',
+          }}
+        >
+          <Text style={{ fontSize: 12, fontWeight: '700', color: '#0D7A3E' }}>{score}</Text>
+        </View>
       )}
-    </View>
+    </>
   );
+
+  const rowStyle = {
+    flex: 1,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    paddingHorizontal: 6,
+    borderBottomWidth: border ? 0.5 : 0,
+    borderBottomColor: '#EBF0EC',
+    gap: 5,
+    backgroundColor: isMine ? HIGHLIGHT_BG : 'transparent',
+  };
+
+  if (onPress && !tbd) {
+    return (
+      <TouchableOpacity onPress={onPress} activeOpacity={0.75} style={rowStyle}>
+        {content}
+      </TouchableOpacity>
+    );
+  }
+
+  return <View style={rowStyle}>{content}</View>;
 }
 
 // ── Props ─────────────────────────────────────────────────────────────────────
@@ -103,6 +148,9 @@ interface BracketViewProps {
   isOrganizador?: boolean;
   estadoTorneo?: string;
   onScheduleRound?: (rondaNum: number, label: string, mode: ScheduleMode) => void;
+  showScheduleControls?: boolean;
+  miEquipoId?: string | null;
+  onPressTeam?: (teamId: string) => void;
 }
 
 // ── Returns button type for a bracket round ───────────────────────────────────
@@ -128,6 +176,9 @@ export default function BracketView({
   isOrganizador,
   estadoTorneo,
   onScheduleRound,
+  showScheduleControls = true,
+  miEquipoId = null,
+  onPressTeam,
 }: BracketViewProps) {
   const safe = Math.max(maxEquipos, 2);
   const totalRounds = Math.ceil(Math.log2(safe));
@@ -148,8 +199,10 @@ export default function BracketView({
         if (real) {
           return {
             team1: real.equipoLocal.nombre,
+            team1Id: real.equipoLocal.id,
             shield1: real.equipoLocal.escudo,
             team2: real.equipoVisitante.nombre,
+            team2Id: real.equipoVisitante.id,
             shield2: real.equipoVisitante.escudo,
             score1: real.golesLocal,
             score2: real.golesVisitante,
@@ -239,9 +292,10 @@ export default function BracketView({
 
         {bracketRounds.map((round, r) => {
           const x = colLeft(r);
-          const btnType = isOrganizador
-            ? getRondaButtonType(r, rondas, estadoTorneo)
-            : null;
+          const btnType =
+            showScheduleControls && isOrganizador
+              ? getRondaButtonType(r, rondas, estadoTorneo)
+              : null;
 
           return (
             <View key={r}>
@@ -319,14 +373,28 @@ export default function BracketView({
                       nombre={match.team1}
                       escudo={match.shield1}
                       score={match.score1}
+                      scoreOponente={match.score2}
                       tbd={match.tbd}
                       border
+                      isMine={!match.tbd && miEquipoId === match.team1Id}
+                      onPress={
+                        onPressTeam && match.team1Id
+                          ? () => onPressTeam(match.team1Id!)
+                          : undefined
+                      }
                     />
                     <TeamRow
                       nombre={match.team2}
                       escudo={match.shield2}
                       score={match.score2}
+                      scoreOponente={match.score1}
                       tbd={match.tbd}
+                      isMine={!match.tbd && miEquipoId === match.team2Id}
+                      onPress={
+                        onPressTeam && match.team2Id
+                          ? () => onPressTeam(match.team2Id!)
+                          : undefined
+                      }
                     />
                   </View>
                 );

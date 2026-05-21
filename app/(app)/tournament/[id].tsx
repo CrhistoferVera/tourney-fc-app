@@ -260,6 +260,9 @@ export default function TournamentDetailScreen() {
         id: tournament!.id,
         nombre: tournament!.nombre,
         rol: tournament!.rolUsuario ?? '',
+        formato: tournament!.formato,
+        maxEquipos: String(tournament!.maxEquipos),
+        estado: tournament!.estado,
       },
     } as never);
 
@@ -294,7 +297,8 @@ export default function TournamentDetailScreen() {
 
   const canVerFixture  = !isDraft;
   const isLiga         = tournament.formato === 'LIGA';
-  const canVerTabla    = canVerFixture && isLiga;
+  const isBracketFmt   = tournament.formato === 'COPA' || tournament.formato === 'ELIMINATORIA';
+  const canVerTabla    = canVerFixture && (isLiga || isBracketFmt);
   const canGestionar   = isOrganizer && (isDraft || isInscripcion);
   const canVerMiEquipo = isCapitan || isJugador;
 
@@ -310,16 +314,29 @@ export default function TournamentDetailScreen() {
       <CustomAlert {...alertState} onConfirm={alertState.onConfirm} onCancel={hideAlert} />
 
       {/* Header */}
-      <View className="bg-primary px-6 pt-14 pb-4">
+      <View className="bg-primary px-4 pt-14 pb-4">
         <View className="flex-row items-center mb-1">
-          <TouchableOpacity onPress={() => router.back()} className="mr-3">
-            <Text className="text-white text-base">‹</Text>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            activeOpacity={0.7}
+            hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
+            accessibilityRole="button"
+            accessibilityLabel="Volver"
+            style={{
+              width: 44,
+              height: 44,
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginRight: 4,
+            }}
+          >
+            <Feather name="arrow-left" size={26} color="white" />
           </TouchableOpacity>
           <Text className="text-white text-xl font-sans-medium flex-1" numberOfLines={1}>
             {tournament.nombre}
           </Text>
         </View>
-        <View className="flex-row items-center gap-2 ml-6">
+        <View className="flex-row items-center gap-2 pl-1">
           <View className="bg-primary-dark px-2 py-0.5 rounded-full">
             <Text className="text-white text-xs">{getEstadoLabel(tournament.estado)}</Text>
           </View>
@@ -401,7 +418,12 @@ export default function TournamentDetailScreen() {
         <Text className="text-night font-sans-medium text-base mb-3">Acceso rápido</Text>
         <View className="flex-row gap-2 mb-2">
           <QuickBtn icon="calendar"    label="Fixture"      color="bg-primary"      onPress={canVerFixture ? goToFixture  : undefined} />
-          <QuickBtn icon="award"       label="Tabla"        color="bg-accent"       onPress={canVerTabla ? goToTabla : undefined} />
+          <QuickBtn
+            icon="award"
+            label={isBracketFmt ? 'Bracket' : 'Tabla'}
+            color="bg-accent"
+            onPress={canVerTabla ? goToTabla : undefined}
+          />
           <QuickBtn icon="users"       label="Equipos"      color="bg-info"         onPress={canVerFixture ? goToEquipos  : undefined} />
         </View>
         <View className="flex-row gap-2 mb-2">
