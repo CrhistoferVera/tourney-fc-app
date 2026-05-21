@@ -253,6 +253,16 @@ export default function TournamentDetailScreen() {
       params: { id: tournament!.id, rol: tournament!.rolUsuario ?? '' },
     } as never);
 
+  const goToTabla = () =>
+    router.push({
+      pathname: '/(app)/tournament/tabla',
+      params: {
+        id: tournament!.id,
+        nombre: tournament!.nombre,
+        rol: tournament!.rolUsuario ?? '',
+      },
+    } as never);
+
   // ── Guards ───────────────────────────────────────────────────────────────────
 
   if (loading) {
@@ -283,6 +293,8 @@ export default function TournamentDetailScreen() {
   const canStart      = isOrganizer && isInscripcion && (tournament.totalPartidos ?? 0) > 0 && equiposFull;
 
   const canVerFixture  = !isDraft;
+  const isLiga         = tournament.formato === 'LIGA';
+  const canVerTabla    = canVerFixture && isLiga;
   const canGestionar   = isOrganizer && (isDraft || isInscripcion);
   const canVerMiEquipo = isCapitan || isJugador;
 
@@ -389,7 +401,7 @@ export default function TournamentDetailScreen() {
         <Text className="text-night font-sans-medium text-base mb-3">Acceso rápido</Text>
         <View className="flex-row gap-2 mb-2">
           <QuickBtn icon="calendar"    label="Fixture"      color="bg-primary"      onPress={canVerFixture ? goToFixture  : undefined} />
-          <QuickBtn icon="award"       label="Tabla"        color="bg-accent"       onPress={canVerFixture ? () => {}     : undefined} />
+          <QuickBtn icon="award"       label="Tabla"        color="bg-accent"       onPress={canVerTabla ? goToTabla : undefined} />
           <QuickBtn icon="users"       label="Equipos"      color="bg-info"         onPress={canVerFixture ? goToEquipos  : undefined} />
         </View>
         <View className="flex-row gap-2 mb-2">

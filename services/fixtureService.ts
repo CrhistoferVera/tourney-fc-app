@@ -49,3 +49,28 @@ export const getFixtureByEquipo = async (
 ): Promise<Partido[]> => {
   return api.get(`/fixtures/tournament/${torneoId}/equipo/${equipoId}`, getToken());
 };
+
+export interface FilaTablaPosiciones {
+  posicion: number;
+  equipo: PartidoEquipo;
+  pj: number;
+  g: number;
+  e: number;
+  p: number;
+  gf: number;
+  gc: number;
+  dg: number;
+  pts: number;
+}
+
+export interface TablaPosicionesResponse {
+  torneoId: string;
+  torneoNombre: string;
+  formato: string;
+  criteriosDesempate?: string[];
+  tabla: FilaTablaPosiciones[];
+}
+
+export const getStandings = async (torneoId: string): Promise<TablaPosicionesResponse> => {
+  return api.get(`/fixtures/tournament/${torneoId}/standings`, getToken());
+};
