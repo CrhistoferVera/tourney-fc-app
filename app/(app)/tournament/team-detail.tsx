@@ -1,7 +1,6 @@
 import { useState, useCallback } from 'react';
 import {
   ActivityIndicator,
-  Image,
   RefreshControl,
   ScrollView,
   Text,
@@ -10,53 +9,11 @@ import {
 } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { getTeamById, TeamDetail, Jugador } from '../../../services/teamsService';
+import { getTeamById, TeamDetail } from '../../../services/teamsService';
 import ShieldDisplay from '../../../components/tournament/ShieldDisplay';
+import JugadoresStatsTable from '../../../components/tournament/JugadoresStatsTable';
 import CustomAlert from '../../../components/CustomAlert';
 import { useAlert } from '../../../hooks/useAlert';
-
-function JugadorRow({
-  jugador,
-  isCapitan,
-  isLast,
-}: {
-  readonly jugador: Jugador;
-  readonly isCapitan: boolean;
-  readonly isLast: boolean;
-}) {
-  return (
-    <View
-      className={`flex-row items-center px-4 py-3 ${isLast ? '' : 'border-b border-mist'}`}
-    >
-      {jugador.fotoPerfil ? (
-        <Image
-          source={{ uri: jugador.fotoPerfil }}
-          style={{ width: 36, height: 36, borderRadius: 18, marginRight: 12 }}
-        />
-      ) : (
-        <View className="w-9 h-9 rounded-full bg-primary-light items-center justify-center mr-3">
-          <Feather name="user" size={16} color="#0D7A3E" />
-        </View>
-      )}
-      <View className="flex-1">
-        <Text className="text-night font-sans-medium text-sm" numberOfLines={1}>
-          {jugador.nombre}
-        </Text>
-        {!!jugador.email && (
-          <Text className="text-carbon text-xs mt-0.5" numberOfLines={1}>
-            {jugador.email}
-          </Text>
-        )}
-      </View>
-      {isCapitan && (
-        <View className="flex-row items-center gap-1 bg-primary-light px-2 py-0.5 rounded-full">
-          <Feather name="star" size={10} color="#0D7A3E" />
-          <Text className="text-primary text-xs font-sans-medium">Capitán</Text>
-        </View>
-      )}
-    </View>
-  );
-}
 
 export default function TeamDetailScreen() {
   const { teamId } = useLocalSearchParams<{ teamId: string }>();
@@ -159,31 +116,24 @@ export default function TeamDetailScreen() {
           </View>
 
           <View className="flex-row items-center mb-3">
-            <Text className="text-night font-sans-medium text-base flex-1">Jugadores</Text>
+            <Text className="text-night font-sans-medium text-base flex-1">
+              Estadísticas del torneo
+            </Text>
             <View className="bg-primary-light px-2 py-0.5 rounded-full">
               <Text className="text-primary text-xs font-sans-medium">{jugadores.length}</Text>
             </View>
           </View>
 
-          <View
-            className="bg-white rounded-2xl overflow-hidden"
-            style={{ elevation: 1, shadowColor: '#0F1A14', shadowOpacity: 0.05, shadowRadius: 6 }}
-          >
-            {jugadores.length === 0 ? (
-              <View className="px-4 py-8 items-center">
-                <Text className="text-carbon text-sm">Sin jugadores registrados aún.</Text>
-              </View>
-            ) : (
-              jugadores.map((jugador, index) => (
-                <JugadorRow
-                  key={jugador.id}
-                  jugador={jugador}
-                  isCapitan={jugador.id === equipo.capitanId}
-                  isLast={index === jugadores.length - 1}
-                />
-              ))
-            )}
-          </View>
+          {jugadores.length === 0 ? (
+            <View
+              className="bg-white rounded-2xl px-4 py-8 items-center"
+              style={{ elevation: 1, shadowColor: '#0F1A14', shadowOpacity: 0.05, shadowRadius: 6 }}
+            >
+              <Text className="text-carbon text-sm">Sin jugadores registrados aún.</Text>
+            </View>
+          ) : (
+            <JugadoresStatsTable jugadores={jugadores} capitanId={equipo.capitanId} />
+          )}
         </ScrollView>
       )}
     </View>

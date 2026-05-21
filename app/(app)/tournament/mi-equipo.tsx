@@ -1,7 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import {
   ActivityIndicator,
-  Image,
   RefreshControl,
   ScrollView,
   Text,
@@ -11,50 +10,11 @@ import {
 } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { getMyTeam, invitePlayer, MyTeam, UsuarioEquipoRow } from '../../../services/teamsService';
+import { getMyTeam, invitePlayer, MyTeam } from '../../../services/teamsService';
 import ShieldDisplay from '../../../components/tournament/ShieldDisplay';
+import JugadoresStatsTable from '../../../components/tournament/JugadoresStatsTable';
 import CustomAlert from '../../../components/CustomAlert';
 import { useAlert } from '../../../hooks/useAlert';
-
-// ── Player row ────────────────────────────────────────────────────────────────
-
-function PlayerRow({
-  row,
-  isCapitan,
-  isLast,
-}: {
-  readonly row: UsuarioEquipoRow;
-  readonly isCapitan: boolean;
-  readonly isLast: boolean;
-}) {
-  return (
-    <View
-      className={`flex-row items-center px-4 py-3 ${isLast ? '' : 'border-b border-mist'}`}
-    >
-      {row.usuario.fotoPerfil ? (
-        <Image
-          source={{ uri: row.usuario.fotoPerfil }}
-          style={{ width: 36, height: 36, borderRadius: 18, marginRight: 12 }}
-        />
-      ) : (
-        <View className="w-9 h-9 rounded-full bg-primary-light items-center justify-center mr-3">
-          <Feather name="user" size={16} color="#0D7A3E" />
-        </View>
-      )}
-      <Text className="text-night font-sans-medium text-sm flex-1" numberOfLines={1}>
-        {row.usuario.nombre}
-      </Text>
-      {isCapitan && (
-        <View className="flex-row items-center gap-1 bg-primary-light px-2 py-0.5 rounded-full">
-          <Feather name="star" size={10} color="#0D7A3E" />
-          <Text className="text-primary text-xs font-sans-medium">Capitán</Text>
-        </View>
-      )}
-    </View>
-  );
-}
-
-// ── Screen ────────────────────────────────────────────────────────────────────
 
 export default function MiEquipoScreen() {
   const { id: torneoId, rol } = useLocalSearchParams<{ id: string; rol: string }>();
@@ -68,6 +28,18 @@ export default function MiEquipoScreen() {
   const [invitando, setInvitando] = useState(false);
 
   const esCapitan = rol === 'CAPITAN';
+
+  const jugadoresTabla = useMemo(
+    () =>
+      (equipo?.jugadores ?? []).map((row) => ({
+        id: row.usuario.id,
+        nombre: row.usuario.nombre,
+        fotoPerfil: row.usuario.fotoPerfil,
+        email: row.usuario.email,
+        estadisticas: row.usuario.estadisticas,
+      })),
+    [equipo?.jugadores],
+  );
 
   const fetchEquipo = useCallback(async () => {
     if (!torneoId) return;
@@ -195,35 +167,28 @@ export default function MiEquipoScreen() {
           </View>
         </View>
 
-        {/* ── Jugadores ── */}
+        {/* ── Estadísticas del torneo ── */}
         <View className="flex-row items-center mb-3">
           <Text className="text-night font-sans-medium text-base flex-1">
-            Jugadores
+            Estadísticas del torneo
           </Text>
           <View className="bg-primary-light px-2 py-0.5 rounded-full">
-            <Text className="text-primary text-xs font-sans-medium">{equipo.jugadores.length}</Text>
+            <Text className="text-primary text-xs font-sans-medium">{jugadoresTabla.length}</Text>
           </View>
         </View>
 
-        <View
-          className="bg-white rounded-2xl mb-5 overflow-hidden"
-          style={{ elevation: 1, shadowColor: '#0F1A14', shadowOpacity: 0.05, shadowRadius: 6 }}
-        >
-          {equipo.jugadores.length === 0 ? (
-            <View className="px-4 py-8 items-center">
-              <Text className="text-carbon text-sm">Sin jugadores registrados aún.</Text>
-            </View>
-          ) : (
-            equipo.jugadores.map((row, index) => (
-              <PlayerRow
-                key={row.id}
-                row={row}
-                isCapitan={row.usuario.id === equipo.capitanId}
-                isLast={index === equipo.jugadores.length - 1}
-              />
-            ))
-          )}
-        </View>
+        {jugadoresTabla.length === 0 ? (
+          <View
+            className="bg-white rounded-2xl px-4 py-8 items-center mb-5"
+            style={{ elevation: 1, shadowColor: '#0F1A14', shadowOpacity: 0.05, shadowRadius: 6 }}
+          >
+            <Text className="text-carbon text-sm">Sin jugadores registrados aún.</Text>
+          </View>
+        ) : (
+          <View className="mb-5">
+            <JugadoresStatsTable jugadores={jugadoresTabla} capitanId={equipo.capitanId} />
+          </View>
+        )}
 
         {/* ── CAPITAN ONLY ── */}
         {esCapitan && (

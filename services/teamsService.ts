@@ -1,11 +1,19 @@
 import { api } from './api';
 import { useAuthStore } from '../store/authStore';
 
+export interface EstadisticasTorneo {
+  goles: number;
+  asistencias: number;
+  tarjetasAmarillas: number;
+  tarjetasRojas: number;
+}
+
 export interface Jugador {
   id: string;
   nombre: string;
   fotoPerfil: string | null;
   email?: string;
+  estadisticas?: EstadisticasTorneo;
 }
 
 export interface PlayerInvitacion {
