@@ -123,6 +123,13 @@ export default function TeamsScreen() {
     showConfirm('Rechazar solicitud', `¿Rechazar la inscripción de "${inscripcion.equipo.nombre}"?`, () => doRechazar(inscripcion), 'Rechazar', 'Cancelar');
   };
 
+  const handleTeamPress = (teamId: string) => {
+    router.push({
+      pathname: '/(app)/tournament/team-detail',
+      params: { teamId, torneoId: torneoId ?? '' },
+    } as never);
+  };
+
   return (
     <View className="flex-1 bg-mist">
       <CustomAlert {...alertState} onConfirm={alertState.onConfirm} onCancel={hideAlert} />
@@ -274,6 +281,7 @@ export default function TeamsScreen() {
                   team={team}
                   canDelete={puedeEliminar}
                   onDelete={(teamId) => handleDelete(teamId, team.nombre)}
+                  onPress={handleTeamPress}
                 />
               ))
             )}
