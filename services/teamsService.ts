@@ -43,6 +43,11 @@ export interface Team {
   createdAt: string;
 }
 
+export interface TeamDetail extends Team {
+  torneo?: { id: string; nombre: string };
+  capitanId?: string | null;
+}
+
 export interface CreateTeamDto {
   nombre: string;
   escudo?: string;
@@ -56,7 +61,7 @@ export const getTeamsByTournament = async (torneoId: string): Promise<Team[]> =>
   return api.get(`/teams/tournament/${torneoId}`, getToken());
 };
 
-export const getTeamById = async (id: string): Promise<Team> => {
+export const getTeamById = async (id: string): Promise<TeamDetail> => {
   return api.get(`/teams/${id}`, getToken());
 };
 

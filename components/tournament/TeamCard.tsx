@@ -12,16 +12,19 @@ interface Props {
 
 export default function TeamCard({ team, canDelete, onDelete, onPress }: Props) {
   const suffix = team.cantidadJugadores === 1 ? '' : 'es';
+  const Wrapper = onPress ? TouchableOpacity : View;
 
   return (
-    <TouchableOpacity
-      onPress={() => onPress?.(team.id)}
-      activeOpacity={onPress ? 0.75 : 1}
+    <View
       className="bg-white rounded-2xl px-4 py-3 mb-3"
       style={{ elevation: 1, shadowColor: '#0F1A14', shadowOpacity: 0.05, shadowRadius: 6 }}
     >
       <View className="flex-row items-center justify-between">
-        <View className="flex-row items-center flex-1">
+        <Wrapper
+          {...(onPress
+            ? { onPress: () => onPress(team.id), activeOpacity: 0.75, className: 'flex-row items-center flex-1' }
+            : { className: 'flex-row items-center flex-1' })}
+        >
           <View className="mr-3">
             <ShieldDisplay escudo={team.escudo} size={40} />
           </View>
@@ -33,17 +36,20 @@ export default function TeamCard({ team, canDelete, onDelete, onPress }: Props) 
               {team.cantidadJugadores} jugador{suffix}
             </Text>
           </View>
+        </Wrapper>
+        <View className="flex-row items-center">
+          {canDelete && onDelete && (
+            <TouchableOpacity
+              onPress={() => onDelete(team.id)}
+              className="p-2"
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Feather name="trash-2" size={16} color="#E53935" />
+            </TouchableOpacity>
+          )}
+          {onPress && <Feather name="chevron-right" size={18} color="#3D4F44" />}
         </View>
-        {canDelete && onDelete && (
-          <TouchableOpacity
-            onPress={() => onDelete(team.id)}
-            className="p-2"
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Feather name="trash-2" size={16} color="#E53935" />
-          </TouchableOpacity>
-        )}
       </View>
-    </TouchableOpacity>
+    </View>
   );
 }
