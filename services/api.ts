@@ -1,12 +1,16 @@
 // services/api.ts
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL;
+import { getApiBaseUrl } from '../constants/config';
+
+const BASE_URL = getApiBaseUrl();
 
 const handleResponse = async (response: Response) => {
   const data = await response.json();
   if (response.status === 401) {
     const { useAuthStore } = await import('../store/authStore');
+    const { unregisterPushDevice } = await import('./pushNotifications');
     const currentToken = useAuthStore.getState().token;
     if (currentToken) {
+      await unregisterPushDevice(currentToken);
       useAuthStore.getState().clearAuth();
       throw new Error('Sesión expirada');
     }

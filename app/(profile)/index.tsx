@@ -6,10 +6,11 @@ import { useProfile } from '../../hooks/useProfile';
 import { useAuthStore } from '../../store/authStore';
 import CustomAlert from '../../components/CustomAlert';
 import { useAlert } from '../../hooks/useAlert';
+import { unregisterPushDevice } from '../../services/pushNotifications';
 
 export default function ProfileScreen() {
   const { usuario, loading, fetchProfile } = useProfile();
-  const { clearAuth } = useAuthStore();
+  const { token, clearAuth } = useAuthStore();
   const router = useRouter();
   const { alertState, hideAlert, showConfirm } = useAlert();
 
@@ -21,7 +22,8 @@ export default function ProfileScreen() {
     showConfirm(
       'Cerrar sesión',
       '¿Estás seguro que deseas cerrar sesión?',
-      () => {
+      async () => {
+        await unregisterPushDevice(token);
         clearAuth();
         router.replace('/(auth)/login');
       },
