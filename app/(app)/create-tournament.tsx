@@ -22,6 +22,7 @@ import {
   createTournament,
   publishTournament,
   TournamentFormat,
+  TournamentModality,
   uploadTournamentImage,
 } from '../../services/tournamentService';
 import { useAuthStore } from '../../store/authStore';
@@ -33,7 +34,9 @@ interface FormData {
   fechaInicio: string;
   fechaFin: string;
   formato: TournamentFormat | '';
+  modalidad: TournamentModality | '';
   maxEquipos: number;
+  maxJugadoresPorEquipo: number;
   campos: Campo[];
   staffEmails: string[];
   imagen?: string;
@@ -47,7 +50,9 @@ const INITIAL_FORM: FormData = {
   fechaInicio: '',
   fechaFin: '',
   formato: '',
+  modalidad: '',
   maxEquipos: 8,
+  maxJugadoresPorEquipo: 22,
   campos: [],
   staffEmails: [],
 };
@@ -100,6 +105,10 @@ export default function CreateTournamentScreen() {
         setStep2Error('Debes seleccionar un formato');
         return false;
       }
+      if (!form.modalidad) {
+        setStep2Error('Debes seleccionar la modalidad (Fútbol 5, 7 u 11)');
+        return false;
+      }
       setStep2Error('');
     }
     return true;
@@ -146,7 +155,9 @@ export default function CreateTournamentScreen() {
     nombre: form.nombre,
     descripcion: form.descripcion,
     formato: form.formato as TournamentFormat,
+    modalidad: form.modalidad as TournamentModality,
     maxEquipos: form.maxEquipos,
+    maxJugadoresPorEquipo: form.maxJugadoresPorEquipo,
     fechaInicio: form.fechaInicio,
     fechaFin: form.fechaFin,
     zona: form.zona,
@@ -270,6 +281,7 @@ export default function CreateTournamentScreen() {
         {step === 2 && (
           <Step2
             formato={form.formato}
+            modalidad={form.modalidad}
             onChange={(v) => {
               onChange('formato', v);
               if (v === 'COPA' && ![4, 8, 16, 32].includes(form.maxEquipos)) {
@@ -280,6 +292,15 @@ export default function CreateTournamentScreen() {
                 );
                 onChange('maxEquipos', closest);
               }
+            }}
+            onChangeModalidad={(m) => {
+              onChange('modalidad', m);
+              const limites: Record<string, number> = {
+                FUTBOL_5: 10,
+                FUTBOL_7: 14,
+                FUTBOL_11: 22,
+              };
+              onChange('maxJugadoresPorEquipo', limites[m]);
             }}
             error={step2Error}
           />
