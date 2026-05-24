@@ -3,6 +3,7 @@ import { useAuthStore } from '../store/authStore';
 
 export type TournamentFormat = 'LIGA' | 'COPA' | 'GRUPOS' | 'ELIMINATORIA';
 export type TournamentStatus = 'BORRADOR' | 'EN_INSCRIPCION' | 'EN_CURSO' | 'FINALIZADO';
+export type TournamentModality = 'FUTBOL_5' | 'FUTBOL_7' | 'FUTBOL_11';
 
 export interface Campo {
   nombre: string;
@@ -20,7 +21,9 @@ export interface Tournament {
   nombre: string;
   descripcion: string;
   formato: TournamentFormat;
+  modalidad?: TournamentModality;
   maxEquipos: number;
+  maxJugadoresPorEquipo?: number;
   estado: TournamentStatus;
   fechaInicio: string;
   fechaFin: string;
@@ -38,7 +41,9 @@ export interface CreateTournamentDto {
   nombre: string;
   descripcion: string;
   formato: TournamentFormat;
+  modalidad?: TournamentModality;
   maxEquipos: number;
+  maxJugadoresPorEquipo?: number;
   fechaInicio: string;
   fechaFin: string;
   zona: string;

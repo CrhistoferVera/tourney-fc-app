@@ -74,7 +74,7 @@ const SignInForm = () => {
           </Pressable>
           <Text className="text-night text-center mt-4">
             ¿No tienes una cuenta?{' '}
-            <Link href="/sign-up" asChild>
+            <Link href="/register" asChild>
               <Text className="text-primary font-sans-bold">Registrate</Text>
             </Link>
           </Text>

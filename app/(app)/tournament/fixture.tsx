@@ -279,7 +279,10 @@ export default function FixtureScreen() {
               <MatchCard
                 key={partido.id}
                 partido={partido}
-                onIniciar={isOrganizadorOStaff ? () => {} : undefined}
+                onPress={() => router.push({
+                  pathname: '/(app)/tournament/match/[id]',
+                  params: { id: partido.id }
+                } as any)}
               />
             ))}
           </>

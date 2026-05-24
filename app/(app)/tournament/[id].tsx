@@ -1,7 +1,16 @@
 import { Feather } from '@expo/vector-icons';
+import {
+  CalendarDays,
+  Trophy,
+  Users,
+  BarChart2,
+  Settings2,
+  Shield,
+  ChevronRight,
+} from 'lucide-react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import CustomAlert from '../../../components/CustomAlert';
 import { useAlert } from '../../../hooks/useAlert';
 import {
@@ -37,25 +46,53 @@ function getEstadoLabel(estado: string) {
   return 'Finalizado';
 }
 
-// ─── QuickBtn ─────────────────────────────────────────────────────────────────
+// ─── NavItem ──────────────────────────────────────────────────────────────────
 
-interface QuickBtnProps {
-  readonly icon: string;
+interface NavItemProps {
+  readonly icon: React.ComponentType<{ size: number; color: string }>;
+  readonly iconColor: string;
+  readonly iconBg: string;
   readonly label: string;
-  readonly color: string;
+  readonly subtitle: string;
   readonly onPress?: () => void;
+  readonly last?: boolean;
 }
 
-function QuickBtn({ icon, label, color, onPress }: QuickBtnProps) {
+function NavItem({ icon: Icon, iconColor, iconBg, label, subtitle, onPress, last }: NavItemProps) {
+  const disabled = !onPress;
   return (
     <TouchableOpacity
       onPress={onPress}
-      activeOpacity={onPress ? 0.8 : 0.6}
-      className={`${color} rounded-2xl items-center justify-center py-4 ${onPress ? '' : 'opacity-40'}`}
-      style={{ flex: 1, minHeight: 80 }}
+      activeOpacity={disabled ? 1 : 0.75}
+      disabled={disabled}
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 13,
+        paddingHorizontal: 16,
+        borderBottomWidth: last ? 0 : 1,
+        borderBottomColor: '#EBF0EC',
+        opacity: disabled ? 0.38 : 1,
+      }}
     >
-      <Feather name={icon as any} size={24} color="white" />
-      <Text className="text-white text-xs font-sans-medium mt-1">{label}</Text>
+      <View
+        style={{
+          width: 42,
+          height: 42,
+          borderRadius: 12,
+          backgroundColor: iconBg,
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginRight: 14,
+        }}
+      >
+        <Icon size={20} color={iconColor} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={{ fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#0F1A14' }}>{label}</Text>
+        <Text style={{ fontFamily: 'Inter_400Regular', fontSize: 12, color: '#3D4F44', marginTop: 1 }}>{subtitle}</Text>
+      </View>
+      {!disabled && <ChevronRight size={18} color="#A8B5AE" />}
     </TouchableOpacity>
   );
 }
@@ -244,7 +281,16 @@ export default function TournamentDetailScreen() {
   const goToInscribirse = () =>
     router.push({
       pathname: '/(app)/tournament/inscribirse',
-      params: { id: tournament!.id },
+      params: {
+        id: tournament!.id,
+        nombre: tournament!.nombre,
+        descripcion: tournament!.descripcion ?? '',
+        modalidad: tournament!.modalidad ?? '',
+        maxEquipos: String(tournament!.maxEquipos),
+        equiposInscritos: String(tournament!.equiposInscritos ?? 0),
+        maxJugadoresPorEquipo: String(tournament!.maxJugadoresPorEquipo ?? 0),
+        zona: tournament!.zona ?? '',
+      },
     } as never);
 
   const goToMiEquipo = () =>
@@ -415,29 +461,75 @@ export default function TournamentDetailScreen() {
         </View>
 
         {/* Acceso rápido */}
-        <Text className="text-night font-sans-medium text-base mb-3">Acceso rápido</Text>
-        <View className="flex-row gap-2 mb-2">
-          <QuickBtn icon="calendar"    label="Fixture"      color="bg-primary"      onPress={canVerFixture ? goToFixture  : undefined} />
-          <QuickBtn
-            icon="award"
-            label={isBracketFmt ? 'Bracket' : 'Tabla'}
-            color="bg-accent"
+        <Text style={{ fontFamily: 'Inter_600SemiBold', fontSize: 15, color: '#0F1A14', marginBottom: 10 }}>Acceso rápido</Text>
+        <View
+          style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: 20,
+            overflow: 'hidden',
+            marginBottom: 16,
+            elevation: 2,
+            shadowColor: '#0F1A14',
+            shadowOpacity: 0.05,
+            shadowRadius: 8,
+          }}
+        >
+          <NavItem
+            icon={CalendarDays}
+            iconColor="#0D7A3E"
+            iconBg="#D4F5E2"
+            label="Fixture"
+            subtitle="Ver el calendario de partidos"
+            onPress={canVerFixture ? goToFixture : undefined}
+          />
+          <NavItem
+            icon={Trophy}
+            iconColor="#F5820D"
+            iconBg="#FEF0DC"
+            label={isBracketFmt ? 'Bracket' : 'Tabla de posiciones'}
+            subtitle={isBracketFmt ? 'Ver el árbol de eliminación' : 'Clasificación y puntos'}
             onPress={canVerTabla ? goToTabla : undefined}
           />
-          <QuickBtn icon="users"       label="Equipos"      color="bg-info"         onPress={canVerFixture ? goToEquipos  : undefined} />
-        </View>
-        <View className="flex-row gap-2 mb-2">
-          <QuickBtn icon="bar-chart-2" label="Estadísticas"  color="bg-primary-dark" onPress={canVerFixture ? () => {} : undefined} />
-          {canGestionar && (
-            <QuickBtn icon="settings" label="Gestionar"     color="bg-carbon"       onPress={goToManage} />
+          <NavItem
+            icon={Users}
+            iconColor="#1A73E8"
+            iconBg="#EAF2FB"
+            label="Equipos"
+            subtitle="Ver todos los equipos inscritos"
+            onPress={canVerFixture ? goToEquipos : undefined}
+          />
+          {canVerMiEquipo && (
+            <NavItem
+              icon={Shield}
+              iconColor="#9B59B6"
+              iconBg="#F5EEF8"
+              label="Mi equipo"
+              subtitle="Ver la plantilla de mi equipo"
+              onPress={goToMiEquipo}
+            />
           )}
-          <QuickBtn icon="bell"        label="Notificaciones" color="bg-accent"      onPress={() => {}} />
+          {canGestionar && (
+            <NavItem
+              icon={Settings2}
+              iconColor="#3D4F44"
+              iconBg="#EBF0EC"
+              label="Gestionar torneo"
+              subtitle="Administrar staff, equipos y fechas"
+              onPress={goToManage}
+              last
+            />
+          )}
+          {!canGestionar && (
+            <NavItem
+              icon={BarChart2}
+              iconColor="#3D4F44"
+              iconBg="#EBF0EC"
+              label="Estadísticas"
+              subtitle="Próximamente disponible"
+              last
+            />
+          )}
         </View>
-        {canVerMiEquipo && (
-          <View className="flex-row gap-2 mb-4">
-            <QuickBtn icon="shield" label="Mi equipo" color="bg-primary" onPress={goToMiEquipo} />
-          </View>
-        )}
 
         {/* Últimos resultados */}
         <Text className="text-night font-sans-medium text-base mb-3">Últimos resultados</Text>
