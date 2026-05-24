@@ -10,6 +10,7 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Feather } from '@expo/vector-icons';
+import { MinusCircle, PlusCircle, Users, CalendarDays, Settings2, UserCheck, ClipboardList } from 'lucide-react-native';
 import { updateTournament, startTournament } from '../../../services/tournamentService';
 import { userService, User } from '../../../services/userService';
 import { api } from '../../../services/api';
@@ -507,8 +508,8 @@ export default function ManageScreen() {
   const handleSave = async () => {
     if (!torneoId) return;
     const max = Number.parseInt(maxEquipos, 10);
-    if (!max || max < 2) {
-      showError('Valor inválido', 'El número de equipos debe ser al menos 2');
+    if (!max || max < 4) {
+      showError('Valor inválido', 'El número de equipos debe ser al menos 4');
       return;
     }
     if (max < equiposAprobados) {
@@ -568,18 +569,47 @@ export default function ManageScreen() {
             />
           </View>
           <View>
-            <Text className="text-night text-sm mb-1">Máximo de equipos</Text>
-            <View className="flex-row items-center bg-mist rounded-xl px-4 py-3">
-              <TextInput
-                className="flex-1 text-night text-base"
-                keyboardType="numeric"
-                value={maxEquipos}
-                onChangeText={setMaxEquipos}
-                maxLength={3}
-              />
-              <Text className="text-carbon text-xs ml-2">
-                {equiposAprobados} aprobado{equiposAprobados === 1 ? '' : 's'}
-              </Text>
+            {/* Separador */}
+            <View style={{ height: 1, backgroundColor: '#EBF0EC', marginBottom: 16 }} />
+            {/* Contador de equipos */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+              <Users size={14} color="#3D4F44" />
+              <Text style={{ color: '#3D4F44', fontFamily: 'Inter_500Medium', fontSize: 12 }}>Máximo de equipos</Text>
+            </View>
+            <View style={{ alignItems: 'center', paddingVertical: 8 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 24 }}>
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    const cur = Number.parseInt(maxEquipos, 10) || 4;
+                    // El mínimo absoluto es 4, pero no puede ser menor a los equipos ya aprobados
+                    const next = Math.max(Math.max(4, equiposAprobados || 4), cur - 2);
+                    setMaxEquipos(String(next));
+                  }}
+                >
+                  <MinusCircle size={42} color="#0D7A3E" strokeWidth={1.5} />
+                </TouchableOpacity>
+                <View style={{ alignItems: 'center' }}>
+                  <Text style={{ fontFamily: 'Inter_600SemiBold', fontSize: 56, color: '#0D7A3E', lineHeight: 62 }}>
+                    {maxEquipos}
+                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                    <Users size={12} color="#3D4F44" />
+                    <Text style={{ color: '#3D4F44', fontSize: 11, fontFamily: 'Inter_400Regular' }}>
+                      {equiposAprobados} aprobado{equiposAprobados === 1 ? '' : 's'} · equipos máx.
+                    </Text>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    const cur = Number.parseInt(maxEquipos, 10) || 2;
+                    setMaxEquipos(String(Math.min(32, cur + 2)));
+                  }}
+                >
+                  <PlusCircle size={42} color="#0D7A3E" strokeWidth={1.5} />
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </View>
@@ -597,17 +627,32 @@ export default function ManageScreen() {
 
         {estado === 'EN_INSCRIPCION' && (
           <TouchableOpacity
-            className="border border-danger rounded-2xl py-4 items-center flex-row justify-center gap-2 mb-8"
+            style={{
+              backgroundColor: '#E53935',
+              borderRadius: 18,
+              paddingVertical: 16,
+              alignItems: 'center',
+              flexDirection: 'row',
+              justifyContent: 'center',
+              gap: 8,
+              marginBottom: 32,
+              elevation: 2,
+              shadowColor: '#E53935',
+              shadowOpacity: 0.25,
+              shadowRadius: 8,
+            }}
             onPress={handleCerrarInscripciones}
             disabled={closing}
             activeOpacity={0.8}
           >
             {closing ? (
-              <ActivityIndicator color="#E53935" size="small" />
+              <ActivityIndicator color="white" size="small" />
             ) : (
               <>
-                <Feather name="lock" size={18} color="#E53935" />
-                <Text className="text-danger font-sans-medium text-base">Cerrar inscripciones</Text>
+                <Feather name="lock" size={18} color="white" />
+                <Text style={{ color: 'white', fontFamily: 'Inter_600SemiBold', fontSize: 15 }}>
+                  Cerrar inscripciones
+                </Text>
               </>
             )}
           </TouchableOpacity>
@@ -615,15 +660,28 @@ export default function ManageScreen() {
 
         {/* Tabs */}
         <View className="flex-row bg-white rounded-2xl p-1 mb-4">
-          {(['staff', 'solicitudes'] as Tab[]).map((t) => (
+          {([
+            { key: 'staff' as Tab,       label: 'Staff',       icon: UserCheck },
+            { key: 'solicitudes' as Tab, label: 'Solicitudes', icon: ClipboardList },
+          ]).map(({ key, label, icon: Icon }) => (
             <TouchableOpacity
-              key={t}
-              onPress={() => setTab(t)}
+              key={key}
+              onPress={() => setTab(key)}
               activeOpacity={0.8}
-              className={`flex-1 py-2.5 rounded-xl items-center ${tab === t ? 'bg-primary' : ''}`}
+              style={{
+                flex: 1,
+                paddingVertical: 10,
+                borderRadius: 12,
+                alignItems: 'center',
+                flexDirection: 'row',
+                justifyContent: 'center',
+                gap: 6,
+                backgroundColor: tab === key ? '#0D7A3E' : 'transparent',
+              }}
             >
-              <Text className={`text-sm font-sans-medium ${tab === t ? 'text-white' : 'text-carbon'}`}>
-                {t === 'staff' ? 'Gestión de staff' : 'Solicitudes'}
+              <Icon size={15} color={tab === key ? 'white' : '#3D4F44'} />
+              <Text style={{ fontSize: 13, fontFamily: 'Inter_600SemiBold', color: tab === key ? 'white' : '#3D4F44' }}>
+                {label}
               </Text>
             </TouchableOpacity>
           ))}

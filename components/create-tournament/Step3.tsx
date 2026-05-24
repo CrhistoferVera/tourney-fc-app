@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MapPin } from 'lucide-react-native';
+import { MapPin, Users, MinusCircle, PlusCircle, Shield } from 'lucide-react-native';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Campo, TournamentFormat } from '../../services/tournamentService';
 import MapPickerModal from './MapPickerModal';
@@ -49,7 +49,7 @@ export default function Step3({
       const idx = validCopa.indexOf(maxEquipos);
       if (idx > 0) onChangeEquipos(validCopa[idx - 1]);
     } else {
-      onChangeEquipos(Math.max(2, maxEquipos - 2));
+      onChangeEquipos(Math.max(4, maxEquipos - 2));
     }
   };
 
@@ -58,77 +58,171 @@ export default function Step3({
       const idx = validCopa.indexOf(maxEquipos);
       if (idx < validCopa.length - 1) onChangeEquipos(validCopa[idx + 1]);
     } else {
-      onChangeEquipos(Math.min(32, maxEquipos + 2)); // Limit to 32
+      onChangeEquipos(Math.min(32, maxEquipos + 2));
     }
   };
 
   return (
     <>
-      <View className="items-center mb-6">
-        <Text className="text-carbon text-sm font-sans-medium mb-3">Número de equipos</Text>
-        <View className="flex-row items-center gap-6">
-          <TouchableOpacity
-            onPress={handleMinus}
-            className="w-12 h-12 rounded-full bg-white border border-mist items-center justify-center shadow-sm"
+      {/* Contador de equipos */}
+      <View
+        style={{
+          backgroundColor: '#FFFFFF',
+          borderRadius: 20,
+          borderWidth: 1.5,
+          borderColor: '#EBF0EC',
+          paddingVertical: 20,
+          paddingHorizontal: 16,
+          marginBottom: 20,
+          alignItems: 'center',
+          elevation: 2,
+          shadowColor: '#0F1A14',
+          shadowOpacity: 0.04,
+          shadowRadius: 8,
+        }}
+      >
+        {/* Ícono + label */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 8 }}>
+          <View
+            style={{
+              backgroundColor: '#D4F5E2',
+              borderRadius: 10,
+              padding: 6,
+            }}
           >
-            <Text className="text-primary text-2xl font-sans-medium">−</Text>
-          </TouchableOpacity>
-          <Text className="text-primary text-4xl font-sans-bold w-16 text-center">
-            {maxEquipos}
+            <Shield size={18} color="#0D7A3E" />
+          </View>
+          <Text style={{ color: '#3D4F44', fontFamily: 'Inter_500Medium', fontSize: 13 }}>
+            Número de equipos
           </Text>
-          <TouchableOpacity
-            onPress={handlePlus}
-            className="w-12 h-12 rounded-full bg-white border border-mist items-center justify-center shadow-sm"
-          >
-            <Text className="text-primary text-2xl font-sans-medium">+</Text>
+        </View>
+
+        {/* Controles */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 24 }}>
+          <TouchableOpacity onPress={handleMinus} activeOpacity={0.7}>
+            <MinusCircle size={40} color="#0D7A3E" strokeWidth={1.5} />
+          </TouchableOpacity>
+
+          <View style={{ alignItems: 'center' }}>
+            <Text
+              style={{
+                fontFamily: 'Inter_600SemiBold',
+                fontSize: 52,
+                color: '#0D7A3E',
+                lineHeight: 58,
+              }}
+            >
+              {maxEquipos}
+            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+              <Users size={12} color="#3D4F44" />
+              <Text style={{ color: '#3D4F44', fontSize: 11, fontFamily: 'Inter_400Regular' }}>
+                equipos máx.
+              </Text>
+            </View>
+          </View>
+
+          <TouchableOpacity onPress={handlePlus} activeOpacity={0.7}>
+            <PlusCircle size={40} color="#0D7A3E" strokeWidth={1.5} />
           </TouchableOpacity>
         </View>
       </View>
 
-      <View className="flex-row items-center justify-between mb-3">
-        <Text className="text-carbon text-sm font-sans-medium">Canchas de juego</Text>
+      {/* Canchas */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <View style={{ backgroundColor: '#D4F5E2', borderRadius: 8, padding: 5 }}>
+            <MapPin size={14} color="#0D7A3E" />
+          </View>
+          <Text style={{ color: '#3D4F44', fontFamily: 'Inter_500Medium', fontSize: 13 }}>
+            Canchas de juego
+          </Text>
+        </View>
         <TouchableOpacity onPress={addCampo}>
-          <Text className="text-primary text-sm font-sans-medium">+ Agregar cancha</Text>
+          <Text style={{ color: '#0D7A3E', fontFamily: 'Inter_600SemiBold', fontSize: 13 }}>
+            + Agregar
+          </Text>
         </TouchableOpacity>
       </View>
 
       {campos.length === 0 ? (
         <TouchableOpacity
           onPress={addCampo}
-          className="bg-white border border-dashed border-primary rounded-2xl px-4 py-6 items-center"
+          style={{
+            backgroundColor: '#FFFFFF',
+            borderWidth: 1.5,
+            borderStyle: 'dashed',
+            borderColor: '#0D7A3E',
+            borderRadius: 18,
+            paddingVertical: 24,
+            alignItems: 'center',
+          }}
         >
-          <Text className="text-primary font-sans-medium text-sm">+ Agregar primera cancha</Text>
+          <View style={{ backgroundColor: '#D4F5E2', borderRadius: 12, padding: 8, marginBottom: 8 }}>
+            <MapPin size={20} color="#0D7A3E" />
+          </View>
+          <Text style={{ color: '#0D7A3E', fontFamily: 'Inter_600SemiBold', fontSize: 13 }}>
+            + Agregar primera cancha
+          </Text>
         </TouchableOpacity>
       ) : (
         campos.map((campo, i) => (
-          <View key={i} className="bg-white rounded-2xl px-4 py-3 mb-3 border border-mist">
-            <View className="flex-row justify-between items-center mb-2">
-              <Text className="text-carbon text-xs font-sans-medium">Cancha {i + 1}</Text>
+          <View
+            key={i}
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: 16,
+              paddingHorizontal: 16,
+              paddingVertical: 12,
+              marginBottom: 10,
+              borderWidth: 1,
+              borderColor: '#EBF0EC',
+              elevation: 1,
+            }}
+          >
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <View style={{ backgroundColor: '#D4F5E2', borderRadius: 8, padding: 4 }}>
+                  <MapPin size={12} color="#0D7A3E" />
+                </View>
+                <Text style={{ color: '#3D4F44', fontSize: 12, fontFamily: 'Inter_500Medium' }}>
+                  Cancha {i + 1}
+                </Text>
+              </View>
               <TouchableOpacity onPress={() => removeCampo(i)}>
-                <Text className="text-danger text-xs">Eliminar</Text>
+                <Text style={{ color: '#E53935', fontSize: 12 }}>Eliminar</Text>
               </TouchableOpacity>
             </View>
             <TextInput
               placeholder="Nombre de la cancha"
-              placeholderTextColor="#3D4F44"
+              placeholderTextColor="#A8B5AE"
               value={campo.nombre}
               onChangeText={(v) => updateCampo(i, 'nombre', v)}
-              className="text-night font-sans text-sm border-b border-mist py-2 mb-2"
+              style={{ color: '#0F1A14', fontFamily: 'Inter_400Regular', fontSize: 13, borderBottomWidth: 1, borderBottomColor: '#EBF0EC', paddingVertical: 8, marginBottom: 8 }}
             />
-            <View className="flex-row items-center">
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <TextInput
                 placeholder="Dirección"
-                placeholderTextColor="#3D4F44"
+                placeholderTextColor="#A8B5AE"
                 value={campo.direccion}
                 onChangeText={(v) => updateCampo(i, 'direccion', v)}
-                className="text-night font-sans text-sm py-2 flex-1"
+                style={{ flex: 1, color: '#0F1A14', fontFamily: 'Inter_400Regular', fontSize: 13, paddingVertical: 8 }}
               />
               <TouchableOpacity
                 onPress={() => openMap(i)}
-                className="ml-2 bg-primary-light rounded-lg px-2 py-1 flex-row items-center gap-1"
+                style={{
+                  marginLeft: 8,
+                  backgroundColor: '#D4F5E2',
+                  borderRadius: 10,
+                  paddingHorizontal: 10,
+                  paddingVertical: 6,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 4,
+                }}
               >
-                <MapPin size={14} color="#0D7A3E" />
-                <Text className="text-primary text-xs font-sans-medium">Mapa</Text>
+                <MapPin size={13} color="#0D7A3E" />
+                <Text style={{ color: '#0D7A3E', fontSize: 12, fontFamily: 'Inter_500Medium' }}>Mapa</Text>
               </TouchableOpacity>
             </View>
           </View>

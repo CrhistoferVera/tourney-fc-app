@@ -13,10 +13,28 @@ export interface Campo {
   direccion: string | null;
 }
 
+export type FaseJuego = 'PREVIA' | 'PRIMER_TIEMPO' | 'MEDIO_TIEMPO' | 'SEGUNDO_TIEMPO' | 'FINALIZADO';
+export type TipoEvento = 'GOL' | 'ASISTENCIA' | 'TARJETA_AMARILLA' | 'TARJETA_ROJA' | 'CAMBIO' | 'FALTA' | 'CORNER';
+
+export interface EventoPartido {
+  id: string;
+  tipo: TipoEvento;
+  minuto: number | null;
+  detalle: string | null;
+  equipoId: string;
+  equipo?: PartidoEquipo;
+  jugadorId: string | null;
+  jugador?: { id: string; nombre: string } | null;
+  createdAt: string;
+}
+
 export interface Partido {
   id: string;
   torneoId: string;
   estado: string;
+  faseJuego: FaseJuego;
+  minutosJugados: number;
+  cronometroIniciadoEn: string | null;
   fecha: string | null;
   ronda: number | null;
   fase: string | null;
@@ -25,6 +43,7 @@ export interface Partido {
   equipoLocal: PartidoEquipo;
   equipoVisitante: PartidoEquipo;
   campo: Campo | null;
+  eventos?: EventoPartido[];
 }
 
 export interface RondaFixture {
@@ -48,6 +67,27 @@ export const getFixtureByEquipo = async (
   equipoId: string,
 ): Promise<Partido[]> => {
   return api.get(`/fixtures/tournament/${torneoId}/equipo/${equipoId}`, getToken());
+};
+
+export const getMatchById = async (id: string): Promise<Partido> => {
+  return api.get(`/matches/${id}`, getToken());
+};
+
+export type MatchControlAction = 'START_FIRST_HALF' | 'PAUSE_HALF_TIME' | 'START_SECOND_HALF' | 'END_MATCH';
+
+export const controlLiveMatch = async (id: string, action: MatchControlAction): Promise<Partido> => {
+  return api.patch(`/matches/${id}/control`, { action }, getToken());
+};
+
+export const addMatchEvent = async (
+  id: string,
+  payload: { tipo: TipoEvento; equipoId: string; jugadorId?: string; minuto?: number; detalle?: string }
+): Promise<EventoPartido> => {
+  return api.post(`/matches/${id}/events`, payload, getToken());
+};
+
+export const deleteMatchEvent = async (id: string, eventId: string): Promise<void> => {
+  return api.delete(`/matches/${id}/events/${eventId}`, getToken());
 };
 
 export interface FilaTablaPosiciones {
