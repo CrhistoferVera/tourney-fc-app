@@ -6,14 +6,16 @@ import { Jugador, EstadisticasTorneo } from '../../services/teamsService';
 
 const STAT_COL = 36;
 
-function CardDot({ color }: { readonly color: string }) {
+function CardIcon({ color }: { readonly color: string }) {
   return (
     <View
       style={{
-        width: 8,
-        height: 8,
-        borderRadius: 4,
+        width: 9,
+        height: 13,
+        borderRadius: 1.5,
         backgroundColor: color,
+        borderWidth: 0.5,
+        borderColor: 'rgba(0,0,0,0.15)',
       }}
     />
   );
@@ -73,10 +75,10 @@ export default function JugadoresStatsTable({ jugadores, capitanId }: Props) {
       <View className="flex-row items-center px-3 py-2.5 bg-mist border-b border-mist">
         <Text className="text-carbon text-xs font-sans-medium flex-1">Jugador</Text>
         <StatHeaderIcon>
-          <CardDot color="#E53935" />
+          <CardIcon color="#E53935" />
         </StatHeaderIcon>
         <StatHeaderIcon>
-          <CardDot color="#F5C518" />
+          <CardIcon color="#F5C518" />
         </StatHeaderIcon>
         <StatHeaderIcon>
           <MaterialCommunityIcons name="soccer" size={16} color="#0D7A3E" />

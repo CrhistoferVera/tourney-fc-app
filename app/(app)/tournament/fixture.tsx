@@ -46,7 +46,7 @@ export default function FixtureScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [rondaActual, setRondaActual] = useState(0);
-  const [bracketTab, setBracketTab] = useState<BracketTab>('bracket');
+  const [bracketTab, setBracketTab] = useState<BracketTab>('lista');
 
   const isBracket = formato === 'COPA' || formato === 'ELIMINATORIA';
   const isOrganizadorOStaff = rol === 'ORGANIZADOR' || rol === 'STAFF';
@@ -97,12 +97,15 @@ export default function FixtureScreen() {
   const isFirstLoad = useRef(true);
   useFocusEffect(
     useCallback(() => {
+      const load = () => Promise.all([fetchFixture(), fetchEquipos()]);
       if (isFirstLoad.current) {
         isFirstLoad.current = false;
-        Promise.all([fetchFixture(), fetchEquipos()]).finally(() => setLoading(false));
+        load().finally(() => setLoading(false));
       } else {
-        Promise.all([fetchFixture(), fetchEquipos()]);
+        load();
       }
+      const interval = setInterval(load, 10000);
+      return () => clearInterval(interval);
     }, [fetchFixture, fetchEquipos]),
   );
 

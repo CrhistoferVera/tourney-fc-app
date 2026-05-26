@@ -325,6 +325,9 @@ export default function TablaScreen() {
     useCallback(() => {
       setLoading(true);
       loadAll().finally(() => setLoading(false));
+      
+      const interval = setInterval(loadAll, 10000);
+      return () => clearInterval(interval);
     }, [loadAll]),
   );
 

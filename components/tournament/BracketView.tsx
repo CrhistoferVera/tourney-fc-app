@@ -66,12 +66,22 @@ function TeamRow({
   onPress,
 }: TeamRowProps) {
   const marcador = hasMarcador(score, scoreOponente);
+  
+  const sNum = score ?? 0;
+  const sOpNum = scoreOponente ?? 0;
+  const isWinner = marcador && sNum > sOpNum;
+  const isLoser = marcador && sNum < sOpNum;
+
   const content = (
     <>
       {tbd ? (
         <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: '#F3F4F6' }} />
       ) : escudo ? (
-        <Image source={{ uri: escudo }} style={{ width: 20, height: 20 }} resizeMode="contain" />
+        <Image 
+          source={{ uri: escudo }} 
+          style={{ width: 20, height: 20, opacity: isLoser ? 0.6 : 1 }} 
+          resizeMode="contain" 
+        />
       ) : (
         <View
           style={{
@@ -81,6 +91,7 @@ function TeamRow({
             backgroundColor: '#EBF0EC',
             alignItems: 'center',
             justifyContent: 'center',
+            opacity: isLoser ? 0.6 : 1,
           }}
         >
           <Text style={{ fontSize: 9, fontWeight: '700', color: '#0D7A3E' }}>
@@ -93,8 +104,8 @@ function TeamRow({
         style={{
           flex: 1,
           fontSize: 10,
-          color: tbd ? '#9CA3AF' : isMine ? '#0D7A3E' : '#0F1A14',
-          fontWeight: isMine ? '600' : '400',
+          color: tbd ? '#9CA3AF' : isWinner ? '#0D7A3E' : isLoser ? '#9CA3AF' : isMine ? '#0D7A3E' : '#0F1A14',
+          fontWeight: isWinner ? '700' : isMine ? '600' : '400',
           fontStyle: tbd ? 'italic' : 'normal',
         }}
       >
@@ -107,11 +118,19 @@ function TeamRow({
             paddingHorizontal: 6,
             paddingVertical: 2,
             borderRadius: 6,
-            backgroundColor: '#EBF5EF',
+            backgroundColor: isWinner ? '#D1FAE5' : '#F3F4F6',
             alignItems: 'center',
           }}
         >
-          <Text style={{ fontSize: 12, fontWeight: '700', color: '#0D7A3E' }}>{score}</Text>
+          <Text 
+            style={{ 
+              fontSize: 12, 
+              fontWeight: isWinner ? '700' : '400', 
+              color: isWinner ? '#0D7A3E' : '#6B7280' 
+            }}
+          >
+            {score}
+          </Text>
         </View>
       )}
     </>
@@ -169,6 +188,29 @@ function getRondaButtonType(
   return !prevReal || prevReal.partidos.every((p) => p.fecha !== null) ? 'programar' : null;
 }
 
+function getWinnerOfMatch(match: any) {
+  if (match.tbd || match.score1 === null || match.score2 === null) return null;
+  if (match.score1 > match.score2) {
+    return {
+      nombre: match.team1,
+      id: match.team1Id,
+      escudo: match.shield1,
+    };
+  } else if (match.score2 > match.score1) {
+    return {
+      nombre: match.team2,
+      id: match.team2Id,
+      escudo: match.shield2,
+    };
+  }
+  // Empate: el local avanza (mismo criterio que el backend)
+  return {
+    nombre: match.team1,
+    id: match.team1Id,
+    escudo: match.shield1,
+  };
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function BracketView({
   rondas,
@@ -180,7 +222,11 @@ export default function BracketView({
   miEquipoId = null,
   onPressTeam,
 }: BracketViewProps) {
-  const safe = Math.max(maxEquipos, 2);
+  const ronda1 = rondas.find((r) => r.ronda === 1);
+  const partidosR1 = ronda1 ? ronda1.partidos.length : 0;
+  const calculatedEquipos = partidosR1 > 0 ? partidosR1 * 2 : maxEquipos;
+
+  const safe = Math.max(calculatedEquipos, 2);
   const totalRounds = Math.ceil(Math.log2(safe));
   const firstRoundMatches = Math.ceil(safe / 2);
 
@@ -188,39 +234,80 @@ export default function BracketView({
   const containerW = totalRounds * (COL_W + COL_GAP) - COL_GAP + 32;
 
   // ── Build bracket rounds (real + TBD) ──────────────────────────────────────
-  const bracketRounds = Array.from({ length: totalRounds }, (_, r) => {
+  const bracketRounds: any[] = [];
+
+  for (let r = 0; r < totalRounds; r++) {
     const matchCount = Math.max(1, Math.ceil(firstRoundMatches / Math.pow(2, r)));
     const realRonda = rondas.find((ro) => ro.ronda === r + 1);
-    return {
+    
+    const roundMatches = Array.from({ length: matchCount }, (__, m) => {
+      const real = realRonda?.partidos[m];
+      
+      // If we have a real match in the database, use it
+      if (real) {
+        return {
+          team1: real.equipoLocal.nombre,
+          team1Id: real.equipoLocal.id,
+          shield1: real.equipoLocal.escudo,
+          team2: real.equipoVisitante.nombre,
+          team2Id: real.equipoVisitante.id,
+          shield2: real.equipoVisitante.escudo,
+          score1: real.golesLocal,
+          score2: real.golesVisitante,
+          tbd: false,
+        };
+      }
+      
+      // Otherwise, we calculate TBD teams based on the previous round's winners
+      let computedTeam1 = 'Por definir';
+      let computedTeam1Id: string | null = null;
+      let computedShield1: string | null = null;
+      let computedTeam2 = 'Por definir';
+      let computedTeam2Id: string | null = null;
+      let computedShield2: string | null = null;
+      let isTbd = true;
+
+      if (r > 0) {
+        const prevRound = bracketRounds[r - 1];
+        
+        const parentMatch1 = prevRound.matches[m * 2];
+        const winner1 = parentMatch1 ? getWinnerOfMatch(parentMatch1) : null;
+        if (winner1) {
+          computedTeam1 = winner1.nombre;
+          computedTeam1Id = winner1.id;
+          computedShield1 = winner1.escudo;
+          isTbd = false;
+        }
+        
+        const parentMatch2 = prevRound.matches[m * 2 + 1];
+        const winner2 = parentMatch2 ? getWinnerOfMatch(parentMatch2) : null;
+        if (winner2) {
+          computedTeam2 = winner2.nombre;
+          computedTeam2Id = winner2.id;
+          computedShield2 = winner2.escudo;
+          isTbd = false;
+        }
+      }
+      
+      return {
+        team1: computedTeam1,
+        team1Id: computedTeam1Id,
+        shield1: computedShield1,
+        team2: computedTeam2,
+        team2Id: computedTeam2Id,
+        shield2: computedShield2,
+        score1: null,
+        score2: null,
+        tbd: isTbd,
+      };
+    });
+
+    bracketRounds.push({
       label: roundLabel(r, totalRounds),
       rondaNum: r + 1,
-      matches: Array.from({ length: matchCount }, (__, m) => {
-        const real = realRonda?.partidos[m];
-        if (real) {
-          return {
-            team1: real.equipoLocal.nombre,
-            team1Id: real.equipoLocal.id,
-            shield1: real.equipoLocal.escudo,
-            team2: real.equipoVisitante.nombre,
-            team2Id: real.equipoVisitante.id,
-            shield2: real.equipoVisitante.escudo,
-            score1: real.golesLocal,
-            score2: real.golesVisitante,
-            tbd: false,
-          };
-        }
-        return {
-          team1: 'Por definir',
-          shield1: null,
-          team2: 'Por definir',
-          shield2: null,
-          score1: null,
-          score2: null,
-          tbd: true,
-        };
-      }),
-    };
-  });
+      matches: roundMatches,
+    });
+  }
 
   // ── Build connector lines ─────────────────────────────────────────────────
   const connectors: React.ReactNode[] = [];
@@ -346,7 +433,7 @@ export default function BracketView({
               )}
 
               {/* Match cards */}
-              {round.matches.map((match, m) => {
+              {round.matches.map((match: any, m: number) => {
                 const top = matchTop(r, m);
                 return (
                   <View

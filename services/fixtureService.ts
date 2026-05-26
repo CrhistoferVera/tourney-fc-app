@@ -40,6 +40,8 @@ export interface Partido {
   fase: string | null;
   golesLocal: number | null;
   golesVisitante: number | null;
+  golesPenalesLocal?: number | null;
+  golesPenalesVisitante?: number | null;
   equipoLocal: PartidoEquipo;
   equipoVisitante: PartidoEquipo;
   campo: Campo | null;
@@ -75,8 +77,17 @@ export const getMatchById = async (id: string): Promise<Partido> => {
 
 export type MatchControlAction = 'START_FIRST_HALF' | 'PAUSE_HALF_TIME' | 'START_SECOND_HALF' | 'END_MATCH';
 
-export const controlLiveMatch = async (id: string, action: MatchControlAction): Promise<Partido> => {
-  return api.patch(`/matches/${id}/control`, { action }, getToken());
+export const controlLiveMatch = async (
+  id: string,
+  action: MatchControlAction,
+  golesPenalesLocal?: number,
+  golesPenalesVisitante?: number,
+): Promise<Partido> => {
+  return api.patch(
+    `/matches/${id}/control`,
+    { action, golesPenalesLocal, golesPenalesVisitante },
+    getToken(),
+  );
 };
 
 export const addMatchEvent = async (
