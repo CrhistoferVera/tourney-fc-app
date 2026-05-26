@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import {
   ActivityIndicator,
   RefreshControl,
@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { getTeamById, TeamDetail } from '../../../services/teamsService';
+import { getTeamById, MyTeam } from '../../../services/teamsService';
 import ShieldDisplay from '../../../components/tournament/ShieldDisplay';
 import JugadoresStatsTable from '../../../components/tournament/JugadoresStatsTable';
 import CustomAlert from '../../../components/CustomAlert';
@@ -20,7 +20,7 @@ export default function TeamDetailScreen() {
   const router = useRouter();
   const { alertState, hideAlert, showError } = useAlert();
 
-  const [equipo, setEquipo] = useState<TeamDetail | null>(null);
+  const [equipo, setEquipo] = useState<MyTeam | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -48,7 +48,10 @@ export default function TeamDetailScreen() {
     setRefreshing(false);
   }, [fetchEquipo]);
 
-  const jugadores = equipo?.jugadores ?? [];
+  const jugadores = useMemo(
+    () => (equipo?.jugadores ?? []).map((row) => row.usuario),
+    [equipo?.jugadores],
+  );
   const count = equipo?.cantidadJugadores ?? jugadores.length;
   const countSuffix = count === 1 ? '' : 'es';
 
@@ -106,11 +109,6 @@ export default function TeamDetailScreen() {
                 <Text className="text-carbon text-xs mt-1">
                   {count} jugador{countSuffix}
                 </Text>
-                {!!equipo.torneo?.nombre && (
-                  <Text className="text-primary text-xs mt-1.5 font-sans-medium">
-                    {equipo.torneo.nombre}
-                  </Text>
-                )}
               </View>
             </View>
           </View>

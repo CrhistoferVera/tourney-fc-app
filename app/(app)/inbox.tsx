@@ -76,15 +76,25 @@ function InvitacionCard({
 
       {/* Mensaje */}
       <Text className="text-night text-sm mb-1">
-        Te invitó a participar en{' '}
-        <Text className="font-sans-medium">{item.torneo.nombre}</Text>
-        {item.equipo ? (
+        {item.tipo === 'JUGADOR' && !item.torneo && item.equipo && (
           <>
-            {' '}como jugador del equipo{' '}
+            Te invitó a unirse al equipo{' '}
             <Text className="font-sans-medium">{item.equipo.nombre}</Text>
           </>
-        ) : (
-          ' como miembro del staff'
+        )}
+        {item.torneo && (
+          <>
+            Te invitó a participar en{' '}
+            <Text className="font-sans-medium">{item.torneo.nombre}</Text>
+            {item.equipo ? (
+              <>
+                {' '}como jugador del equipo{' '}
+                <Text className="font-sans-medium">{item.equipo.nombre}</Text>
+              </>
+            ) : (
+              ' como miembro del staff'
+            )}
+          </>
         )}
       </Text>
 

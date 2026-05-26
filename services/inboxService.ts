@@ -7,8 +7,8 @@ export interface Invitacion {
   estado: 'PENDIENTE' | 'ACEPTADA' | 'RECHAZADA';
   email: string;
   createdAt: string;
-  torneo: { id: string; nombre: string; imagen: string | null };
-  equipo: { id: string; nombre: string } | null;
+  torneo: { id: string; nombre: string; imagen: string | null } | null;
+  equipo: { id: string; nombre: string; escudo?: string | null } | null;
   invitador: { id: string; nombre: string; fotoPerfil: string | null };
 }
 

@@ -212,8 +212,11 @@ export default function MatchScreen() {
           getTeamById(partido.equipoLocal.id),
           getTeamById(partido.equipoVisitante.id),
         ]);
-        setJugadoresLocal(local.jugadores ?? []);
-        setJugadoresVisitante(visitante.jugadores ?? []);
+        // MyTeam.jugadores son UsuarioEquipoRow[]; aplanar a Jugador[]
+        const mapJugadores = (rows: { usuario: Jugador }[] | undefined | null) =>
+          (rows ?? []).map((r) => r.usuario);
+        setJugadoresLocal(mapJugadores(local.jugadores));
+        setJugadoresVisitante(mapJugadores(visitante.jugadores));
       } catch {
         // Si falla, seguimos sin lista de jugadores
       } finally {
