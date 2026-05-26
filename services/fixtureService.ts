@@ -92,7 +92,7 @@ export const controlLiveMatch = async (
 
 export const addMatchEvent = async (
   id: string,
-  payload: { tipo: TipoEvento; equipoId: string; jugadorId?: string; minuto?: number; detalle?: string }
+  payload: { tipo: TipoEvento; equipoId: string; jugadorId?: string; minuto?: number; detalle?: string; asistenciaJugadorId?: string }
 ): Promise<EventoPartido> => {
   return api.post(`/matches/${id}/events`, payload, getToken());
 };
