@@ -13,8 +13,8 @@ export interface Campo {
   direccion: string | null;
 }
 
-export type FaseJuego = 'PREVIA' | 'PRIMER_TIEMPO' | 'MEDIO_TIEMPO' | 'SEGUNDO_TIEMPO' | 'FINALIZADO';
-export type TipoEvento = 'GOL' | 'ASISTENCIA' | 'TARJETA_AMARILLA' | 'TARJETA_ROJA' | 'CAMBIO' | 'FALTA' | 'CORNER';
+export type FaseJuego = 'PREVIA' | 'PRIMER_TIEMPO' | 'MEDIO_TIEMPO' | 'SEGUNDO_TIEMPO' | 'PENALES' | 'FINALIZADO';
+export type TipoEvento = 'GOL' | 'ASISTENCIA' | 'TARJETA_AMARILLA' | 'TARJETA_ROJA' | 'CAMBIO' | 'FALTA' | 'CORNER' | 'PENAL_FALLADO';
 
 export interface EventoPartido {
   id: string;
@@ -75,7 +75,15 @@ export const getMatchById = async (id: string): Promise<Partido> => {
   return api.get(`/matches/${id}`, getToken());
 };
 
-export type MatchControlAction = 'START_FIRST_HALF' | 'PAUSE_HALF_TIME' | 'START_SECOND_HALF' | 'END_MATCH';
+export const MatchControlActionValues = {
+  START_FIRST_HALF: 'START_FIRST_HALF',
+  PAUSE_HALF_TIME: 'PAUSE_HALF_TIME',
+  START_SECOND_HALF: 'START_SECOND_HALF',
+  START_PENALTIES: 'START_PENALTIES',
+  END_MATCH: 'END_MATCH',
+} as const;
+
+export type MatchControlAction = keyof typeof MatchControlActionValues;
 
 export const controlLiveMatch = async (
   id: string,

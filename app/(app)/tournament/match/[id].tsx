@@ -29,7 +29,7 @@ import { useAlert } from '../../../../hooks/useAlert';
 import CustomAlert from '../../../../components/CustomAlert';
 
 function MatchEventIcon({ tipo, size, color }: { tipo: TipoEvento; size: number; color: string }) {
-  if (tipo === 'GOL') {
+  if (tipo === 'GOL' || tipo === 'PENAL_FALLADO') {
     return <MaterialCommunityIcons name="soccer" size={size} color={color} />;
   }
   if (tipo === 'ASISTENCIA') {
@@ -64,29 +64,41 @@ const EVENT_CONFIGS: EventConfig[] = [
   { tipo: 'GOL',              label: 'Gol',      icon: 'soccer',         iconColor: '#15803D', iconBg: '#DCFCE7', bgColor: '#DCFCE7', textColor: '#15803D', borderColor: '#86EFAC', needsPlayer: true },
   { tipo: 'TARJETA_AMARILLA', label: 'Amarilla',  icon: 'cards',          iconColor: '#A16207', iconBg: '#FEF9C3', bgColor: '#FEF9C3', textColor: '#A16207', borderColor: '#FDE047', needsPlayer: true },
   { tipo: 'TARJETA_ROJA',    label: 'Roja',      icon: 'cards',          iconColor: '#B91C1C', iconBg: '#FEE2E2', bgColor: '#FEE2E2', textColor: '#B91C1C', borderColor: '#FCA5A5', needsPlayer: true },
-  { tipo: 'FALTA',            label: 'Falta',     icon: 'alert-triangle', iconColor: '#C2410C', iconBg: '#FFEDD5', bgColor: '#FFEDD5', textColor: '#C2410C', borderColor: '#FDBA74', needsPlayer: false },
-  { tipo: 'CORNER',           label: 'Corner',    icon: 'flag',           iconColor: '#1D4ED8', iconBg: '#DBEAFE', bgColor: '#DBEAFE', textColor: '#1D4ED8', borderColor: '#93C5FD', needsPlayer: false },
+  { tipo: 'PENAL_FALLADO',    label: 'Penal Fallado', icon: 'soccer',   iconColor: '#EF4444', iconBg: '#FEE2E2', bgColor: '#FEE2E2', textColor: '#EF4444', borderColor: '#FCA5A5', needsPlayer: true },
 ];
 
 // ─── Helpers ────────────────────────────────────────────────────────────
-const formatFase = (fase: string) => {
-  switch (fase) {
+const formatFase = (partido: Partido, torneo?: Tournament | null) => {
+  const isCopa = torneo?.formato === 'COPA' || torneo?.formato === 'ELIMINATORIA';
+  const isEmpate = partido.golesLocal === partido.golesVisitante;
+  if (partido.faseJuego === 'SEGUNDO_TIEMPO' && partido.cronometroIniciadoEn === null && isCopa && isEmpate) {
+    return 'Fin de Tiempo Regular';
+  }
+  switch (partido.faseJuego) {
     case 'PREVIA': return 'Sin iniciar';
     case 'PRIMER_TIEMPO': return '1er Tiempo';
     case 'MEDIO_TIEMPO': return 'Medio Tiempo';
     case 'SEGUNDO_TIEMPO': return '2do Tiempo';
+    case 'PENALES': return 'Penales';
     case 'FINALIZADO': return 'Finalizado';
-    default: return fase;
+    default: return partido.faseJuego;
   }
 };
 
-const getFaseBadgeStyle = (fase: string) => {
-  switch (fase) {
+const getFaseBadgeStyle = (partido: Partido, torneo?: Tournament | null) => {
+  const isCopa = torneo?.formato === 'COPA' || torneo?.formato === 'ELIMINATORIA';
+  const isEmpate = partido.golesLocal === partido.golesVisitante;
+  if (partido.faseJuego === 'SEGUNDO_TIEMPO' && partido.cronometroIniciadoEn === null && isCopa && isEmpate) {
+    return { bg: '#3B82F6', text: '#fff' }; // Blue style for regular time ended in draw
+  }
+  switch (partido.faseJuego) {
     case 'PRIMER_TIEMPO':
     case 'SEGUNDO_TIEMPO':
       return { bg: '#22C55E', text: '#fff' };
     case 'MEDIO_TIEMPO':
       return { bg: '#F59E0B', text: '#fff' };
+    case 'PENALES':
+      return { bg: '#E65C00', text: '#fff' }; // Orange style for shootout
     case 'FINALIZADO':
       return { bg: '#6B7280', text: '#fff' };
     default:
@@ -128,9 +140,7 @@ export default function MatchScreen() {
   const [loadingPlayers, setLoadingPlayers] = useState(false);
 
   // Modal de penales
-  const [penalesModalVisible, setPenalesModalVisible] = useState(false);
-  const [penLocal, setPenLocal] = useState('0');
-  const [penVisitante, setPenVisitante] = useState('0');
+
 
   // Cronómetro
   const [displayMinutes, setDisplayMinutes] = useState(0);
@@ -274,8 +284,8 @@ export default function MatchScreen() {
   }
 
   const isAdmin = torneo?.rolUsuario === 'ORGANIZADOR' || torneo?.rolUsuario === 'STAFF';
-  const isLive = partido.faseJuego === 'PRIMER_TIEMPO' || partido.faseJuego === 'SEGUNDO_TIEMPO';
-  const faseBadge = getFaseBadgeStyle(partido.faseJuego);
+  const isLive = partido.faseJuego === 'PRIMER_TIEMPO' || partido.faseJuego === 'SEGUNDO_TIEMPO' || partido.faseJuego === 'PENALES';
+  const faseBadge = getFaseBadgeStyle(partido, torneo);
 
   // ─── Acciones de control ─────────────────────────────────────────────
   const doControlAction = (
@@ -296,24 +306,7 @@ export default function MatchScreen() {
       }
     });
 
-  const submitEndMatchWithPenalties = async () => {
-    const pl = parseInt(penLocal, 10) || 0;
-    const pv = parseInt(penVisitante, 10) || 0;
-    if (pl === pv) {
-      showError('Error', 'Los penales no pueden terminar en empate. Debe haber un ganador.');
-      return;
-    }
-    setPenalesModalVisible(false);
-    setActionLoading(true);
-    try {
-      await controlLiveMatch(partido.id, 'END_MATCH', pl, pv);
-      await fetchAll();
-    } catch (e: any) {
-      showError('Error', e.message ?? 'No se pudo finalizar el partido');
-    } finally {
-      setActionLoading(false);
-    }
-  };
+
 
   const handleControlActionPress = (action: MatchControlAction) => {
     const halfLimit = getHalfLimit();
@@ -330,25 +323,22 @@ export default function MatchScreen() {
       doControlAction(action, msg);
     } else if (action === 'START_SECOND_HALF') {
       doControlAction(action, '¿Iniciar el segundo tiempo?');
+    } else if (action === 'START_PENALTIES') {
+      doControlAction(action, '¿Iniciar la tanda de penales?');
     } else if (action === 'END_MATCH') {
       const requiredMinutes = partido.faseJuego === 'PRIMER_TIEMPO' ? halfLimit : halfLimit * 2;
-      const isCopa = torneo?.formato === 'COPA' || torneo?.formato === 'ELIMINATORIA';
-      const isEmpate = partido.golesLocal === partido.golesVisitante;
 
       const finishAction = () => {
-        if (isCopa && isEmpate) {
-          setPenLocal('0');
-          setPenVisitante('0');
-          setPenalesModalVisible(true);
-        } else {
-          doControlAction(action, '¿Finalizar el partido?');
-        }
+        const confirmMsg = partido.faseJuego === 'PENALES' ? '¿Finalizar el partido?' : '¿Terminar el segundo tiempo?';
+        doControlAction(action, confirmMsg);
       };
 
-      if (displayMinutes < requiredMinutes) {
+      if (partido.faseJuego === 'PENALES') {
+        finishAction();
+      } else if (displayMinutes < requiredMinutes) {
         showConfirm(
           'Confirmar',
-          `¡Advertencia! Aún no se han jugado los ${requiredMinutes} minutos reglamentarios. ¿Deseas finalizar el partido antes de tiempo?`,
+          `¡Advertencia! Aún no se han jugado los ${requiredMinutes} minutos reglamentarios. ¿Deseas terminar el segundo tiempo antes de tiempo?`,
           finishAction
         );
       } else {
@@ -378,11 +368,13 @@ export default function MatchScreen() {
     closeModal();
     setActionLoading(true);
     try {
+      const isPenal = partido.faseJuego === 'PENALES';
       await addMatchEvent(partido.id, {
         tipo: selectedEvent.tipo,
         equipoId,
         jugadorId,
-        minuto: displayMinutes,
+        minuto: isPenal ? undefined : displayMinutes,
+        detalle: isPenal ? 'PENAL' : undefined,
         asistenciaJugadorId,
       });
       await fetchMatch();
@@ -442,6 +434,7 @@ export default function MatchScreen() {
             <>
               <Text style={styles.eventPlayerName} numberOfLines={1}>
                 {ev.jugador ? ev.jugador.nombre : partido.equipoLocal.nombre}
+                {ev.tipo === 'PENAL_FALLADO' && <Text style={{ color: '#EF4444', fontSize: 11, fontWeight: '400' }}> (Fallado)</Text>}
               </Text>
             </>
           )}
@@ -449,7 +442,9 @@ export default function MatchScreen() {
 
         {/* Centro — minuto + ícono */}
         <View style={styles.eventCenter}>
-          <Text style={styles.eventMinute}>{ev.minuto}'</Text>
+          <Text style={styles.eventMinute}>
+            {ev.detalle === 'PENAL' || ev.tipo === 'PENAL_FALLADO' || ev.minuto === null || ev.minuto === undefined ? 'Pen.' : `${ev.minuto}'`}
+          </Text>
           <View style={[styles.eventIconDot, { backgroundColor: iconBg }]}>
             <MatchEventIcon tipo={ev.tipo} size={12} color={iconColor} />
           </View>
@@ -460,6 +455,7 @@ export default function MatchScreen() {
           {!isLocal && (
             <Text style={styles.eventPlayerName} numberOfLines={1}>
               {ev.jugador ? ev.jugador.nombre : partido.equipoVisitante.nombre}
+              {ev.tipo === 'PENAL_FALLADO' && <Text style={{ color: '#EF4444', fontSize: 11, fontWeight: '400' }}> (Fallado)</Text>}
             </Text>
           )}
         </View>
@@ -490,7 +486,7 @@ export default function MatchScreen() {
           <View style={[styles.faseBadge, { backgroundColor: faseBadge.bg, marginBottom: 0, marginTop: 0 }]}>
             {isLive && <View style={styles.liveDot} />}
             <Text style={[styles.faseText, { color: faseBadge.text }]}>
-              {formatFase(partido.faseJuego)}
+              {formatFase(partido, torneo)}
             </Text>
           </View>
           {getFormattedTime() ? (
@@ -550,6 +546,21 @@ export default function MatchScreen() {
                   onPress={() => handleControlActionPress('START_SECOND_HALF')} />
               )}
               {partido.faseJuego === 'SEGUNDO_TIEMPO' && (
+                <>
+                  {partido.cronometroIniciadoEn !== null ? (
+                    <CtrlBtn icon="x-circle" label="Terminar 2do Tiempo" color="#EF4444"
+                      onPress={() => handleControlActionPress('END_MATCH')} />
+                  ) : (
+                    // Pausado tras fin de tiempo reglamentario en empate de copa
+                    (torneo?.formato === 'COPA' || torneo?.formato === 'ELIMINATORIA') &&
+                    partido.golesLocal === partido.golesVisitante && (
+                      <CtrlBtn icon="play-circle" label="Iniciar Penales" color="#D97706"
+                        onPress={() => handleControlActionPress('START_PENALTIES')} />
+                    )
+                  )}
+                </>
+              )}
+              {partido.faseJuego === 'PENALES' && (
                 <CtrlBtn icon="x-circle" label="Finalizar Partido" color="#EF4444"
                   onPress={() => handleControlActionPress('END_MATCH')} />
               )}
@@ -561,7 +572,12 @@ export default function MatchScreen() {
                 <View style={styles.divider} />
                 <Text style={styles.sectionSubtitle}>Registrar evento</Text>
                 <View style={styles.eventGrid}>
-                  {EVENT_CONFIGS.map((ev) => (
+                  {EVENT_CONFIGS.filter((ev) => {
+                    if (ev.tipo === 'PENAL_FALLADO') {
+                      return partido.faseJuego === 'PENALES';
+                    }
+                    return true;
+                  }).map((ev) => (
                     <TouchableOpacity
                       key={ev.tipo}
                       style={[styles.eventBtn, { backgroundColor: ev.bgColor, borderColor: ev.borderColor }]}
@@ -806,85 +822,6 @@ export default function MatchScreen() {
                 </ScrollView>
               </>
             )}
-          </View>
-        </View>
-      </Modal>
-
-      {/* ── MODAL DE PENALES ── */}
-      <Modal visible={penalesModalVisible} transparent animationType="slide" onRequestClose={() => setPenalesModalVisible(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalSheet}>
-            <View style={styles.handle} />
-            <View style={styles.modalHeader}>
-              <View style={[styles.modalIconCircle, { backgroundColor: '#FEF0DC' }]}>
-                <MaterialCommunityIcons name="soccer" size={22} color="#F5820D" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.modalTitle}>Definición por Penales</Text>
-                <Text style={styles.modalSubtitle}>El partido terminó en empate. Registra los penales.</Text>
-              </View>
-              <TouchableOpacity onPress={() => setPenalesModalVisible(false)}>
-                <Feather name="x" size={22} color="#6B7280" />
-              </TouchableOpacity>
-            </View>
-
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around', marginVertical: 20 }}>
-              <View style={{ alignItems: 'center', width: '40%' }}>
-                <Text style={{ fontSize: 13, fontWeight: '700', color: '#111827', textAlign: 'center', marginBottom: 8 }} numberOfLines={1}>
-                  {partido.equipoLocal.nombre}
-                </Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <TouchableOpacity 
-                    onPress={() => setPenLocal(prev => String(Math.max(0, (parseInt(prev, 10) || 0) - 1)))}
-                    style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' }}
-                  >
-                    <Feather name="minus" size={18} color="#374151" />
-                  </TouchableOpacity>
-                  <Text style={{ fontSize: 24, fontWeight: '700', color: '#111827', width: 40, textAlign: 'center' }}>
-                    {penLocal || '0'}
-                  </Text>
-                  <TouchableOpacity 
-                    onPress={() => setPenLocal(prev => String((parseInt(prev, 10) || 0) + 1))}
-                    style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#EBF0EC', alignItems: 'center', justifyContent: 'center' }}
-                  >
-                    <Feather name="plus" size={18} color="#0D7A3E" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              <Text style={{ fontSize: 18, fontWeight: '800', color: '#9CA3AF' }}>vs</Text>
-
-              <View style={{ alignItems: 'center', width: '40%' }}>
-                <Text style={{ fontSize: 13, fontWeight: '700', color: '#111827', textAlign: 'center', marginBottom: 8 }} numberOfLines={1}>
-                  {partido.equipoVisitante.nombre}
-                </Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <TouchableOpacity 
-                    onPress={() => setPenVisitante(prev => String(Math.max(0, (parseInt(prev, 10) || 0) - 1)))}
-                    style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' }}
-                  >
-                    <Feather name="minus" size={18} color="#374151" />
-                  </TouchableOpacity>
-                  <Text style={{ fontSize: 24, fontWeight: '700', color: '#111827', width: 40, textAlign: 'center' }}>
-                    {penVisitante || '0'}
-                  </Text>
-                  <TouchableOpacity 
-                    onPress={() => setPenVisitante(prev => String((parseInt(prev, 10) || 0) + 1))}
-                    style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#EBF0EC', alignItems: 'center', justifyContent: 'center' }}
-                  >
-                    <Feather name="plus" size={18} color="#0D7A3E" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-
-            <TouchableOpacity
-              onPress={submitEndMatchWithPenalties}
-              style={{ backgroundColor: '#0D7A3E', borderRadius: 14, paddingVertical: 13, alignItems: 'center', marginTop: 10 }}
-              activeOpacity={0.8}
-            >
-              <Text style={{ color: '#fff', fontSize: 14, fontWeight: '600' }}>Confirmar y Finalizar Partido</Text>
-            </TouchableOpacity>
           </View>
         </View>
       </Modal>
