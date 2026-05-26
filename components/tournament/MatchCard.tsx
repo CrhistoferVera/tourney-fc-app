@@ -58,7 +58,13 @@ export default function MatchCard({ partido, canEdit, onPress }: Props) {
       return { label: 'Medio Tiempo', bg: '#FEF9C3', text: '#A16207' };
     }
     if (partido.faseJuego === 'SEGUNDO_TIEMPO') {
+      if (partido.cronometroIniciadoEn === null && partido.golesLocal !== null && partido.golesVisitante !== null && partido.golesLocal === partido.golesVisitante) {
+        return { label: 'Fin T. Regular', bg: '#DBEAFE', text: '#1D4ED8' };
+      }
       return { label: '2do Tiempo', bg: '#DCFCE7', text: '#15803D' };
+    }
+    if (partido.faseJuego === 'PENALES') {
+      return { label: 'Penales', bg: '#FFEADB', text: '#E65C00' };
     }
     if (partido.faseJuego === 'FINALIZADO' || partido.estado === 'EN_DISPUTA') {
       return { label: 'Finalizado', bg: '#F3F4F6', text: '#4B5563' };
@@ -75,13 +81,17 @@ export default function MatchCard({ partido, canEdit, onPress }: Props) {
     partido.faseJuego === 'FINALIZADO' || 
     partido.faseJuego === 'PRIMER_TIEMPO' || 
     partido.faseJuego === 'SEGUNDO_TIEMPO' || 
+    partido.faseJuego === 'PENALES' || 
     partido.estado === 'EN_DISPUTA'
   );
   
-  const localWinner = isFinishedOrLive && partido.golesLocal! > partido.golesVisitante!;
-  const visitanteWinner = isFinishedOrLive && partido.golesLocal! < partido.golesVisitante!;
-  const isLoserLocal = isFinishedOrLive && partido.golesLocal! < partido.golesVisitante!;
-  const isLoserVisitante = isFinishedOrLive && partido.golesLocal! > partido.golesVisitante!;
+  const penLocal = partido.golesPenalesLocal ?? null;
+  const penVisitante = partido.golesPenalesVisitante ?? null;
+
+  const localWinner = isFinishedOrLive && (partido.golesLocal! > partido.golesVisitante! || (partido.golesLocal! === partido.golesVisitante! && penLocal !== null && penVisitante !== null && penLocal > penVisitante));
+  const visitanteWinner = isFinishedOrLive && (partido.golesLocal! < partido.golesVisitante! || (partido.golesLocal! === partido.golesVisitante! && penLocal !== null && penVisitante !== null && penLocal < penVisitante));
+  const isLoserLocal = isFinishedOrLive && (partido.golesLocal! < partido.golesVisitante! || (partido.golesLocal! === partido.golesVisitante! && penLocal !== null && penVisitante !== null && penLocal < penVisitante));
+  const isLoserVisitante = isFinishedOrLive && (partido.golesLocal! > partido.golesVisitante! || (partido.golesLocal! === partido.golesVisitante! && penLocal !== null && penVisitante !== null && penLocal > penVisitante));
 
   return (
     <TouchableOpacity
@@ -111,15 +121,22 @@ export default function MatchCard({ partido, canEdit, onPress }: Props) {
         {/* Score */}
         <View className="px-3 items-center min-w-[48px]">
           {tieneMarcador ? (
-            <Text 
-              style={{
-                fontSize: 18,
-                fontWeight: '700',
-                color: '#0F1A14',
-              }}
-            >
-              {partido.golesLocal} - {partido.golesVisitante}
-            </Text>
+            <>
+              <Text 
+                style={{
+                  fontSize: 18,
+                  fontWeight: '700',
+                  color: '#0F1A14',
+                }}
+              >
+                {partido.golesLocal} - {partido.golesVisitante}
+              </Text>
+              {partido.golesPenalesLocal !== null && partido.golesPenalesVisitante !== null && (
+                <Text style={{ fontSize: 11, fontWeight: '600', color: '#E65C00', marginTop: 2 }}>
+                  ({partido.golesPenalesLocal} - {partido.golesPenalesVisitante})
+                </Text>
+              )}
+            </>
           ) : (
             <Text className="text-carbon text-sm font-sans-medium">vs</Text>
           )}
