@@ -48,8 +48,40 @@ function Shield({ escudo, nombre }: { readonly escudo: string | null; readonly n
 }
 
 export default function MatchCard({ partido, canEdit, onPress }: Props) {
-  const confirmado = partido.estado === 'CONFIRMADO';
   const tieneMarcador = partido.golesLocal !== null && partido.golesVisitante !== null;
+
+  const getStatusLabelAndStyle = () => {
+    if (partido.faseJuego === 'PRIMER_TIEMPO') {
+      return { label: '1er Tiempo', bg: '#DCFCE7', text: '#15803D' };
+    }
+    if (partido.faseJuego === 'MEDIO_TIEMPO') {
+      return { label: 'Medio Tiempo', bg: '#FEF9C3', text: '#A16207' };
+    }
+    if (partido.faseJuego === 'SEGUNDO_TIEMPO') {
+      return { label: '2do Tiempo', bg: '#DCFCE7', text: '#15803D' };
+    }
+    if (partido.faseJuego === 'FINALIZADO' || partido.estado === 'EN_DISPUTA') {
+      return { label: 'Finalizado', bg: '#F3F4F6', text: '#4B5563' };
+    }
+    const isConf = partido.estado === 'CONFIRMADO';
+    return isConf
+      ? { label: 'Confirmado', bg: '#EBF5EF', text: '#0D7A3E' }
+      : { label: 'Pendiente', bg: '#FEE2E2', text: '#B91C1C' };
+  };
+
+  const status = getStatusLabelAndStyle();
+
+  const isFinishedOrLive = tieneMarcador && (
+    partido.faseJuego === 'FINALIZADO' || 
+    partido.faseJuego === 'PRIMER_TIEMPO' || 
+    partido.faseJuego === 'SEGUNDO_TIEMPO' || 
+    partido.estado === 'EN_DISPUTA'
+  );
+  
+  const localWinner = isFinishedOrLive && partido.golesLocal! > partido.golesVisitante!;
+  const visitanteWinner = isFinishedOrLive && partido.golesLocal! < partido.golesVisitante!;
+  const isLoserLocal = isFinishedOrLive && partido.golesLocal! < partido.golesVisitante!;
+  const isLoserVisitante = isFinishedOrLive && partido.golesLocal! > partido.golesVisitante!;
 
   return (
     <TouchableOpacity
@@ -60,16 +92,32 @@ export default function MatchCard({ partido, canEdit, onPress }: Props) {
     >
       {/* Teams row */}
       <View className="flex-row items-center justify-between mb-2">
-        <View className="flex-1 items-center gap-1">
+        {/* Local team */}
+        <View style={{ flex: 1, alignItems: 'center', opacity: isLoserLocal ? 0.6 : 1, gap: 4 }}>
           <Shield escudo={partido.equipoLocal.escudo} nombre={partido.equipoLocal.nombre} />
-          <Text className="text-night font-sans-medium text-xs text-center" numberOfLines={2}>
+          <Text 
+            style={{
+              fontSize: 12,
+              textAlign: 'center',
+              fontWeight: localWinner ? '700' : '500',
+              color: localWinner ? '#0D7A3E' : isLoserLocal ? '#9CA3AF' : '#0F1A14',
+            }}
+            numberOfLines={2}
+          >
             {partido.equipoLocal.nombre}
           </Text>
         </View>
 
+        {/* Score */}
         <View className="px-3 items-center min-w-[48px]">
           {tieneMarcador ? (
-            <Text className="text-night font-sans-medium text-lg">
+            <Text 
+              style={{
+                fontSize: 18,
+                fontWeight: '700',
+                color: '#0F1A14',
+              }}
+            >
               {partido.golesLocal} - {partido.golesVisitante}
             </Text>
           ) : (
@@ -77,9 +125,18 @@ export default function MatchCard({ partido, canEdit, onPress }: Props) {
           )}
         </View>
 
-        <View className="flex-1 items-center gap-1">
+        {/* Visitante team */}
+        <View style={{ flex: 1, alignItems: 'center', opacity: isLoserVisitante ? 0.6 : 1, gap: 4 }}>
           <Shield escudo={partido.equipoVisitante.escudo} nombre={partido.equipoVisitante.nombre} />
-          <Text className="text-night font-sans-medium text-xs text-center" numberOfLines={2}>
+          <Text 
+            style={{
+              fontSize: 12,
+              textAlign: 'center',
+              fontWeight: visitanteWinner ? '700' : '500',
+              color: visitanteWinner ? '#0D7A3E' : isLoserVisitante ? '#9CA3AF' : '#0F1A14',
+            }}
+            numberOfLines={2}
+          >
             {partido.equipoVisitante.nombre}
           </Text>
         </View>
@@ -97,12 +154,21 @@ export default function MatchCard({ partido, canEdit, onPress }: Props) {
         </View>
         <View className="flex-row items-center gap-2">
           <View
-            className={`px-2 py-0.5 rounded-full ${confirmado ? 'bg-primary-light' : 'bg-accent-soft'}`}
+            style={{
+              backgroundColor: status.bg,
+              paddingHorizontal: 8,
+              paddingVertical: 2,
+              borderRadius: 12,
+            }}
           >
             <Text
-              className={`text-xs font-sans-medium ${confirmado ? 'text-primary' : 'text-accent'}`}
+              style={{
+                fontSize: 11,
+                fontWeight: '600',
+                color: status.text,
+              }}
             >
-              {confirmado ? 'Confirmado' : 'Pendiente'}
+              {status.label}
             </Text>
           </View>
         </View>

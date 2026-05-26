@@ -8,8 +8,8 @@ import {
   Shield,
   ChevronRight,
 } from 'lucide-react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
+import { useState, useCallback } from 'react';
 import { ActivityIndicator, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import CustomAlert from '../../../components/CustomAlert';
 import { useAlert } from '../../../hooks/useAlert';
@@ -19,6 +19,8 @@ import {
   startTournament,
   Tournament,
 } from '../../../services/tournamentService';
+import { getFixture, Partido } from '../../../services/fixtureService';
+import MatchCard from '../../../components/tournament/MatchCard';
 
 // ─── Helpers (module-level, zero complexity cost) ────────────────────────────
 
@@ -184,17 +186,28 @@ export default function TournamentDetailScreen() {
   const { alertState, hideAlert, showError, showConfirm } = useAlert();
 
   const [tournament, setTournament] = useState<Tournament | null>(null);
+  const [partidos, setPartidos] = useState<Partido[]>([]);
   const [loading,    setLoading]    = useState(true);
   const [publishing, setPublishing] = useState(false);
   const [starting,   setStarting]   = useState(false);
 
-  useEffect(() => {
-    if (!id) return;
-    getTournamentById(id)
-      .then(setTournament)
-      .catch(() => showError('Error', 'No se pudo cargar el torneo.'))
-      .finally(() => setLoading(false));
-  }, [id]);
+  useFocusEffect(
+    useCallback(() => {
+      if (!id) return;
+      setLoading(true);
+      Promise.all([
+        getTournamentById(id)
+          .then(setTournament)
+          .catch(() => showError('Error', 'No se pudo cargar el torneo.')),
+        getFixture(id)
+          .then((rondas) => {
+            setPartidos(Array.isArray(rondas) ? rondas.flatMap((r) => r.partidos) : []);
+          })
+          .catch(() => setPartidos([]))
+      ])
+        .finally(() => setLoading(false));
+    }, [id])
+  );
 
   // ── Handlers ────────────────────────────────────────────────────────────────
 
@@ -347,6 +360,43 @@ export default function TournamentDetailScreen() {
   const canVerTabla    = canVerFixture && (isLiga || isBracketFmt);
   const canGestionar   = isOrganizer && (isDraft || isInscripcion);
   const canVerMiEquipo = isCapitan || isJugador;
+
+  // Filtrar últimos resultados (3 partidos finalizados/en disputa/con marcador)
+  const ultimosResultados = partidos
+    .filter(
+      (p) =>
+        p.faseJuego === 'FINALIZADO' ||
+        p.estado === 'CONFIRMADO' ||
+        p.estado === 'EN_DISPUTA' ||
+        (p.golesLocal !== null && p.golesVisitante !== null)
+    )
+    .sort((a, b) => {
+      const dateA = a.fecha ? new Date(a.fecha).getTime() : 0;
+      const dateB = b.fecha ? new Date(b.fecha).getTime() : 0;
+      if (dateB !== dateA) return dateB - dateA;
+      return (b.ronda ?? 0) - (a.ronda ?? 0);
+    })
+    .slice(0, 3);
+
+  // Filtrar próximos partidos (3 partidos pendientes/previas sin marcador)
+  const proximosPartidos = partidos
+    .filter(
+      (p) =>
+        p.faseJuego !== 'FINALIZADO' &&
+        p.estado !== 'CONFIRMADO' &&
+        p.estado !== 'EN_DISPUTA' &&
+        p.golesLocal === null &&
+        p.golesVisitante === null
+    )
+    .sort((a, b) => {
+      if (a.fecha && !b.fecha) return -1;
+      if (!a.fecha && b.fecha) return 1;
+      if (a.fecha && b.fecha) {
+        return new Date(a.fecha).getTime() - new Date(b.fecha).getTime();
+      }
+      return (a.ronda ?? 0) - (b.ronda ?? 0);
+    })
+    .slice(0, 3);
 
   const showBannerBorrador         = isDraft && isOrganizer;
   const showBannerEsperando        = isInscripcion && (isOrganizer || isStaff) && !equiposFull;
@@ -533,15 +583,49 @@ export default function TournamentDetailScreen() {
 
         {/* Últimos resultados */}
         <Text className="text-night font-sans-medium text-base mb-3">Últimos resultados</Text>
-        <View className="bg-white rounded-2xl px-4 py-6 items-center mb-4">
-          <Text className="text-carbon text-sm text-center">Aún no hay resultados registrados.</Text>
-        </View>
+        {ultimosResultados.length === 0 ? (
+          <View className="bg-white rounded-2xl px-4 py-6 items-center mb-4">
+            <Text className="text-carbon text-sm text-center">Aún no hay resultados registrados.</Text>
+          </View>
+        ) : (
+          <View className="mb-1">
+            {ultimosResultados.map((partido) => (
+              <MatchCard
+                key={partido.id}
+                partido={partido}
+                onPress={() =>
+                  router.push({
+                    pathname: '/(app)/tournament/match/[id]',
+                    params: { id: partido.id },
+                  } as any)
+                }
+              />
+            ))}
+          </View>
+        )}
 
         {/* Próximos partidos */}
         <Text className="text-night font-sans-medium text-base mb-3 mt-1">Próximos partidos</Text>
-        <View className="bg-white rounded-2xl px-4 py-6 items-center">
-          <Text className="text-carbon text-sm text-center">No hay partidos próximos programados.</Text>
-        </View>
+        {proximosPartidos.length === 0 ? (
+          <View className="bg-white rounded-2xl px-4 py-6 items-center">
+            <Text className="text-carbon text-sm text-center">No hay partidos próximos programados.</Text>
+          </View>
+        ) : (
+          <View className="mb-1">
+            {proximosPartidos.map((partido) => (
+              <MatchCard
+                key={partido.id}
+                partido={partido}
+                onPress={() =>
+                  router.push({
+                    pathname: '/(app)/tournament/match/[id]',
+                    params: { id: partido.id },
+                  } as any)
+                }
+              />
+            ))}
+          </View>
+        )}
       </ScrollView>
     </View>
   );
