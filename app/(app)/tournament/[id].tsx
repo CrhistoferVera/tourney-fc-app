@@ -325,6 +325,16 @@ export default function TournamentDetailScreen() {
       },
     } as never);
 
+  const goToEstadisticas = () =>
+    router.push({
+      pathname: '/(app)/tournament/estadisticas',
+      params: {
+        id: tournament!.id,
+        nombre: tournament!.nombre,
+        rol: tournament!.rolUsuario ?? '',
+      },
+    } as never);
+
   // ── Guards ───────────────────────────────────────────────────────────────────
 
   if (loading) {
@@ -575,7 +585,8 @@ export default function TournamentDetailScreen() {
               iconColor="#3D4F44"
               iconBg="#EBF0EC"
               label="Estadísticas"
-              subtitle="Próximamente disponible"
+              subtitle="Goleadores, tarjetas y más"
+              onPress={goToEstadisticas}
               last
             />
           )}

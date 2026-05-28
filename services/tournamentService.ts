@@ -110,6 +110,55 @@ export const getCamposByTournament = async (torneoId: string): Promise<CampoDeta
   return api.get(`/tournaments/${torneoId}/campos`, token ?? undefined);
 };
 
+export interface EntradaLiderato {
+  posicion: number;
+  jugadorId: string;
+  nombre: string;
+  fotoPerfil: string | null;
+  equipoNombre: string;
+  valor: number;
+}
+
+export interface ResumenGlobal {
+  totalPartidos: number;
+  totalGoles: number;
+  totalTarjetasAmarillas: number;
+  totalTarjetasRojas: number;
+  promedioGolesPorPartido: number;
+  totalFaltas: number;
+}
+
+export interface EstadisticasPersonales {
+  goles: number;
+  asistencias: number;
+  tarjetasAmarillas: number;
+  tarjetasRojas: number;
+  faltas: number;
+  penalesFallados: number;
+  posicionGoles: number | null;
+  posicionAsistencias: number | null;
+  posicionAmarillas: number | null;
+  posicionRojas: number | null;
+  posicionFaltas: number | null;
+  posicionPenalesFallados: number | null;
+}
+
+export interface TorneoEstadisticas {
+  resumen: ResumenGlobal;
+  goleadores: EntradaLiderato[];
+  asistentes: EntradaLiderato[];
+  amarillas: EntradaLiderato[];
+  rojas: EntradaLiderato[];
+  faltas: EntradaLiderato[];
+  penalesFallados: EntradaLiderato[];
+  estadisticasPersonales: EstadisticasPersonales | null;
+}
+
+export const getTournamentEstadisticas = async (id: string): Promise<TorneoEstadisticas> => {
+  const token = getToken();
+  return api.get(`/tournaments/${id}/estadisticas`, token ?? undefined);
+};
+
 export const uploadTournamentImage = async (uri: string): Promise<{ url: string }> => {
   const token = getToken();
   const formData = new FormData();
