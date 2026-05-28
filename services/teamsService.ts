@@ -110,6 +110,10 @@ export const getTeamById = async (id: string): Promise<MyTeam> => {
   return api.get(`/teams/${id}`, getToken());
 };
 
+export const getTeamInTournament = async (equipoId: string, torneoId: string): Promise<MyTeam> => {
+  return api.get(`/teams/${equipoId}/in-tournament/${torneoId}`, getToken());
+};
+
 export const updateTeam = async (id: string, dto: UpdateTeamDto): Promise<MyTeam> => {
   return api.patch(`/teams/${id}`, dto, getToken());
 };
