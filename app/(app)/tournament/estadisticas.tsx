@@ -519,7 +519,7 @@ export default function EstadisticasScreen() {
                     <MetricTile
                       icon={<Feather name="activity" size={18} color="#0D7A3E" />}
                       value={data?.resumen.totalPartidos ?? 0}
-                      label="Partidos"
+                      label="Finalizados"
                     />
                   </View>
                   <View style={{ flex: 1, borderRightWidth: 1, borderColor: '#EEF2EF' }}>
@@ -554,13 +554,6 @@ export default function EstadisticasScreen() {
                       label="Rojas"
                     />
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <MetricTile
-                      icon={<MaterialCommunityIcons name="whistle" size={20} color="#F5820D" />}
-                      value={data?.resumen.totalFaltas ?? 0}
-                      label="Faltas"
-                    />
-                  </View>
                 </View>
               </View>
 
@@ -579,10 +572,6 @@ export default function EstadisticasScreen() {
               {/* Tarjetas rojas */}
               <SectionTitle>🟥 Tarjetas rojas</SectionTitle>
               <LeaderboardCard entries={data?.rojas ?? []} />
-
-              {/* Faltas */}
-              <SectionTitle>💢 Faltas cometidas</SectionTitle>
-              <LeaderboardCard entries={data?.faltas ?? []} />
 
               {/* Penales fallados */}
               <SectionTitle>❌ Penales fallados</SectionTitle>
