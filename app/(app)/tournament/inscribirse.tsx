@@ -1,24 +1,26 @@
 import { Feather } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Info, MapPin, Users, Zap, Shield } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Image,
   ScrollView,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import CustomAlert from '../../../components/CustomAlert';
-import ShieldDisplay, { PRESETS } from '../../../components/tournament/ShieldDisplay';
+import RosterSelector from '../../../components/team/RosterSelector';
+import ShieldDisplay from '../../../components/tournament/ShieldDisplay';
 import { useAlert } from '../../../hooks/useAlert';
-import { createTeam, uploadEscudo } from '../../../services/teamsService';
+import { solicitarInscripcion } from '../../../services/inscriptionService';
+import {
+  getMyTeams,
+  getTeamById,
+  MyTeam,
+  MyTeamSummary,
+} from '../../../services/teamsService';
 import { getTournamentById } from '../../../services/tournamentService';
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const MODALIDAD_INFO: Record<string, { label: string; min: number; max: number; Icon: any }> = {
   FUTBOL_5:  { label: 'Fútbol 5',  min: 5,  max: 10, Icon: Zap },
@@ -52,26 +54,37 @@ export default function InscribirseScreen() {
   const [fetchedTournament, setFetchedTournament] = useState<any>(null);
   const [loadingTournament, setLoadingTournament] = useState(true);
 
+  const [myTeams, setMyTeams] = useState<MyTeamSummary[]>([]);
+  const [loadingTeams, setLoadingTeams] = useState(true);
+
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
+  const [selectedTeam, setSelectedTeam] = useState<MyTeam | null>(null);
+  const [loadingTeamDetail, setLoadingTeamDetail] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
+
+  // ── Cargar torneo ──────────────────────────────────────────────────────────
   useEffect(() => {
     if (!torneoId) return;
     if (torneoNombre && torneoModalidad && maxJugadoresPorEquipo) {
       setLoadingTournament(false);
       return;
     }
-    const loadTournament = async () => {
-      try {
-        const data = await getTournamentById(torneoId);
-        setFetchedTournament(data);
-      } catch (e) {
-        console.error('Error cargando torneo en inscribirse:', e);
-      } finally {
-        setLoadingTournament(false);
-      }
-    };
-    loadTournament();
+    getTournamentById(torneoId)
+      .then(setFetchedTournament)
+      .catch((e) => console.error('Error cargando torneo en inscribirse:', e))
+      .finally(() => setLoadingTournament(false));
   }, [torneoId, torneoNombre, torneoModalidad, maxJugadoresPorEquipo]);
 
-  // ── Derived info ────────────────────────────────────────────────────────────
+  // ── Cargar mis equipos (solo donde soy capitán) ────────────────────────────
+  useEffect(() => {
+    getMyTeams()
+      .then((teams) => setMyTeams(teams.filter((t) => t.esCapitan)))
+      .catch((e: any) => showError('Error', e.message ?? 'No se pudieron cargar tus equipos.'))
+      .finally(() => setLoadingTeams(false));
+  }, []);
+
+  // ── Derived info del torneo ────────────────────────────────────────────────
   const finalNombre = torneoNombre || fetchedTournament?.nombre;
   const finalDescripcion = torneoDescripcion || fetchedTournament?.descripcion;
   const finalModalidad = torneoModalidad || fetchedTournament?.modalidad;
@@ -87,54 +100,71 @@ export default function InscribirseScreen() {
   const jugadoresMin = modalidadInfo?.min ?? 1;
   const jugadoresMax = maxJugadoresNum > 0 ? maxJugadoresNum : (modalidadInfo?.max ?? 30);
 
-  const [nombre, setNombre] = useState('');
-  const [telefono, setTelefono] = useState('');
-  const [escudo, setEscudo] = useState<string | null>(null);
-  const [localPreviewUri, setLocalPreviewUri] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [saving, setSaving] = useState(false);
-
-  const handlePickGallery = async () => {
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) {
-      showError('Permiso requerido', 'Necesitas dar acceso a la galería para subir una imagen.');
+  // ── Al seleccionar equipo, cargar detalle ──────────────────────────────────
+  useEffect(() => {
+    if (!selectedTeamId) {
+      setSelectedTeam(null);
+      setSelectedIds([]);
       return;
     }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.7,
-    });
-    if (result.canceled) return;
-    const asset = result.assets[0];
-    setUploading(true);
-    try {
-      const formData = new FormData();
-      formData.append('image', { uri: asset.uri, name: 'escudo.jpg', type: 'image/jpeg' } as any);
-      const { url } = await uploadEscudo(formData);
-      setEscudo(url);
-      setLocalPreviewUri(asset.uri);
-    } catch {
-      showError('Error', 'No se pudo subir la imagen. Intenta de nuevo.');
-    } finally {
-      setUploading(false);
-    }
+    setLoadingTeamDetail(true);
+    getTeamById(selectedTeamId)
+      .then((team) => {
+        setSelectedTeam(team);
+        // Pre-marcar capitán + el resto hasta llenar (o todo si entra en el max)
+        const allIds = team.jugadores.map((r) => r.usuario.id);
+        const capId = team.capitanId;
+        const others = allIds.filter((x) => x !== capId);
+        const preSelected = capId ? [capId, ...others] : others;
+        setSelectedIds(preSelected.slice(0, jugadoresMax));
+      })
+      .catch((e: any) => showError('Error', e.message ?? 'No se pudo cargar el equipo.'))
+      .finally(() => setLoadingTeamDetail(false));
+  }, [selectedTeamId, jugadoresMax]);
+
+  const jugadoresForSelector = useMemo(
+    () => (selectedTeam?.jugadores ?? []).map((row) => row.usuario),
+    [selectedTeam?.jugadores],
+  );
+
+  const goToCreateTeam = () => {
+    router.push({
+      pathname: '/team/create',
+      params: {
+        returnTo: '/tournament/inscribirse',
+        returnParams: JSON.stringify({
+          id: torneoId ?? '',
+          nombre: torneoNombre ?? '',
+          descripcion: torneoDescripcion ?? '',
+          modalidad: torneoModalidad ?? '',
+          maxEquipos: maxEquipos ?? '',
+          equiposInscritos: equiposInscritos ?? '',
+          maxJugadoresPorEquipo: maxJugadoresPorEquipo ?? '',
+          zona: zona ?? '',
+        }),
+      },
+    } as never);
   };
 
   const handleSubmit = async () => {
-    if (!nombre.trim()) {
-      showError('Campo requerido', 'Ingresa el nombre del equipo.');
+    if (!torneoId || !selectedTeamId) {
+      showError('Selecciona un equipo', 'Elige uno de tus equipos para inscribir.');
       return;
     }
-    if (!torneoId) return;
+    if (selectedIds.length < jugadoresMin) {
+      showError(
+        'Faltan jugadores',
+        `Debes seleccionar al menos ${jugadoresMin} jugadores para esta modalidad.`,
+      );
+      return;
+    }
+    if (selectedIds.length > jugadoresMax) {
+      showError('Demasiados jugadores', `El máximo permitido es ${jugadoresMax}.`);
+      return;
+    }
     setSaving(true);
     try {
-      await createTeam(torneoId, {
-        nombre: nombre.trim(),
-        telefonoCapitan: telefono.trim() || undefined,
-        escudo: escudo ?? undefined,
-      });
+      await solicitarInscripcion(torneoId, selectedTeamId, selectedIds);
       showSuccess(
         'Solicitud enviada',
         'Tu solicitud fue enviada. El organizador la revisará pronto.',
@@ -147,16 +177,231 @@ export default function InscribirseScreen() {
     }
   };
 
-  const isCustomImage = !!localPreviewUri;
-  let escudoLabel = 'Sin escudo — se usará el predeterminado';
-  if (isCustomImage) escudoLabel = 'Imagen personalizada';
-  else if (escudo?.startsWith('preset_')) escudoLabel = 'Escudo genérico seleccionado';
+  const renderTorneoCard = () => {
+    if (!finalNombre) return null;
+    return (
+      <View
+        style={{
+          backgroundColor: '#FFFFFF',
+          borderRadius: 20,
+          padding: 16,
+          marginBottom: 20,
+          elevation: 2,
+          shadowColor: '#0F1A14',
+          shadowOpacity: 0.05,
+          shadowRadius: 8,
+          borderWidth: 1,
+          borderColor: '#EBF0EC',
+        }}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+          <View style={{ backgroundColor: '#D4F5E2', borderRadius: 8, padding: 6 }}>
+            <Info size={14} color="#0D7A3E" />
+          </View>
+          <Text style={{ fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#0F1A14', flex: 1 }}>
+            {finalNombre}
+          </Text>
+        </View>
+
+        {!!finalDescripcion && (
+          <Text
+            style={{
+              fontFamily: 'Inter_400Regular',
+              fontSize: 12,
+              color: '#3D4F44',
+              lineHeight: 18,
+              marginBottom: 12,
+            }}
+          >
+            {finalDescripcion}
+          </Text>
+        )}
+
+        <View style={{ height: 1, backgroundColor: '#EBF0EC', marginBottom: 10 }} />
+
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+          <View
+            style={{
+              flexDirection: 'row', alignItems: 'center', gap: 4,
+              backgroundColor: '#EBF0EC', borderRadius: 8,
+              paddingHorizontal: 9, paddingVertical: 5,
+            }}
+          >
+            <Users size={12} color="#3D4F44" />
+            <Text style={{ fontFamily: 'Inter_500Medium', fontSize: 11, color: '#3D4F44' }}>
+              {equiposInscritosNum}/{maxEquiposNum} equipos
+            </Text>
+          </View>
+
+          {modalidadInfo && (
+            <View
+              style={{
+                flexDirection: 'row', alignItems: 'center', gap: 4,
+                backgroundColor: '#D4F5E2', borderRadius: 8,
+                paddingHorizontal: 9, paddingVertical: 5,
+              }}
+            >
+              <modalidadInfo.Icon size={12} color="#0D7A3E" />
+              <Text style={{ fontFamily: 'Inter_500Medium', fontSize: 11, color: '#0D7A3E' }}>
+                {modalidadInfo.label}
+              </Text>
+            </View>
+          )}
+
+          {!!finalZona && (
+            <View
+              style={{
+                flexDirection: 'row', alignItems: 'center', gap: 4,
+                backgroundColor: '#EAF2FB', borderRadius: 8,
+                paddingHorizontal: 9, paddingVertical: 5,
+              }}
+            >
+              <MapPin size={12} color="#1A73E8" />
+              <Text style={{ fontFamily: 'Inter_500Medium', fontSize: 11, color: '#1A73E8' }}>
+                {finalZona}
+              </Text>
+            </View>
+          )}
+        </View>
+      </View>
+    );
+  };
+
+  const renderEmptyTeams = () => (
+    <View
+      className="bg-white rounded-2xl px-6 py-8 items-center"
+      style={{ elevation: 1, shadowColor: '#0F1A14', shadowOpacity: 0.05, shadowRadius: 6 }}
+    >
+      <View className="w-14 h-14 rounded-full bg-primary-light items-center justify-center mb-3">
+        <Feather name="shield" size={24} color="#0D7A3E" />
+      </View>
+      <Text className="text-night font-sans-medium text-base text-center mb-1">
+        No tienes equipos
+      </Text>
+      <Text className="text-carbon text-sm text-center mb-5">
+        Crea un equipo primero para poder inscribirte a este torneo.
+      </Text>
+      <TouchableOpacity
+        onPress={goToCreateTeam}
+        activeOpacity={0.85}
+        className="bg-primary rounded-xl px-5 py-3 flex-row items-center gap-2"
+      >
+        <Feather name="plus" size={16} color="white" />
+        <Text className="text-white font-sans-medium text-sm">Crear equipo</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderTeamSelector = () => (
+    <View>
+      <Text className="text-night font-sans-medium text-base mb-3">Selecciona tu equipo</Text>
+      {myTeams.map((t) => {
+        const selected = selectedTeamId === t.id;
+        return (
+          <TouchableOpacity
+            key={t.id}
+            onPress={() => setSelectedTeamId(t.id)}
+            activeOpacity={0.85}
+            className="bg-white rounded-2xl px-4 py-3 mb-2 flex-row items-center"
+            style={{
+              borderWidth: 2,
+              borderColor: selected ? '#0D7A3E' : 'transparent',
+              elevation: 1,
+              shadowColor: '#0F1A14',
+              shadowOpacity: 0.04,
+              shadowRadius: 4,
+            }}
+          >
+            <ShieldDisplay escudo={t.escudo} size={42} />
+            <View className="flex-1 ml-3">
+              <Text className="text-night font-sans-medium text-sm" numberOfLines={1}>
+                {t.nombre}
+              </Text>
+              <Text className="text-carbon text-xs">
+                {t.cantidadJugadores} jugador{t.cantidadJugadores === 1 ? '' : 'es'}
+              </Text>
+            </View>
+            <View
+              style={{
+                width: 22, height: 22, borderRadius: 11,
+                borderWidth: 2,
+                borderColor: selected ? '#0D7A3E' : '#A8B5AE',
+                backgroundColor: selected ? '#0D7A3E' : 'transparent',
+                alignItems: 'center', justifyContent: 'center',
+              }}
+            >
+              {selected && <Feather name="check" size={12} color="white" />}
+            </View>
+          </TouchableOpacity>
+        );
+      })}
+      <TouchableOpacity
+        onPress={goToCreateTeam}
+        activeOpacity={0.7}
+        className="mt-2 py-2 flex-row items-center justify-center gap-1"
+      >
+        <Feather name="plus" size={14} color="#0D7A3E" />
+        <Text className="text-primary text-xs font-sans-medium">Crear otro equipo</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderRoster = () => {
+    if (!selectedTeamId) return null;
+    if (loadingTeamDetail) {
+      return (
+        <View className="py-6 items-center">
+          <ActivityIndicator color="#0D7A3E" />
+        </View>
+      );
+    }
+    if (!selectedTeam) return null;
+    return (
+      <View className="mt-6">
+        <Text className="text-night font-sans-medium text-base mb-3">
+          Jugadores que participarán
+        </Text>
+        <RosterSelector
+          jugadores={jugadoresForSelector}
+          capitanId={selectedTeam.capitanId}
+          selectedIds={selectedIds}
+          onChange={setSelectedIds}
+          min={jugadoresMin}
+          max={jugadoresMax}
+          onLockedToggle={() =>
+            showError('Capitán bloqueado', 'El capitán siempre va en el roster del torneo.')
+          }
+        />
+      </View>
+    );
+  };
+
+  if (loadingTournament || loadingTeams) {
+    return (
+      <View className="flex-1 bg-mist">
+        <View className="bg-primary px-6 pt-14 pb-4 flex-row items-center">
+          <TouchableOpacity onPress={() => router.back()} className="mr-3">
+            <Feather name="arrow-left" size={22} color="white" />
+          </TouchableOpacity>
+          <Text className="text-white text-xl font-sans-medium flex-1">Inscribir equipo</Text>
+        </View>
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator color="#0D7A3E" size="large" />
+        </View>
+      </View>
+    );
+  }
+
+  const canSubmit =
+    !!selectedTeamId &&
+    selectedIds.length >= jugadoresMin &&
+    selectedIds.length <= jugadoresMax &&
+    !saving;
 
   return (
     <View className="flex-1 bg-mist">
       <CustomAlert {...alertState} onConfirm={alertState.onConfirm} onCancel={hideAlert} />
 
-      {/* Header */}
       <View className="bg-primary px-6 pt-14 pb-4 flex-row items-center">
         <TouchableOpacity onPress={() => router.back()} className="mr-3">
           <Feather name="arrow-left" size={22} color="white" />
@@ -164,285 +409,37 @@ export default function InscribirseScreen() {
         <Text className="text-white text-xl font-sans-medium flex-1">Inscribir equipo</Text>
       </View>
 
-      {loadingTournament ? (
-        <View className="flex-1 items-center justify-center">
-          <ActivityIndicator color="#0D7A3E" size="large" />
-        </View>
-      ) : (
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ padding: 16, paddingBottom: 48 }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* ── Info del torneo ── */}
-        {finalNombre ? (
-          <View
-            style={{
-              backgroundColor: '#FFFFFF',
-              borderRadius: 20,
-              padding: 16,
-              marginBottom: 20,
-              elevation: 2,
-              shadowColor: '#0F1A14',
-              shadowOpacity: 0.05,
-              shadowRadius: 8,
-              borderWidth: 1,
-              borderColor: '#EBF0EC',
-            }}
-          >
-            {/* Título */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-              <View style={{ backgroundColor: '#D4F5E2', borderRadius: 8, padding: 6 }}>
-                <Info size={14} color="#0D7A3E" />
-              </View>
-              <Text style={{ fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#0F1A14', flex: 1 }}>
-                {finalNombre}
-              </Text>
-            </View>
+        {renderTorneoCard()}
 
-            {/* Descripción */}
-            {!!finalDescripcion && (
-              <Text
-                style={{
-                  fontFamily: 'Inter_400Regular',
-                  fontSize: 12,
-                  color: '#3D4F44',
-                  lineHeight: 18,
-                  marginBottom: 12,
-                }}
-              >
-                {finalDescripcion}
-              </Text>
+        {myTeams.length === 0 ? renderEmptyTeams() : renderTeamSelector()}
+
+        {renderRoster()}
+
+        {myTeams.length > 0 && (
+          <TouchableOpacity
+            onPress={handleSubmit}
+            disabled={!canSubmit}
+            activeOpacity={0.85}
+            className="bg-primary rounded-2xl py-4 items-center flex-row justify-center gap-2 mt-6"
+            style={{ opacity: canSubmit ? 1 : 0.5 }}
+          >
+            {saving ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <>
+                <Feather name="send" size={18} color="white" />
+                <Text className="text-white font-sans-medium text-base">Enviar solicitud</Text>
+              </>
             )}
-
-            {/* Separador */}
-            <View style={{ height: 1, backgroundColor: '#EBF0EC', marginBottom: 10 }} />
-
-            {/* Chips */}
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-              {/* Equipos */}
-              <View
-                style={{
-                  flexDirection: 'row', alignItems: 'center', gap: 4,
-                  backgroundColor: '#EBF0EC', borderRadius: 8,
-                  paddingHorizontal: 9, paddingVertical: 5,
-                }}
-              >
-                <Users size={12} color="#3D4F44" />
-                <Text style={{ fontFamily: 'Inter_500Medium', fontSize: 11, color: '#3D4F44' }}>
-                  {equiposInscritosNum}/{maxEquiposNum} equipos
-                </Text>
-              </View>
-
-              {/* Jugadores */}
-              {modalidadInfo && (
-                <View
-                  style={{
-                    flexDirection: 'row', alignItems: 'center', gap: 4,
-                    backgroundColor: '#D4F5E2', borderRadius: 8,
-                    paddingHorizontal: 9, paddingVertical: 5,
-                  }}
-                >
-                  <modalidadInfo.Icon size={12} color="#0D7A3E" />
-                  <Text style={{ fontFamily: 'Inter_500Medium', fontSize: 11, color: '#0D7A3E' }}>
-                    {modalidadInfo.label}
-                  </Text>
-                </View>
-              )}
-
-              {/* Zona */}
-              {!!finalZona && (
-                <View
-                  style={{
-                    flexDirection: 'row', alignItems: 'center', gap: 4,
-                    backgroundColor: '#EAF2FB', borderRadius: 8,
-                    paddingHorizontal: 9, paddingVertical: 5,
-                  }}
-                >
-                  <MapPin size={12} color="#1A73E8" />
-                  <Text style={{ fontFamily: 'Inter_500Medium', fontSize: 11, color: '#1A73E8' }}>
-                    {finalZona}
-                  </Text>
-                </View>
-              )}
-            </View>
-          </View>
-        ) : null}
-
-        {/* ── Escudo ── */}
-        <Text className="text-night font-sans-medium text-base mb-3">Escudo del equipo</Text>
-
-        {/* Preview */}
-        <View
-          className="bg-white rounded-2xl p-5 mb-4 items-center"
-          style={{ elevation: 1, shadowColor: '#0F1A14', shadowOpacity: 0.05, shadowRadius: 6 }}
-        >
-          {isCustomImage ? (
-            <Image
-              source={{ uri: localPreviewUri }}
-              style={{ width: 88, height: 88, borderRadius: 18 }}
-              resizeMode="cover"
-            />
-          ) : (
-            <ShieldDisplay escudo={escudo} size={88} />
-          )}
-          <Text className="text-carbon text-xs mt-3 text-center">{escudoLabel}</Text>
-        </View>
-
-        {/* Presets */}
-        <Text className="text-carbon text-xs font-sans-medium mb-2 uppercase tracking-wide">
-          Escudos genéricos
-        </Text>
-        <View className="flex-row flex-wrap gap-3 mb-4">
-          {PRESETS.map((preset) => {
-            const selected = escudo === preset.id && !localPreviewUri;
-            return (
-              <TouchableOpacity
-                key={preset.id}
-                activeOpacity={0.8}
-                onPress={() => {
-                  setEscudo(preset.id);
-                  setLocalPreviewUri(null);
-                }}
-                style={{
-                  borderWidth: 3,
-                  borderColor: selected ? '#0F1A14' : 'transparent',
-                  borderRadius: 17,
-                  padding: 2,
-                }}
-              >
-                <ShieldDisplay escudo={preset.id} size={52} />
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        {/* Gallery picker */}
-        <TouchableOpacity
-          onPress={handlePickGallery}
-          disabled={uploading}
-          activeOpacity={0.8}
-          className="bg-white rounded-xl px-4 py-3 flex-row items-center gap-3 mb-6 border border-mist"
-          style={{ elevation: 1, shadowColor: '#0F1A14', shadowOpacity: 0.04, shadowRadius: 4 }}
-        >
-          {uploading ? (
-            <ActivityIndicator color="#0D7A3E" size="small" />
-          ) : (
-            <Feather name="image" size={20} color="#0D7A3E" />
-          )}
-          <Text className="text-night font-sans-medium text-sm flex-1">
-            {uploading ? 'Subiendo imagen...' : 'Elegir de galería'}
-          </Text>
-          {!uploading && <Feather name="chevron-right" size={16} color="#3D4F44" />}
-        </TouchableOpacity>
-
-        {/* ── Datos del equipo ── */}
-        <Text className="text-night font-sans-medium text-base mb-3">Datos del equipo</Text>
-        <View
-          className="bg-white rounded-2xl px-4 py-4 mb-6"
-          style={{ elevation: 1, shadowColor: '#0F1A14', shadowOpacity: 0.05, shadowRadius: 6 }}
-        >
-          <TextInput
-            className="bg-mist rounded-xl px-4 py-3 text-night text-sm mb-3"
-            placeholder="Nombre del equipo *"
-            placeholderTextColor="#3D4F44"
-            value={nombre}
-            onChangeText={setNombre}
-            autoCapitalize="words"
-          />
-          <TextInput
-            className="bg-mist rounded-xl px-4 py-3 text-night text-sm mb-3"
-            placeholder="Teléfono del capitán (opcional)"
-            placeholderTextColor="#3D4F44"
-            keyboardType="phone-pad"
-            value={telefono}
-            onChangeText={setTelefono}
-          />
-
-          {/* ── Requisito de jugadores (solo informativo) ── */}
-          <View
-            style={{
-              backgroundColor: '#F4FAF6',
-              borderRadius: 12,
-              borderWidth: 1,
-              borderColor: '#D4F5E2',
-              paddingHorizontal: 12,
-              paddingVertical: 10,
-              marginBottom: 12,
-            }}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-              <Users size={13} color="#0D7A3E" />
-              <Text style={{ fontFamily: 'Inter_600SemiBold', fontSize: 12, color: '#0D7A3E' }}>
-                Requisito de jugadores por equipo
-              </Text>
-            </View>
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              {/* Mínimo */}
-              <View
-                style={{
-                  flex: 1, backgroundColor: '#FFFFFF', borderRadius: 10,
-                  borderWidth: 1, borderColor: '#D4F5E2',
-                  paddingVertical: 8, alignItems: 'center',
-                }}
-              >
-                <Text style={{ fontFamily: 'Inter_400Regular', fontSize: 10, color: '#3D4F44', marginBottom: 2 }}>
-                  Mínimo
-                </Text>
-                <Text style={{ fontFamily: 'Inter_700Bold', fontSize: 22, color: '#0D7A3E', lineHeight: 26 }}>
-                  {jugadoresMin}
-                </Text>
-                <Text style={{ fontFamily: 'Inter_400Regular', fontSize: 10, color: '#3D4F44' }}>
-                  jugadores
-                </Text>
-              </View>
-
-              {/* Separador */}
-              <View style={{ justifyContent: 'center' }}>
-                <Text style={{ fontFamily: 'Inter_600SemiBold', fontSize: 14, color: '#A8B5AE' }}>—</Text>
-              </View>
-
-              {/* Máximo */}
-              <View
-                style={{
-                  flex: 1, backgroundColor: '#FFFFFF', borderRadius: 10,
-                  borderWidth: 1, borderColor: '#D4F5E2',
-                  paddingVertical: 8, alignItems: 'center',
-                }}
-              >
-                <Text style={{ fontFamily: 'Inter_400Regular', fontSize: 10, color: '#3D4F44', marginBottom: 2 }}>
-                  Máximo
-                </Text>
-                <Text style={{ fontFamily: 'Inter_700Bold', fontSize: 22, color: '#0D7A3E', lineHeight: 26 }}>
-                  {jugadoresMax}
-                </Text>
-                <Text style={{ fontFamily: 'Inter_400Regular', fontSize: 10, color: '#3D4F44' }}>
-                  jugadores
-                </Text>
-              </View>
-            </View>
-          </View>
-        </View>
-
-        {/* Submit */}
-        <TouchableOpacity
-          onPress={handleSubmit}
-          disabled={saving || uploading}
-          activeOpacity={0.85}
-          className="bg-primary rounded-2xl py-4 items-center flex-row justify-center gap-2"
-        >
-          {saving ? (
-            <ActivityIndicator color="white" />
-          ) : (
-            <>
-              <Feather name="send" size={18} color="white" />
-              <Text className="text-white font-sans-medium text-base">Enviar solicitud</Text>
-            </>
-          )}
-        </TouchableOpacity>
+          </TouchableOpacity>
+        )}
       </ScrollView>
-      )}
     </View>
   );
 }

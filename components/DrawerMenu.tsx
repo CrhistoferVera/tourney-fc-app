@@ -6,8 +6,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 const TABS = [
   { key: 'home', label: 'Home', icon: 'home', href: '/(app)/(tabs)/home' },
   { key: 'explorar', label: 'Explorar', icon: 'search', href: '/(app)/(tabs)/explorar' },
+  { key: 'mis-equipos', label: 'Mis equipos', icon: 'shield', href: '/(app)/(tabs)/mis-equipos' },
   { key: 'mis-torneos', label: 'Mis torneos', icon: 'award', href: '/(app)/(tabs)/mis-torneos' },
-  { key: 'perfil', label: 'Perfil', icon: 'user', href: '/(profile)' },
 ] as const;
 
 export default function BottomTabBar() {

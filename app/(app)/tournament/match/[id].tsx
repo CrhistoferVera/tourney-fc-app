@@ -32,6 +32,9 @@ function MatchEventIcon({ tipo, size, color }: { tipo: TipoEvento; size: number;
   if (tipo === 'GOL' || tipo === 'PENAL_FALLADO') {
     return <MaterialCommunityIcons name="soccer" size={size} color={color} />;
   }
+  if (tipo === 'ASISTENCIA') {
+    return <MaterialCommunityIcons name="shoe-cleat" size={size} color={color} />;
+  }
   if (tipo === 'TARJETA_AMARILLA' || tipo === 'TARJETA_ROJA') {
     return <MaterialCommunityIcons name="cards" size={size} color={color} />;
   }
@@ -103,10 +106,13 @@ const getFaseBadgeStyle = (partido: Partido, torneo?: Tournament | null) => {
   }
 };
 
-const getEventLabel = (tipo: TipoEvento) =>
-  EVENT_CONFIGS.find((c) => c.tipo === tipo)?.label ?? tipo.replace(/_/g, ' ');
+const getEventLabel = (tipo: TipoEvento) => {
+  if (tipo === 'ASISTENCIA') return 'Asistencia';
+  return EVENT_CONFIGS.find((c) => c.tipo === tipo)?.label ?? tipo.replace(/_/g, ' ');
+};
 
 const getEventIcon = (tipo: TipoEvento) => {
+  if (tipo === 'ASISTENCIA') return { icon: 'shoe-cleat', iconColor: '#7C3AED', iconBg: '#EDE9FE' };
   const cfg = EVENT_CONFIGS.find((c) => c.tipo === tipo);
   if (!cfg) return { icon: 'info', iconColor: '#6B7280', iconBg: '#F3F4F6' };
   return { icon: cfg.icon, iconColor: cfg.iconColor, iconBg: cfg.iconBg };
@@ -125,9 +131,10 @@ export default function MatchScreen() {
   const [actionLoading, setActionLoading] = useState(false);
 
   // Modal de evento
-  const [modalStep, setModalStep] = useState<'equipo' | 'jugador' | null>(null);
+  const [modalStep, setModalStep] = useState<'equipo' | 'jugador' | 'asistencia' | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<EventConfig | null>(null);
   const [selectedEquipoId, setSelectedEquipoId] = useState<string | null>(null);
+  const [goalScorerId, setGoalScorerId] = useState<string | null>(null);
   const [jugadoresLocal, setJugadoresLocal] = useState<Jugador[]>([]);
   const [jugadoresVisitante, setJugadoresVisitante] = useState<Jugador[]>([]);
   const [loadingPlayers, setLoadingPlayers] = useState(false);
@@ -205,8 +212,11 @@ export default function MatchScreen() {
           getTeamById(partido.equipoLocal.id),
           getTeamById(partido.equipoVisitante.id),
         ]);
-        setJugadoresLocal(local.jugadores ?? []);
-        setJugadoresVisitante(visitante.jugadores ?? []);
+        // MyTeam.jugadores son UsuarioEquipoRow[]; aplanar a Jugador[]
+        const mapJugadores = (rows: { usuario: Jugador }[] | undefined | null) =>
+          (rows ?? []).map((r) => r.usuario);
+        setJugadoresLocal(mapJugadores(local.jugadores));
+        setJugadoresVisitante(mapJugadores(visitante.jugadores));
       } catch {
         // Si falla, seguimos sin lista de jugadores
       } finally {
@@ -261,9 +271,9 @@ export default function MatchScreen() {
   // Eventos agrupados por tipo
   const groupedEvents = useMemo(() => {
     if (!partido?.eventos || partido.eventos.length === 0) return null;
-    const goles = partido.eventos.filter((e) => e.tipo === 'GOL');
+    const goles = partido.eventos.filter((e) => e.tipo === 'GOL' || e.tipo === 'ASISTENCIA');
     const tarjetas = partido.eventos.filter((e) => e.tipo === 'TARJETA_AMARILLA' || e.tipo === 'TARJETA_ROJA');
-    const otros = partido.eventos.filter((e) => e.tipo !== 'GOL' && e.tipo !== 'TARJETA_AMARILLA' && e.tipo !== 'TARJETA_ROJA');
+    const otros = partido.eventos.filter((e) => e.tipo !== 'GOL' && e.tipo !== 'ASISTENCIA' && e.tipo !== 'TARJETA_AMARILLA' && e.tipo !== 'TARJETA_ROJA');
     return { goles, tarjetas, otros };
   }, [partido]);
 
@@ -356,7 +366,7 @@ export default function MatchScreen() {
     }
   };
 
-  const submitEvent = async (equipoId: string, jugadorId?: string) => {
+  const submitEvent = async (equipoId: string, jugadorId?: string, asistenciaJugadorId?: string) => {
     if (!selectedEvent) return;
     closeModal();
     setActionLoading(true);
@@ -368,6 +378,7 @@ export default function MatchScreen() {
         jugadorId,
         minuto: isPenal ? undefined : displayMinutes,
         detalle: isPenal ? 'PENAL' : undefined,
+        asistenciaJugadorId,
       });
       await fetchMatch();
     } catch (e: any) {
@@ -381,6 +392,16 @@ export default function MatchScreen() {
     setModalStep(null);
     setSelectedEvent(null);
     setSelectedEquipoId(null);
+    setGoalScorerId(null);
+  };
+
+  const onSelectJugador = (jugadorId?: string) => {
+    if (selectedEvent?.tipo === 'GOL') {
+      setGoalScorerId(jugadorId ?? null);
+      setModalStep('asistencia');
+    } else {
+      submitEvent(selectedEquipoId!, jugadorId);
+    }
   };
 
   const deleteEvent = (ev: EventoPartido) =>
@@ -687,6 +708,65 @@ export default function MatchScreen() {
               </>
             )}
 
+            {/* ── Paso: Seleccionar Asistente ── */}
+            {modalStep === 'asistencia' && selectedEvent && selectedEquipoId && (
+              <>
+                <View style={styles.modalHeader}>
+                  <TouchableOpacity onPress={() => setModalStep('jugador')} style={{ marginRight: 8 }}>
+                    <Feather name="arrow-left" size={20} color="#374151" />
+                  </TouchableOpacity>
+                  <View style={[styles.modalIconCircle, { backgroundColor: '#EDE9FE' }]}>
+                    <MaterialCommunityIcons name="shoe-cleat" size={22} color="#7C3AED" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.modalTitle}>Asistencia (opcional)</Text>
+                    <Text style={styles.modalSubtitle}>{nombreEquipoSeleccionado}</Text>
+                  </View>
+                  <TouchableOpacity onPress={closeModal}>
+                    <Feather name="x" size={22} color="#6B7280" />
+                  </TouchableOpacity>
+                </View>
+
+                <ScrollView style={{ maxHeight: 320 }} showsVerticalScrollIndicator={false}>
+                  <TouchableOpacity style={styles.playerRow} onPress={() => submitEvent(selectedEquipoId, goalScorerId ?? undefined)}>
+                    <View style={styles.playerAvatar}>
+                      <Feather name="slash" size={18} color="#6B7280" />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.playerName}>Sin asistencia</Text>
+                      <Text style={styles.playerEmail}>Registrar solo el gol</Text>
+                    </View>
+                    <Feather name="chevron-right" size={18} color="#9CA3AF" />
+                  </TouchableOpacity>
+
+                  <View style={styles.divider} />
+
+                  {loadingPlayers ? (
+                    <ActivityIndicator color="#0D7A3E" style={{ marginVertical: 20 }} />
+                  ) : jugadoresEquipoSeleccionado.length === 0 ? (
+                    <Text style={styles.noPlayersText}>No hay jugadores registrados</Text>
+                  ) : (
+                    jugadoresEquipoSeleccionado.map((j) => (
+                      <TouchableOpacity key={j.id} style={styles.playerRow} onPress={() => submitEvent(selectedEquipoId, goalScorerId ?? undefined, j.id)} activeOpacity={0.7}>
+                        <View style={styles.playerAvatar}>
+                          {j.fotoPerfil ? (
+                            <Image source={{ uri: j.fotoPerfil }} style={styles.playerAvatarImg} />
+                          ) : (
+                            <Text style={styles.playerAvatarText}>{j.nombre.charAt(0).toUpperCase()}</Text>
+                          )}
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.playerName}>{j.nombre}</Text>
+                          {j.email && <Text style={styles.playerEmail}>{j.email}</Text>}
+                        </View>
+                        <Feather name="chevron-right" size={18} color="#9CA3AF" />
+                      </TouchableOpacity>
+                    ))
+                  )}
+                </ScrollView>
+              </>
+            )}
+
             {/* ── Paso: Seleccionar Jugador ── */}
             {modalStep === 'jugador' && selectedEvent && selectedEquipoId && (
               <>
@@ -707,7 +787,7 @@ export default function MatchScreen() {
                 </View>
 
                 <ScrollView style={{ maxHeight: 320 }} showsVerticalScrollIndicator={false}>
-                  <TouchableOpacity style={styles.playerRow} onPress={() => submitEvent(selectedEquipoId)}>
+                  <TouchableOpacity style={styles.playerRow} onPress={() => onSelectJugador(undefined)}>
                     <View style={styles.playerAvatar}>
                       <Feather name="users" size={18} color="#6B7280" />
                     </View>
@@ -726,7 +806,7 @@ export default function MatchScreen() {
                     <Text style={styles.noPlayersText}>No hay jugadores registrados</Text>
                   ) : (
                     jugadoresEquipoSeleccionado.map((j) => (
-                      <TouchableOpacity key={j.id} style={styles.playerRow} onPress={() => submitEvent(selectedEquipoId, j.id)} activeOpacity={0.7}>
+                      <TouchableOpacity key={j.id} style={styles.playerRow} onPress={() => onSelectJugador(j.id)} activeOpacity={0.7}>
                         <View style={styles.playerAvatar}>
                           {j.fotoPerfil ? (
                             <Image source={{ uri: j.fotoPerfil }} style={styles.playerAvatarImg} />

@@ -1,16 +1,15 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   RefreshControl,
   ScrollView,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
-import { getMyTeam, invitePlayer, MyTeam } from '../../../services/teamsService';
+import { getMyTeam, MyTeam } from '../../../services/teamsService';
 import ShieldDisplay from '../../../components/tournament/ShieldDisplay';
 import JugadoresStatsTable from '../../../components/tournament/JugadoresStatsTable';
 import CustomAlert from '../../../components/CustomAlert';
@@ -19,13 +18,11 @@ import { useAlert } from '../../../hooks/useAlert';
 export default function MiEquipoScreen() {
   const { id: torneoId, rol } = useLocalSearchParams<{ id: string; rol: string }>();
   const router = useRouter();
-  const { alertState, hideAlert, showError, showSuccess } = useAlert();
+  const { alertState, hideAlert, showError } = useAlert();
 
   const [equipo, setEquipo] = useState<MyTeam | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [emailInvitar, setEmailInvitar] = useState('');
-  const [invitando, setInvitando] = useState(false);
 
   const esCapitan = rol === 'CAPITAN';
 
@@ -64,24 +61,9 @@ export default function MiEquipoScreen() {
     setRefreshing(false);
   }, [fetchEquipo]);
 
-  const handleInvitar = async () => {
-    const email = emailInvitar.trim().toLowerCase();
-    if (!email) {
-      showError('Campo requerido', 'Ingresa el correo del jugador');
-      return;
-    }
+  const goToGlobalTeam = () => {
     if (!equipo) return;
-    setInvitando(true);
-    try {
-      await invitePlayer(equipo.id, email);
-      setEmailInvitar('');
-      await fetchEquipo();
-      showSuccess('Invitación enviada', `Se envió una invitación a ${email}.`);
-    } catch (e: any) {
-      showError('Error', e.message ?? 'No se pudo enviar la invitación');
-    } finally {
-      setInvitando(false);
-    }
+    router.push(`/team/${equipo.id}` as never);
   };
 
   if (loading) {
@@ -123,7 +105,6 @@ export default function MiEquipoScreen() {
     <View className="flex-1 bg-mist">
       <CustomAlert {...alertState} onConfirm={alertState.onConfirm} onCancel={hideAlert} />
 
-      {/* Header */}
       <View className="bg-primary px-6 pt-14 pb-4 flex-row items-center">
         <TouchableOpacity onPress={() => router.back()} className="mr-3">
           <Feather name="arrow-left" size={22} color="white" />
@@ -167,10 +148,30 @@ export default function MiEquipoScreen() {
           </View>
         </View>
 
-        {/* ── Estadísticas del torneo ── */}
+        {/* Banner: gestionar globalmente */}
+        <TouchableOpacity
+          onPress={goToGlobalTeam}
+          activeOpacity={0.85}
+          className="bg-primary-light border border-primary rounded-2xl px-4 py-3 mb-5 flex-row items-center"
+        >
+          <View className="w-9 h-9 rounded-full bg-white items-center justify-center mr-3">
+            <Feather name="shield" size={16} color="#0D7A3E" />
+          </View>
+          <View className="flex-1">
+            <Text className="text-primary font-sans-medium text-sm">
+              Gestionar equipo
+            </Text>
+            <Text className="text-carbon text-xs mt-0.5">
+              Invita jugadores y administra tu equipo desde Mis equipos.
+            </Text>
+          </View>
+          <Feather name="chevron-right" size={18} color="#0D7A3E" />
+        </TouchableOpacity>
+
+        {/* Estadísticas del torneo */}
         <View className="flex-row items-center mb-3">
           <Text className="text-night font-sans-medium text-base flex-1">
-            Estadísticas del torneo
+            Roster del torneo
           </Text>
           <View className="bg-primary-light px-2 py-0.5 rounded-full">
             <Text className="text-primary text-xs font-sans-medium">{jugadoresTabla.length}</Text>
@@ -182,111 +183,12 @@ export default function MiEquipoScreen() {
             className="bg-white rounded-2xl px-4 py-8 items-center mb-5"
             style={{ elevation: 1, shadowColor: '#0F1A14', shadowOpacity: 0.05, shadowRadius: 6 }}
           >
-            <Text className="text-carbon text-sm">Sin jugadores registrados aún.</Text>
+            <Text className="text-carbon text-sm">Sin jugadores en el roster.</Text>
           </View>
         ) : (
           <View className="mb-5">
             <JugadoresStatsTable jugadores={jugadoresTabla} capitanId={equipo.capitanId} />
           </View>
-        )}
-
-        {/* ── CAPITAN ONLY ── */}
-        {esCapitan && (
-          <>
-            {/* ── Invitar por correo ── */}
-            <Text className="text-night font-sans-medium text-base mb-3">Invitar jugador</Text>
-            <View
-              className="bg-white rounded-2xl px-4 py-4 mb-5"
-              style={{ elevation: 1, shadowColor: '#0F1A14', shadowOpacity: 0.05, shadowRadius: 6 }}
-            >
-              <View className="flex-row gap-2 mb-1">
-                <TextInput
-                  className="bg-mist rounded-xl px-4 py-3 text-night text-sm flex-1"
-                  placeholder="Correo del jugador"
-                  placeholderTextColor="#3D4F44"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  value={emailInvitar}
-                  onChangeText={setEmailInvitar}
-                  editable={!invitando}
-                  returnKeyType="send"
-                  onSubmitEditing={handleInvitar}
-                />
-                <TouchableOpacity
-                  onPress={handleInvitar}
-                  disabled={invitando}
-                  activeOpacity={0.85}
-                  className="bg-primary rounded-xl px-4 items-center justify-center"
-                  style={{ minWidth: 80 }}
-                >
-                  {invitando ? (
-                    <ActivityIndicator color="white" size="small" />
-                  ) : (
-                    <Text className="text-white font-sans-medium text-sm">Invitar</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-
-              {/* Pending invitations */}
-              {equipo.invitaciones.length > 0 && (
-                <View className="mt-3">
-                  <Text className="text-carbon text-xs font-sans-medium mb-2 uppercase tracking-wide">
-                    Pendientes de aceptar ({equipo.invitaciones.length})
-                  </Text>
-                  {equipo.invitaciones.map((inv, idx) => {
-                    const isLast = idx === equipo.invitaciones.length - 1;
-                    return (
-                      <View
-                        key={inv.id}
-                        className={`flex-row items-center py-2.5 ${isLast ? '' : 'border-b border-mist'}`}
-                      >
-                        <View className="w-8 h-8 rounded-full bg-accent-soft items-center justify-center mr-3">
-                          <Feather name="mail" size={14} color="#F5820D" />
-                        </View>
-                        <Text className="text-carbon text-sm flex-1" numberOfLines={1}>
-                          {inv.email}
-                        </Text>
-                        <View className="bg-accent-soft px-2 py-0.5 rounded-full">
-                          <Text className="text-accent text-xs">Pendiente</Text>
-                        </View>
-                      </View>
-                    );
-                  })}
-                </View>
-              )}
-            </View>
-
-            {/* ── Enlace de invitación (placeholder) ── */}
-            <Text className="text-night font-sans-medium text-base mb-3">Enlace de invitación</Text>
-            <View
-              className="bg-white rounded-2xl px-4 py-4 mb-4"
-              style={{ elevation: 1, shadowColor: '#0F1A14', shadowOpacity: 0.05, shadowRadius: 6 }}
-            >
-              <Text className="text-carbon text-xs mb-3 leading-5">
-                Genera un enlace para que cualquier jugador pueda unirse a tu equipo sin necesidad de invitación por correo.
-              </Text>
-              <TouchableOpacity
-                activeOpacity={0.7}
-                className="bg-mist rounded-xl px-4 py-3 flex-row items-center gap-3"
-              >
-                <View className="w-8 h-8 rounded-full bg-primary-light items-center justify-center">
-                  <Feather name="link-2" size={16} color="#0D7A3E" />
-                </View>
-                <Text className="text-night font-sans-medium text-sm flex-1">Generar enlace</Text>
-                <Feather name="chevron-right" size={16} color="#3D4F44" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                activeOpacity={0.7}
-                className="bg-mist rounded-xl px-4 py-3 flex-row items-center gap-3 mt-2"
-              >
-                <View className="w-8 h-8 rounded-full bg-primary-light items-center justify-center">
-                  <Feather name="share-2" size={16} color="#0D7A3E" />
-                </View>
-                <Text className="text-night font-sans-medium text-sm flex-1">Compartir enlace</Text>
-                <Feather name="chevron-right" size={16} color="#3D4F44" />
-              </TouchableOpacity>
-            </View>
-          </>
         )}
       </ScrollView>
     </View>

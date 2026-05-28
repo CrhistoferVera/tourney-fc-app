@@ -83,6 +83,7 @@ export default function TabsLayout() {
     >
       <Tabs.Screen name="home" options={{ title: 'Inicio' }} />
       <Tabs.Screen name="explorar" options={{ title: 'Explorar' }} />
+      <Tabs.Screen name="mis-equipos" options={{ title: 'Mis equipos' }} />
       <Tabs.Screen name="mis-torneos" options={{ title: 'Mis torneos' }} />
     </Tabs>
   );
