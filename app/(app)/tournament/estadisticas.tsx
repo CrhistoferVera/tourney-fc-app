@@ -247,11 +247,6 @@ function PersonalStatGrid({
       label: 'Rojas',
     },
     {
-      icon: <MaterialCommunityIcons name="whistle" size={20} color="#F5820D" />,
-      value: stats.faltas,
-      label: 'Faltas',
-    },
-    {
       icon: <MaterialCommunityIcons name="close-circle-outline" size={20} color="#9B59B6" />,
       value: stats.penalesFallados,
       label: 'Pen. fallados',
@@ -317,11 +312,6 @@ function PersonalRankings({
       icon: <CardIcon color="#E53935" />,
       label: 'Tarjetas rojas',
       pos: stats.posicionRojas,
-    },
-    {
-      icon: <MaterialCommunityIcons name="whistle" size={16} color="#F5820D" />,
-      label: 'Faltas cometidas',
-      pos: stats.posicionFaltas,
     },
     {
       icon: <MaterialCommunityIcons name="close-circle-outline" size={16} color="#9B59B6" />,

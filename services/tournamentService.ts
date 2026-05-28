@@ -125,7 +125,6 @@ export interface ResumenGlobal {
   totalTarjetasAmarillas: number;
   totalTarjetasRojas: number;
   promedioGolesPorPartido: number;
-  totalFaltas: number;
 }
 
 export interface EstadisticasPersonales {
@@ -133,13 +132,11 @@ export interface EstadisticasPersonales {
   asistencias: number;
   tarjetasAmarillas: number;
   tarjetasRojas: number;
-  faltas: number;
   penalesFallados: number;
   posicionGoles: number | null;
   posicionAsistencias: number | null;
   posicionAmarillas: number | null;
   posicionRojas: number | null;
-  posicionFaltas: number | null;
   posicionPenalesFallados: number | null;
 }
 
@@ -149,7 +146,6 @@ export interface TorneoEstadisticas {
   asistentes: EntradaLiderato[];
   amarillas: EntradaLiderato[];
   rojas: EntradaLiderato[];
-  faltas: EntradaLiderato[];
   penalesFallados: EntradaLiderato[];
   estadisticasPersonales: EstadisticasPersonales | null;
 }
