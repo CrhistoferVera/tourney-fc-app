@@ -15,7 +15,6 @@ import CustomAlert from '../../components/CustomAlert';
 import { useAlert } from '../../hooks/useAlert';
 import { Trophy, Eye, EyeOff } from 'lucide-react-native';
 import { Colors } from '../../constants/Colors';
-import { registerPushDevice } from '../../services/pushNotifications';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -62,7 +61,6 @@ export default function LoginScreen() {
           fotoPerfil: data.fotoPerfil,
           zona: data.zona,
         });
-        registerPushDevice(data.accessToken);
         router.replace('/(app)/(tabs)/home');
       } else {
         showError(

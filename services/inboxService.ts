@@ -12,11 +12,27 @@ export interface Invitacion {
   invitador: { id: string; nombre: string; fotoPerfil: string | null };
 }
 
+export interface NotificacionBandeja {
+  id: string;
+  tipo: string;
+  mensaje: string;
+  leida: boolean;
+  createdAt: string;
+  torneoId: string | null;
+  torneo: { id: string; nombre: string } | null;
+}
+
 const getToken = () => useAuthStore.getState().token ?? undefined;
 
 export const inboxService = {
   getInvitaciones: (): Promise<Invitacion[]> =>
     api.get('/users/me/invitaciones', getToken()),
+
+  getNotificaciones: (): Promise<NotificacionBandeja[]> =>
+    api.get('/users/me/notificaciones', getToken()),
+
+  marcarLeida: (id: string): Promise<unknown> =>
+    api.patch(`/users/me/notificaciones/${id}/leida`, {}, getToken()),
 
   aceptar: (id: string): Promise<{ mensaje: string }> =>
     api.post(`/users/me/invitaciones/${id}/aceptar`, {}, getToken()),

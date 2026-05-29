@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "272814387856",
+    "project_id": "tourneyfc-v1",
+    "storage_bucket": "tourneyfc-v1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:272814387856:android:e61ea64181ce49a47f9e15",
+        "android_client_info": {
+          "package_name": "com.cristian.tourneyfc"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA9a3Z-YjebZ7PIqL55TcE_GsEQa8T1z5k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

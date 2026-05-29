@@ -4,7 +4,15 @@ import { getApiBaseUrl } from '../constants/config';
 const BASE_URL = getApiBaseUrl();
 
 const handleResponse = async (response: Response) => {
-  const data = await response.json();
+  const text = await response.text();
+  let data: Record<string, unknown> = {};
+  if (text) {
+    try {
+      data = JSON.parse(text) as Record<string, unknown>;
+    } catch {
+      data = { message: text || 'Respuesta inválida del servidor' };
+    }
+  }
   if (response.status === 401) {
     const { useAuthStore } = await import('../store/authStore');
     const { unregisterPushDevice } = await import('./pushNotifications');
@@ -14,10 +22,12 @@ const handleResponse = async (response: Response) => {
       useAuthStore.getState().clearAuth();
       throw new Error('Sesión expirada');
     }
-    throw new Error(data.message || data.error || 'Correo electrónico o contraseña incorrectos');
+    throw new Error(
+      String(data.message || data.error || 'Correo electrónico o contraseña incorrectos'),
+    );
   }
   if (!response.ok) {
-    const errorMessage = data.message || data.error || 'Error en la petición';
+    const errorMessage = String(data.message || data.error || 'Error en la petición');
     throw new Error(errorMessage);
   }
   return data;

@@ -1,6 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
-import { View, Text, Modal, TouchableOpacity, ActivityIndicator, TextInput } from 'react-native';
-import MapView, { Marker, MapPressEvent, Region } from 'react-native-maps';
+import {
+  View,
+  Text,
+  Modal,
+  TouchableOpacity,
+  ActivityIndicator,
+  TextInput,
+  Platform,
+} from 'react-native';
+import MapView, { Marker, MapPressEvent, Region, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as Location from 'expo-location';
 
 interface Props {
@@ -24,12 +32,20 @@ export default function MapPickerModal({ visible, onClose, onConfirm }: Props) {
   const [resolvedAddress, setResolvedAddress] = useState('');
   const [loadingLocation, setLoadingLocation] = useState(false);
   const [loadingAddress, setLoadingAddress] = useState(false);
+  const [mapMounted, setMapMounted] = useState(false);
   const mapRef = useRef<MapView>(null);
 
   useEffect(() => {
-    if (visible) {
-      locateUser();
+    if (!visible) {
+      setMapMounted(false);
+      setMarkerCoords(null);
+      setResolvedAddress('');
+      return;
     }
+
+    const timer = setTimeout(() => setMapMounted(true), 350);
+    locateUser();
+    return () => clearTimeout(timer);
   }, [visible]);
 
   const locateUser = async () => {
@@ -37,7 +53,9 @@ export default function MapPickerModal({ visible, onClose, onConfirm }: Props) {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status === 'granted') {
-        const loc = await Location.getCurrentPositionAsync({});
+        const loc = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
         const r: Region = {
           latitude: loc.coords.latitude,
           longitude: loc.coords.longitude,
@@ -45,9 +63,12 @@ export default function MapPickerModal({ visible, onClose, onConfirm }: Props) {
           longitudeDelta: 0.01,
         };
         setRegion(r);
-        mapRef.current?.animateToRegion(r, 500);
+        if (mapMounted) {
+          mapRef.current?.animateToRegion(r, 500);
+        }
       }
     } catch {
+      // Ubicación opcional: se usa región por defecto (Cochabamba)
     } finally {
       setLoadingLocation(false);
     }
@@ -65,7 +86,7 @@ export default function MapPickerModal({ visible, onClose, onConfirm }: Props) {
         setResolvedAddress(parts.join(', '));
       }
     } catch {
-      setResolvedAddress('');
+      setResolvedAddress(`${coords.latitude.toFixed(5)}, ${coords.longitude.toFixed(5)}`);
     } finally {
       setLoadingAddress(false);
     }
@@ -76,8 +97,10 @@ export default function MapPickerModal({ visible, onClose, onConfirm }: Props) {
     onClose();
   };
 
+  if (!visible) return null;
+
   return (
-    <Modal visible={visible} animationType="slide" statusBarTranslucent>
+    <Modal visible={visible} animationType="slide" statusBarTranslucent onRequestClose={onClose}>
       <View className="flex-1 bg-mist">
         <View className="bg-primary px-6 pt-14 pb-4 flex-row items-center">
           <TouchableOpacity onPress={onClose} className="mr-3">
@@ -89,9 +112,28 @@ export default function MapPickerModal({ visible, onClose, onConfirm }: Props) {
           {loadingLocation && <ActivityIndicator color="white" size="small" />}
         </View>
 
-        <MapView ref={mapRef} style={{ flex: 1 }} initialRegion={region} onPress={handleMapPress}>
-          {markerCoords && <Marker coordinate={markerCoords} pinColor="#0D7A3E" />}
-        </MapView>
+        <View style={{ flex: 1 }}>
+          {mapMounted ? (
+            <MapView
+              ref={mapRef}
+              style={{ flex: 1 }}
+              provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
+              initialRegion={region}
+              region={region}
+              onRegionChangeComplete={setRegion}
+              onPress={handleMapPress}
+              showsUserLocation
+              showsMyLocationButton
+            >
+              {markerCoords && <Marker coordinate={markerCoords} pinColor="#0D7A3E" />}
+            </MapView>
+          ) : (
+            <View className="flex-1 items-center justify-center">
+              <ActivityIndicator size="large" color="#0D7A3E" />
+              <Text className="text-carbon text-sm mt-3">Cargando mapa...</Text>
+            </View>
+          )}
+        </View>
 
         <View className="bg-white px-5 pt-4 pb-8">
           {markerCoords ? (

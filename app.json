@@ -17,11 +17,17 @@
       "supportsTablet": true
     },
     "android": {
-      "package": "com.cristian.tourneyfc", 
+      "package": "com.cristian.tourneyfc",
+      "icon": "./assets/images/icon.png",
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png"
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#0D7A3E"
+      },
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyA9a3Z-YjebZ7PIqL55TcE_GsEQa8T1z5k"
+        }
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
@@ -51,6 +57,12 @@
           "color": "#0D7A3E"
         }
       ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "TourneyFC usa tu ubicación para marcar canchas en el mapa."
+        }
+      ],
       "expo-web-browser"
     ],
     "experiments": {
@@ -60,8 +72,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "3f2c9009-2df5-4e1a-94aa-67ae0514f040"
+        "projectId": "b673659b-add8-4205-b4e8-210545e5c0a9"
       }
-    }
+    },
+    "owner": "cristian493"
   }
 }
