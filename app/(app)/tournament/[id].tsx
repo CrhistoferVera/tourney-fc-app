@@ -371,14 +371,26 @@ export default function TournamentDetailScreen() {
   const canGestionar   = isOrganizer && (isDraft || isInscripcion);
   const canVerMiEquipo = isCapitan || isJugador;
 
-  // Filtrar últimos resultados (3 partidos finalizados/en disputa/con marcador)
+  // Filtrar partidos en curso (estado EN_CURSO o con fase de juego activa en vivo)
+  const partidosEnCurso = partidos
+    .filter(
+      (p) =>
+        p.estado === 'EN_CURSO' ||
+        ['PRIMER_TIEMPO', 'MEDIO_TIEMPO', 'SEGUNDO_TIEMPO', 'PENALES'].includes(p.faseJuego)
+    )
+    .sort((a, b) => {
+      const dateA = a.fecha ? new Date(a.fecha).getTime() : 0;
+      const dateB = b.fecha ? new Date(b.fecha).getTime() : 0;
+      return dateA - dateB;
+    });
+
+  // Filtrar últimos resultados (sólo partidos finalizados/esperando confirmación/en disputa)
   const ultimosResultados = partidos
     .filter(
       (p) =>
         p.faseJuego === 'FINALIZADO' ||
-        p.estado === 'CONFIRMADO' ||
-        p.estado === 'EN_DISPUTA' ||
-        (p.golesLocal !== null && p.golesVisitante !== null)
+        p.estado === 'ESPERANDO_CONFIRMACION' ||
+        p.estado === 'EN_DISPUTA'
     )
     .sort((a, b) => {
       const dateA = a.fecha ? new Date(a.fecha).getTime() : 0;
@@ -388,13 +400,12 @@ export default function TournamentDetailScreen() {
     })
     .slice(0, 3);
 
-  // Filtrar próximos partidos (3 partidos pendientes/previas sin marcador)
+  // Filtrar próximos partidos (no iniciados y sin marcador, fase PREVIA y no en curso)
   const proximosPartidos = partidos
     .filter(
       (p) =>
-        p.faseJuego !== 'FINALIZADO' &&
-        p.estado !== 'CONFIRMADO' &&
-        p.estado !== 'EN_DISPUTA' &&
+        p.faseJuego === 'PREVIA' &&
+        p.estado !== 'EN_CURSO' &&
         p.golesLocal === null &&
         p.golesVisitante === null
     )
@@ -592,6 +603,25 @@ export default function TournamentDetailScreen() {
           )}
         </View>
 
+        {/* Partidos en curso */}
+        {partidosEnCurso.length > 0 && (
+          <View className="mb-2">
+            <Text className="text-night font-sans-medium text-base mb-3">Partidos en curso</Text>
+            {partidosEnCurso.map((partido) => (
+              <MatchCard
+                key={partido.id}
+                partido={partido}
+                onPress={() =>
+                  router.push({
+                    pathname: '/(app)/tournament/match/[id]',
+                    params: { id: partido.id },
+                  } as any)
+                }
+              />
+            ))}
+          </View>
+        )}
+
         {/* Últimos resultados */}
         <Text className="text-night font-sans-medium text-base mb-3">Últimos resultados</Text>
         {ultimosResultados.length === 0 ? (
@@ -627,12 +657,17 @@ export default function TournamentDetailScreen() {
               <MatchCard
                 key={partido.id}
                 partido={partido}
-                onPress={() =>
-                  router.push({
-                    pathname: '/(app)/tournament/match/[id]',
-                    params: { id: partido.id },
-                  } as any)
-                }
+                onPress={() => {
+                  if (partido.estado === 'PENDIENTE') {
+                    showError('Partido no programado', 'Debes programar primero estos partidos');
+                    goToFixture();
+                  } else {
+                    router.push({
+                      pathname: '/(app)/tournament/match/[id]',
+                      params: { id: partido.id },
+                    } as any);
+                  }
+                }}
               />
             ))}
           </View>

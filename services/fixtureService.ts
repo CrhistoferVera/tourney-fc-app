@@ -35,6 +35,8 @@ export interface Partido {
   faseJuego: FaseJuego;
   minutosJugados: number;
   cronometroIniciadoEn: string | null;
+  finalizadoEn?: string | null;
+  updatedAt: string;
   fecha: string | null;
   ronda: number | null;
   fase: string | null;
@@ -46,6 +48,7 @@ export interface Partido {
   equipoVisitante: PartidoEquipo;
   campo: Campo | null;
   eventos?: EventoPartido[];
+  ganadorTorneo?: { nombre: string; escudo: string | null } | null;
 }
 
 export interface RondaFixture {

@@ -171,3 +171,11 @@ export const uploadTournamentImage = async (uri: string): Promise<{ url: string 
 
   return api.postMultipart('/tournaments/upload-image', formData, token ?? undefined);
 };
+
+export const addCampoToTournament = async (
+  torneoId: string,
+  dto: { nombre: string; direccion?: string },
+): Promise<CampoDetalle> => {
+  const token = getToken();
+  return api.post(`/tournaments/${torneoId}/campos`, dto, token ?? undefined);
+};

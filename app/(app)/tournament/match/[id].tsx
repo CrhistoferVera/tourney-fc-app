@@ -7,6 +7,9 @@ import {
   Modal,
   Image,
   StyleSheet,
+  Animated,
+  Easing,
+  Dimensions,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
@@ -118,17 +121,103 @@ const getEventIcon = (tipo: TipoEvento) => {
   return { icon: cfg.icon, iconColor: cfg.iconColor, iconBg: cfg.iconBg };
 };
 
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+interface ParticleProps {
+  delay: number;
+}
+
+function ConfettiParticle({ delay }: ParticleProps) {
+  const animatedValue = useRef(new Animated.Value(0)).current;
+
+  const colors = ['#F97316', '#EAB308', '#22C55E', '#3B82F6', '#6366F1', '#A855F7', '#EC4899', '#EF4444'];
+  const color = useMemo(() => colors[Math.floor(Math.random() * colors.length)], []);
+  const sizeWidth = useMemo(() => Math.floor(Math.random() * 8) + 6, []);
+  const sizeHeight = useMemo(() => Math.floor(Math.random() * 10) + 8, []);
+  const startX = useMemo(() => Math.random() * SCREEN_WIDTH, []);
+  const swayDistance = useMemo(() => (Math.random() - 0.5) * 80, []);
+  const rotateValue = useMemo(() => `${Math.floor(Math.random() * 360)}deg`, []);
+  const rotateTo = useMemo(() => `${Math.floor(Math.random() * 720) + 360}deg`, []);
+  const borderRadius = useMemo(() => (Math.random() > 0.5 ? sizeWidth / 2 : 0), []);
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.delay(delay),
+        Animated.timing(animatedValue, {
+          toValue: 1,
+          duration: Math.floor(Math.random() * 2000) + 2000,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, []);
+
+  const translateY = animatedValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-50, SCREEN_HEIGHT + 50],
+  });
+
+  const translateX = animatedValue.interpolate({
+    inputRange: [0, 0.5, 1],
+    outputRange: [startX, startX + swayDistance, startX - swayDistance],
+  });
+
+  const rotate = animatedValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: [rotateValue, rotateTo],
+  });
+
+  const scale = animatedValue.interpolate({
+    inputRange: [0, 0.1, 0.9, 1],
+    outputRange: [0, 1, 1, 0],
+  });
+
+  return (
+    <Animated.View
+      style={{
+        position: 'absolute',
+        width: sizeWidth,
+        height: sizeHeight,
+        backgroundColor: color,
+        borderRadius: borderRadius,
+        transform: [
+          { translateY },
+          { translateX },
+          { rotate },
+          { scale },
+        ],
+        zIndex: 9999,
+        pointerEvents: 'none',
+      }}
+    />
+  );
+}
+
 // ─── Componente Principal ────────────────────────────────────────────────
 export default function MatchScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { top, bottom } = useSafeAreaInsets();
-  const { alertState, hideAlert, showError, showConfirm } = useAlert();
+  const { alertState, hideAlert, showError, showConfirm, showSuccess } = useAlert();
 
   const [partido, setPartido] = useState<Partido | null>(null);
   const [torneo, setTorneo] = useState<Tournament | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading,    setLoading]    = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [winnerInfo, setWinnerInfo] = useState<{ nombre: string; escudo: string | null } | null>(null);
+
+  const closeCelebration = () => {
+    setShowCelebration(false);
+    setWinnerInfo(null);
+    showSuccess(
+      'Partido Finalizado',
+      'El partido ha finalizado. Tienes un máximo de 3 minutos para realizar cualquier corrección o edición en los eventos.',
+    );
+  };
 
   // Modal de evento
   const [modalStep, setModalStep] = useState<'equipo' | 'jugador' | 'asistencia' | null>(null);
@@ -139,6 +228,17 @@ export default function MatchScreen() {
   const [jugadoresVisitante, setJugadoresVisitante] = useState<Jugador[]>([]);
   const [loadingPlayers, setLoadingPlayers] = useState(false);
 
+  const expelledPlayerIds = useMemo(() => {
+    if (!partido?.eventos) return new Set<string>();
+    const ids = new Set<string>();
+    for (const ev of partido.eventos) {
+      if (ev.tipo === 'TARJETA_ROJA' && ev.jugadorId) {
+        ids.add(ev.jugadorId);
+      }
+    }
+    return ids;
+  }, [partido?.eventos]);
+
   // Modal de penales
 
 
@@ -147,9 +247,8 @@ export default function MatchScreen() {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const getHalfLimit = () => {
-    if (torneo?.modalidad === 'FUTBOL_7') return 25;
     if (torneo?.modalidad === 'FUTBOL_11') return 45;
-    return 15; // default FUTBOL_5
+    return 25; // default FUTBOL_5 y FUTBOL_7
   };
 
   const getFormattedTime = () => {
@@ -277,6 +376,13 @@ export default function MatchScreen() {
     return { goles, tarjetas, otros };
   }, [partido]);
 
+  const isMatchFinished = partido?.faseJuego === 'FINALIZADO';
+  const canEditEvents = useMemo(() => {
+    if (!partido || !isMatchFinished) return true;
+    const finishedAt = partido.finalizadoEn ? new Date(partido.finalizadoEn).getTime() : new Date(partido.updatedAt).getTime();
+    return Date.now() - finishedAt <= 3 * 60 * 1000;
+  }, [isMatchFinished, partido?.finalizadoEn, partido?.updatedAt]);
+
   // ─── Loading ────────────────────────────────────────────────────────
   if (loading || !partido) {
     return (
@@ -290,6 +396,8 @@ export default function MatchScreen() {
   const isLive = partido.faseJuego === 'PRIMER_TIEMPO' || partido.faseJuego === 'SEGUNDO_TIEMPO' || partido.faseJuego === 'PENALES';
   const faseBadge = getFaseBadgeStyle(partido, torneo);
 
+  const showEventControls = isLive || (isMatchFinished && canEditEvents);
+
   // ─── Acciones de control ─────────────────────────────────────────────
   const doControlAction = (
     action: MatchControlAction,
@@ -300,8 +408,19 @@ export default function MatchScreen() {
     showConfirm('Confirmar', msg, async () => {
       setActionLoading(true);
       try {
-        await controlLiveMatch(partido.id, action, golesPenalesLocal, golesPenalesVisitante);
+        const res = await controlLiveMatch(partido.id, action, golesPenalesLocal, golesPenalesVisitante);
         await fetchAll();
+        if (action === 'END_MATCH') {
+          if (res.ganadorTorneo) {
+            setWinnerInfo(res.ganadorTorneo);
+            setShowCelebration(true);
+          } else {
+            showSuccess(
+              'Partido Finalizado',
+              'El partido ha finalizado. Tienes un máximo de 3 minutos para realizar cualquier corrección o edición en los eventos.',
+            );
+          }
+        }
       } catch (e: any) {
         showError('Error', e.message ?? 'No se pudo realizar la acción');
       } finally {
@@ -316,6 +435,22 @@ export default function MatchScreen() {
     let msg = '';
 
     if (action === 'START_FIRST_HALF') {
+      if (partido.fecha) {
+        const scheduledTime = new Date(partido.fecha).getTime();
+        const now = Date.now();
+        const tenMinutesMs = 10 * 60 * 1000;
+        if (now < scheduledTime || now > scheduledTime + tenMinutesMs) {
+          const formattedScheduled = new Date(partido.fecha).toLocaleString('es-ES', {
+            dateStyle: 'short',
+            timeStyle: 'short',
+          });
+          doControlAction(
+            action,
+            `ADVERTENCIA: El partido está programado para el ${formattedScheduled}. ¿Estás seguro de iniciar este partido en la fecha y hora actual?`
+          );
+          return;
+        }
+      }
       doControlAction(action, '¿Iniciar el primer tiempo?');
     } else if (action === 'PAUSE_HALF_TIME') {
       if (displayMinutes < halfLimit) {
@@ -329,23 +464,26 @@ export default function MatchScreen() {
     } else if (action === 'START_PENALTIES') {
       doControlAction(action, '¿Iniciar la tanda de penales?');
     } else if (action === 'END_MATCH') {
-      const requiredMinutes = partido.faseJuego === 'PRIMER_TIEMPO' ? halfLimit : halfLimit * 2;
-
-      const finishAction = () => {
-        const confirmMsg = partido.faseJuego === 'PENALES' ? '¿Finalizar el partido?' : '¿Terminar el segundo tiempo?';
-        doControlAction(action, confirmMsg);
-      };
-
-      if (partido.faseJuego === 'PENALES') {
-        finishAction();
-      } else if (displayMinutes < requiredMinutes) {
-        showConfirm(
-          'Confirmar',
-          `¡Advertencia! Aún no se han jugado los ${requiredMinutes} minutos reglamentarios. ¿Deseas terminar el segundo tiempo antes de tiempo?`,
-          finishAction
-        );
+      if (partido.faseJuego === 'PRIMER_TIEMPO') {
+        doControlAction('END_MATCH', '¿Finalizar el partido?');
       } else {
-        finishAction();
+        const requiredMinutes = halfLimit * 2;
+        const finishAction = () => {
+          const confirmMsg = partido.faseJuego === 'PENALES' ? '¿Finalizar el partido?' : '¿Terminar el segundo tiempo?';
+          doControlAction(action, confirmMsg);
+        };
+
+        if (partido.faseJuego === 'PENALES') {
+          finishAction();
+        } else if (displayMinutes < requiredMinutes) {
+          showConfirm(
+            'Confirmar',
+            `¡Advertencia! Aún no se han jugado los ${requiredMinutes} minutos reglamentarios. ¿Deseas terminar el segundo tiempo antes de tiempo?`,
+            finishAction
+          );
+        } else {
+          finishAction();
+        }
       }
     }
   };
@@ -464,7 +602,7 @@ export default function MatchScreen() {
         </View>
 
         {/* Botón borrar (solo admin) */}
-        {isAdmin && (
+        {isAdmin && canEditEvents && (
           <TouchableOpacity onPress={() => deleteEvent(ev)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={styles.eventDeleteBtn}>
             <Feather name="trash-2" size={13} color="#EF4444" />
           </TouchableOpacity>
@@ -570,7 +708,7 @@ export default function MatchScreen() {
             </View>
 
             {/* Botones de eventos */}
-            {isLive && (
+            {showEventControls && (
               <>
                 <View style={styles.divider} />
                 <Text style={styles.sectionSubtitle}>Registrar evento</Text>
@@ -746,8 +884,10 @@ export default function MatchScreen() {
                   ) : jugadoresEquipoSeleccionado.length === 0 ? (
                     <Text style={styles.noPlayersText}>No hay jugadores registrados</Text>
                   ) : (
-                    jugadoresEquipoSeleccionado.map((j) => (
-                      <TouchableOpacity key={j.id} style={styles.playerRow} onPress={() => submitEvent(selectedEquipoId, goalScorerId ?? undefined, j.id)} activeOpacity={0.7}>
+                    jugadoresEquipoSeleccionado
+                      .filter((j) => j.id !== goalScorerId && !expelledPlayerIds.has(j.id))
+                      .map((j) => (
+                        <TouchableOpacity key={j.id} style={styles.playerRow} onPress={() => submitEvent(selectedEquipoId, goalScorerId ?? undefined, j.id)} activeOpacity={0.7}>
                         <View style={styles.playerAvatar}>
                           {j.fotoPerfil ? (
                             <Image source={{ uri: j.fotoPerfil }} style={styles.playerAvatarImg} />
@@ -787,16 +927,18 @@ export default function MatchScreen() {
                 </View>
 
                 <ScrollView style={{ maxHeight: 320 }} showsVerticalScrollIndicator={false}>
-                  <TouchableOpacity style={styles.playerRow} onPress={() => onSelectJugador(undefined)}>
-                    <View style={styles.playerAvatar}>
-                      <Feather name="users" size={18} color="#6B7280" />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.playerName}>Sin jugador específico</Text>
-                      <Text style={styles.playerEmail}>Registrar solo al equipo</Text>
-                    </View>
-                    <Feather name="chevron-right" size={18} color="#9CA3AF" />
-                  </TouchableOpacity>
+                  {!(selectedEvent?.tipo === 'TARJETA_AMARILLA' || selectedEvent?.tipo === 'TARJETA_ROJA') && (
+                    <TouchableOpacity style={styles.playerRow} onPress={() => onSelectJugador(undefined)}>
+                      <View style={styles.playerAvatar}>
+                        <Feather name="users" size={18} color="#6B7280" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.playerName}>Sin jugador específico</Text>
+                        <Text style={styles.playerEmail}>Registrar solo al equipo</Text>
+                      </View>
+                      <Feather name="chevron-right" size={18} color="#9CA3AF" />
+                    </TouchableOpacity>
+                  )}
 
                   <View style={styles.divider} />
 
@@ -805,8 +947,10 @@ export default function MatchScreen() {
                   ) : jugadoresEquipoSeleccionado.length === 0 ? (
                     <Text style={styles.noPlayersText}>No hay jugadores registrados</Text>
                   ) : (
-                    jugadoresEquipoSeleccionado.map((j) => (
-                      <TouchableOpacity key={j.id} style={styles.playerRow} onPress={() => onSelectJugador(j.id)} activeOpacity={0.7}>
+                    jugadoresEquipoSeleccionado
+                      .filter((j) => !expelledPlayerIds.has(j.id))
+                      .map((j) => (
+                        <TouchableOpacity key={j.id} style={styles.playerRow} onPress={() => onSelectJugador(j.id)} activeOpacity={0.7}>
                         <View style={styles.playerAvatar}>
                           {j.fotoPerfil ? (
                             <Image source={{ uri: j.fotoPerfil }} style={styles.playerAvatarImg} />
@@ -826,6 +970,50 @@ export default function MatchScreen() {
               </>
             )}
           </View>
+        </View>
+      </Modal>
+
+      {/* ── CELEBRATION MODAL ── */}
+      <Modal visible={showCelebration} transparent animationType="fade" statusBarTranslucent>
+        <View style={styles.celebrationOverlay}>
+          {showCelebration &&
+            Array.from({ length: 80 }).map((_, idx) => (
+              <ConfettiParticle key={idx} delay={idx * 60} />
+            ))}
+          <Animated.View style={styles.celebrationCard}>
+            <View style={styles.celebrationGoldBorder} />
+            <View style={styles.trophyContainer}>
+              <MaterialCommunityIcons name="trophy" size={80} color="#D97706" style={styles.trophyIcon} />
+              <View style={styles.trophyGlow} />
+            </View>
+
+            <Text style={styles.champTitle}>
+              {torneo?.formato === 'LIGA' ? '¡CAMPEÓN DE LA LIGA!' : '¡CAMPEÓN DE LA COPA!'}
+            </Text>
+
+            {winnerInfo && (
+              <View style={styles.champWinnerBlock}>
+                {winnerInfo.escudo ? (
+                  <Image source={{ uri: winnerInfo.escudo }} style={styles.champEscudo} />
+                ) : (
+                  <View style={styles.champEscudoFallback}>
+                    <Text style={styles.champEscudoFallbackText}>
+                      {winnerInfo.nombre.charAt(0).toUpperCase()}
+                    </Text>
+                  </View>
+                )}
+                <Text style={styles.champName}>{winnerInfo.nombre}</Text>
+              </View>
+            )}
+
+            <Text style={styles.champSubtitle}>
+              Felicitaciones al nuevo monarca del torneo por su excelente campaña y gran victoria.
+            </Text>
+
+            <TouchableOpacity style={styles.champCloseBtn} onPress={closeCelebration} activeOpacity={0.85}>
+              <Text style={styles.champCloseBtnText}>Aceptar</Text>
+            </TouchableOpacity>
+          </Animated.View>
         </View>
       </Modal>
 
@@ -1051,5 +1239,121 @@ const styles = StyleSheet.create({
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(255,255,255,0.6)', alignItems: 'center', justifyContent: 'center',
+  },
+
+  // Celebration styles
+  celebrationOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 26, 20, 0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  celebrationCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    width: '100%',
+    maxWidth: 340,
+    padding: 28,
+    alignItems: 'center',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 15,
+    shadowOffset: { width: 0, height: 10 },
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  celebrationGoldBorder: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 6,
+    backgroundColor: '#D97706',
+  },
+  trophyContainer: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 16,
+    width: 120,
+    height: 120,
+  },
+  trophyIcon: {
+    zIndex: 2,
+  },
+  trophyGlow: {
+    position: 'absolute',
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: '#FEF3C7',
+    opacity: 0.6,
+    zIndex: 1,
+  },
+  champTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#0F1A14',
+    textAlign: 'center',
+    marginTop: 8,
+    marginBottom: 16,
+    letterSpacing: 0.5,
+  },
+  champWinnerBlock: {
+    alignItems: 'center',
+    marginVertical: 8,
+    gap: 10,
+  },
+  champEscudo: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 2,
+    borderColor: '#D97706',
+    backgroundColor: '#F3F4F6',
+  },
+  champEscudoFallback: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 2,
+    borderColor: '#D97706',
+    backgroundColor: '#FEF3C7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  champEscudoFallbackText: {
+    fontSize: 36,
+    fontWeight: '800',
+    color: '#D97706',
+  },
+  champName: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#D97706',
+    textAlign: 'center',
+  },
+  champSubtitle: {
+    fontSize: 13,
+    color: '#4B5563',
+    textAlign: 'center',
+    lineHeight: 18,
+    marginTop: 12,
+    marginBottom: 20,
+  },
+  champCloseBtn: {
+    backgroundColor: '#D97706',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 36,
+    width: '100%',
+    alignItems: 'center',
+  },
+  champCloseBtnText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
   },
 });

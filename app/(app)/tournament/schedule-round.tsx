@@ -15,7 +15,7 @@ import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getFixture, Partido, RondaFixture } from '../../../services/fixtureService';
 import { updateMatch } from '../../../services/matchService';
-import { getCamposByTournament, CampoDetalle } from '../../../services/tournamentService';
+import { getCamposByTournament, CampoDetalle, getTournamentById, Tournament } from '../../../services/tournamentService';
 import DatePickerField from '../../../components/create-tournament/DatePickerField';
 import CustomAlert from '../../../components/CustomAlert';
 import { useAlert } from '../../../hooks/useAlert';
@@ -171,7 +171,8 @@ export default function ScheduleRoundScreen() {
 
   const [partidos, setPartidos] = useState<Partido[]>([]);
   const [campos, setCampos] = useState<CampoDetalle[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [torneo, setTorneo] = useState<Tournament | null>(null);
+  const [loading,    setLoading]    = useState(true);
   const [saving, setSaving] = useState(false);
   const [horarios, setHorarios] = useState<Record<string, MatchHorario>>({});
   const [activeDatePicker, setActiveDatePicker] = useState<string | null>(null);
@@ -180,14 +181,16 @@ export default function ScheduleRoundScreen() {
   const fetchData = useCallback(async () => {
     if (!torneoId) return;
     try {
-      const [rondas, camposList] = await Promise.all([
+      const [rondas, camposList, torneoData] = await Promise.all([
         getFixture(torneoId) as Promise<RondaFixture[]>,
         getCamposByTournament(torneoId),
+        getTournamentById(torneoId),
       ]);
       const rondaData = rondas.find((r) => r.ronda === rondaNum);
       const ps = rondaData?.partidos ?? [];
       setPartidos(ps);
       setCampos(camposList);
+      setTorneo(torneoData);
 
       const init: Record<string, MatchHorario> = {};
       for (const p of ps) {
@@ -216,24 +219,68 @@ export default function ScheduleRoundScreen() {
 
   const allFilled = partidos.length > 0 &&
     partidos.every((p) => {
+      if (p.estado === 'EN_CURSO' || p.faseJuego === 'FINALIZADO') return true;
       const h = horarios[p.id];
       return h?.date && validateTime(h?.time ?? '');
     });
 
+  const checkLocalConflicts = (): string | null => {
+    const activeSchedules = partidos
+      .filter((p) => p.estado !== 'EN_CURSO' && p.faseJuego !== 'FINALIZADO')
+      .map((p) => {
+        const h = horarios[p.id];
+        if (!h?.date || !h?.time || !h?.campoId) return null;
+        try {
+          const dt = new Date(`${h.date}T${h.time}:00`);
+          return { partidoId: p.id, label: `${p.equipoLocal.nombre} vs ${p.equipoVisitante.nombre}`, date: dt, campoId: h.campoId };
+        } catch {
+          return null;
+        }
+      })
+      .filter(Boolean) as Array<{ partidoId: string; label: string; date: Date; campoId: string }>;
+
+    const isFutbol11 = torneo?.modalidad === 'FUTBOL_11';
+    const diffMinutes = isFutbol11 ? 120 : 75;
+    const diffMs = diffMinutes * 60 * 1000;
+
+    for (let i = 0; i < activeSchedules.length; i++) {
+      for (let j = i + 1; j < activeSchedules.length; j++) {
+        const a = activeSchedules[i];
+        const b = activeSchedules[j];
+
+        if (a.campoId === b.campoId) {
+          const diff = Math.abs(a.date.getTime() - b.date.getTime());
+          if (diff < diffMs) {
+            const hoursText = isFutbol11 ? '2 horas' : '1 hora y 15 minutos';
+            return `Conflicto entre "${a.label}" y "${b.label}": ya hay un partido programado en la misma cancha con menos de ${hoursText} de diferencia.`;
+          }
+        }
+      }
+    }
+    return null;
+  };
+
   const handleSave = async () => {
+    const localConflict = checkLocalConflicts();
+    if (localConflict) {
+      showError('Conflicto de canchas', localConflict);
+      return;
+    }
+
     setSaving(true);
     try {
-      await Promise.all(
-        partidos.map((p) => {
-          const h = horarios[p.id];
-          if (!h?.date || !validateTime(h?.time ?? '')) return Promise.resolve();
-          const fecha = `${h.date}T${h.time}:00`;
-          return updateMatch(p.id, {
-            fecha,
-            ...(h.campoId ? { campoId: h.campoId } : {}),
-          });
-        }),
-      );
+      // Guardar secuencialmente para evitar condiciones de carrera en base de datos
+      for (const p of partidos) {
+        if (p.estado === 'EN_CURSO' || p.faseJuego === 'FINALIZADO') continue;
+        const h = horarios[p.id];
+        if (!h?.date || !validateTime(h?.time ?? '')) continue;
+        const fecha = `${h.date}T${h.time}:00`;
+        await updateMatch(p.id, {
+          fecha,
+          ...(h.campoId ? { campoId: h.campoId } : {}),
+        });
+      }
+
       showSuccess(
         'Horarios guardados',
         `Los horarios de ${label} fueron programados correctamente.`,
@@ -324,6 +371,7 @@ export default function ScheduleRoundScreen() {
               const h = horarios[partido.id] ?? { date: '', time: '', campoId: null };
               const timeOk = !h.time || validateTime(h.time);
               const campoSeleccionado = campos.find((c) => c.id === h.campoId);
+              const isNonEditable = partido.estado === 'EN_CURSO' || partido.faseJuego === 'FINALIZADO';
 
               return (
                 <View
@@ -339,6 +387,14 @@ export default function ScheduleRoundScreen() {
                     shadowRadius: 6,
                   }}
                 >
+                  {isNonEditable && (
+                    <View style={{ backgroundColor: '#FEE2E2', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, alignSelf: 'flex-start', marginBottom: 12 }}>
+                      <Text style={{ color: '#B91C1C', fontSize: 11, fontWeight: '700' }}>
+                        {partido.estado === 'EN_CURSO' ? 'Partido en curso - No editable' : 'Partido finalizado - No editable'}
+                      </Text>
+                    </View>
+                  )}
+
                   {/* Teams */}
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
                     <Text
@@ -380,7 +436,11 @@ export default function ScheduleRoundScreen() {
                         minDate={minDate || undefined}
                         maxDate={maxDate || undefined}
                         visible={activeDatePicker === partido.id}
-                        onOpen={() => setActiveDatePicker(partido.id)}
+                        onOpen={() => {
+                          if (!isNonEditable) {
+                            setActiveDatePicker(partido.id);
+                          }
+                        }}
                         onClose={() => setActiveDatePicker(null)}
                       />
                     </View>
@@ -401,15 +461,16 @@ export default function ScheduleRoundScreen() {
                         placeholder="HH:MM"
                         keyboardType="numbers-and-punctuation"
                         maxLength={5}
+                        editable={!isNonEditable}
                         style={{
-                          backgroundColor: 'white',
+                          backgroundColor: isNonEditable ? '#F3F4F6' : 'white',
                           borderRadius: 12,
                           paddingHorizontal: 16,
                           paddingVertical: 12,
                           borderWidth: 1,
                           borderColor: !timeOk ? '#EF4444' : '#EBF0EC',
                           fontSize: 14,
-                          color: '#0F1A14',
+                          color: isNonEditable ? '#9CA3AF' : '#0F1A14',
                         }}
                       />
                       {!timeOk && (
@@ -438,12 +499,17 @@ export default function ScheduleRoundScreen() {
                       </Text>
                     ) : (
                       <TouchableOpacity
-                        onPress={() => setActiveCampoPicker(partido.id)}
+                        onPress={() => {
+                          if (!isNonEditable) {
+                            setActiveCampoPicker(partido.id);
+                          }
+                        }}
+                        disabled={isNonEditable}
                         style={{
                           flexDirection: 'row',
                           alignItems: 'center',
                           justifyContent: 'space-between',
-                          backgroundColor: 'white',
+                          backgroundColor: isNonEditable ? '#F3F4F6' : 'white',
                           borderRadius: 12,
                           paddingHorizontal: 16,
                           paddingVertical: 12,
