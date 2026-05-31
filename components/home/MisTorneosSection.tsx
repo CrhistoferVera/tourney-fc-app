@@ -7,9 +7,25 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
 import { Tournament } from '../../services/tournamentService';
 import TournamentCard from '../tournament/TournamentCard';
 import SectionHeader from '../tournament/SectionHeader';
+
+function EmptyState({ icon, message }: { icon: any; message: string }) {
+  return (
+    <View
+      className="bg-white rounded-2xl px-4 py-8 items-center mb-3"
+      style={{ elevation: 1, shadowColor: '#0F1A14', shadowOpacity: 0.04, shadowRadius: 6 }}
+    >
+      <View className="w-14 h-14 rounded-2xl bg-mist items-center justify-center mb-3">
+        <Feather name={icon} size={26} color="#3D4F44" />
+      </View>
+      <Text className="text-night font-sans-medium text-sm text-center">{message}</Text>
+    </View>
+  );
+}
+
 
 type Props = {
   tournaments: Tournament[];
@@ -78,9 +94,7 @@ export default function MisTorneosSection({
       <View className="px-4">
         <SectionHeader title="Activos" count={active.length} />
         {active.length === 0 ? (
-          <View className="bg-white rounded-2xl px-4 py-6 items-center mb-3">
-            <Text className="text-carbon text-sm text-center">No tienes torneos activos.</Text>
-          </View>
+          <EmptyState icon="award" message="No tienes torneos activos." />
         ) : (
           active.map((item) => (
             <TournamentCard key={item.id} item={item} onPress={() => onPress(item.id)} />
@@ -91,9 +105,7 @@ export default function MisTorneosSection({
       <View className="px-4 mt-2">
         <SectionHeader title="Borradores" count={drafts.length} />
         {drafts.length === 0 ? (
-          <View className="bg-white rounded-2xl px-4 py-6 items-center">
-            <Text className="text-carbon text-sm text-center">No tienes borradores.</Text>
-          </View>
+          <EmptyState icon="edit-3" message="No tienes borradores." />
         ) : (
           drafts.map((item) => (
             <TournamentCard key={item.id} item={item} onPress={() => onPress(item.id)} />
