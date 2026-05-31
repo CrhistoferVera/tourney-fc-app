@@ -3,12 +3,13 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   ActivityIndicator,
-  ScrollView,
+  Platform,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import CustomAlert from '../../../components/CustomAlert';
 import EscudoPicker from '../../../components/team/EscudoPicker';
 import { useAlert } from '../../../hooks/useAlert';
@@ -73,11 +74,15 @@ export default function CreateTeamScreen() {
         <Text className="text-white text-xl font-sans-medium flex-1">Crear equipo</Text>
       </View>
 
-      <ScrollView
+      <KeyboardAwareScrollView
         className="flex-1"
         contentContainerStyle={{ padding: 16, paddingBottom: 48 }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        enableOnAndroid={true}
+        enableAutomaticScroll={true}
+        extraHeight={Platform.OS === 'ios' ? 20 : 150}
+        extraScrollHeight={Platform.OS === 'ios' ? 20 : 150}
       >
         <Text className="text-night font-sans-medium text-base mb-3">Escudo del equipo</Text>
         <EscudoPicker
@@ -130,7 +135,7 @@ export default function CreateTeamScreen() {
             </>
           )}
         </TouchableOpacity>
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </View>
   );
 }
