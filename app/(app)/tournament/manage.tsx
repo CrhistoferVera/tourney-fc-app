@@ -10,8 +10,8 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Feather } from '@expo/vector-icons';
-import { MinusCircle, PlusCircle, Users, CalendarDays, Settings2, UserCheck, ClipboardList } from 'lucide-react-native';
-import { updateTournament, startTournament } from '../../../services/tournamentService';
+import { MinusCircle, PlusCircle, Users, CalendarDays, Settings2, UserCheck, ClipboardList, MapPin } from 'lucide-react-native';
+import { updateTournament, startTournament, getCamposByTournament, CampoDetalle, addCampoToTournament } from '../../../services/tournamentService';
 import { userService, User } from '../../../services/userService';
 import { api } from '../../../services/api';
 import { useAuthStore } from '../../../store/authStore';
@@ -445,9 +445,153 @@ function TabSolicitudes({
   );
 }
 
+// ─── Tab Canchas ──────────────────────────────────────────────────────────────
+
+function TabCanchas({ torneoId }: { readonly torneoId: string }) {
+  const { alertState, hideAlert, showError, showSuccess } = useAlert();
+
+  const [campos, setCampos] = useState<CampoDetalle[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [nombre, setNombre] = useState('');
+  const [direccion, setDireccion] = useState('');
+  const [adding, setAdding] = useState(false);
+
+  const fetchCampos = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await getCamposByTournament(torneoId);
+      setCampos(data);
+    } catch { /* silencioso */ }
+    finally { setLoading(false); }
+  }, [torneoId]);
+
+  useEffect(() => { fetchCampos(); }, [fetchCampos]);
+
+  const handleAddCampo = async () => {
+    if (!nombre.trim()) {
+      showError('Nombre requerido', 'Por favor ingresa el nombre de la cancha.');
+      return;
+    }
+    setAdding(true);
+    try {
+      await addCampoToTournament(torneoId, {
+        nombre: nombre.trim(),
+        direccion: direccion.trim() || undefined,
+      });
+      setNombre('');
+      setDireccion('');
+      setShowForm(false);
+      showSuccess('Cancha agregada', 'La cancha fue agregada exitosamente al torneo.');
+      await fetchCampos();
+    } catch (e: any) {
+      showError('Error', e.message ?? 'No se pudo agregar la cancha.');
+    } finally { setAdding(false); }
+  };
+
+  const renderLista = () => {
+    if (loading) {
+      return (
+        <View className="py-4 items-center">
+          <ActivityIndicator color="#0D7A3E" size="small" />
+        </View>
+      );
+    }
+    if (campos.length === 0 && !showForm) {
+      return (
+        <View className="bg-white rounded-2xl px-4 py-6 items-center mb-3">
+          <Feather name="map-pin" size={28} color="#3D4F44" />
+          <Text className="text-carbon text-sm text-center mt-2">No hay canchas registradas en este torneo.</Text>
+        </View>
+      );
+    }
+    return (
+      <>
+        {campos.map((c) => (
+          <View key={c.id} className="bg-white rounded-2xl px-4 py-3 mb-2 flex-row items-center"
+            style={{ elevation: 1, shadowColor: '#0F1A14', shadowOpacity: 0.04, shadowRadius: 4 }}>
+            <View className="w-9 h-9 rounded-full bg-primary-light items-center justify-center mr-3">
+              <MapPin size={16} color="#0D7A3E" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-night text-sm font-sans-medium">{c.nombre}</Text>
+              {c.direccion && <Text className="text-carbon text-xs">{c.direccion}</Text>}
+            </View>
+          </View>
+        ))}
+      </>
+    );
+  };
+
+  return (
+    <View>
+      <CustomAlert {...alertState} onConfirm={alertState.onConfirm} onCancel={hideAlert} />
+
+      <View className="flex-row items-center justify-between mb-3">
+        <Text className="text-night font-sans-medium text-base">
+          Canchas{campos.length > 0 ? ` (${campos.length})` : ''}
+        </Text>
+        <TouchableOpacity
+          onPress={() => { setShowForm((p) => !p); setNombre(''); setDireccion(''); }}
+          className="flex-row items-center gap-1 bg-primary rounded-xl px-3 py-2"
+          activeOpacity={0.8}
+        >
+          <Feather name={showForm ? 'x' : 'plus'} size={15} color="white" />
+          <Text className="text-white text-xs font-sans-medium">
+            {showForm ? 'Cancelar' : 'Agregar'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {renderLista()}
+
+      {showForm && (
+        <View className="bg-white rounded-2xl px-4 py-4 mt-2">
+          <Text className="text-night font-sans-medium text-sm mb-3">
+            Nueva Cancha de Juego
+          </Text>
+          <View className="mb-3">
+            <Text className="text-carbon text-xs mb-1">Nombre de la cancha</Text>
+            <TextInput
+              className="bg-mist rounded-xl px-3 py-2.5 text-night text-sm"
+              placeholder="Ej: Cancha Central, Campo 1..."
+              placeholderTextColor="#9CA3AF"
+              value={nombre}
+              onChangeText={setNombre}
+            />
+          </View>
+          <View className="mb-4">
+            <Text className="text-carbon text-xs mb-1">Dirección (opcional)</Text>
+            <TextInput
+              className="bg-mist rounded-xl px-3 py-2.5 text-night text-sm"
+              placeholder="Ej: Av. Principal 123..."
+              placeholderTextColor="#9CA3AF"
+              value={direccion}
+              onChangeText={setDireccion}
+            />
+          </View>
+          <TouchableOpacity
+            className="bg-primary rounded-xl py-3 items-center"
+            onPress={handleAddCampo}
+            disabled={adding}
+          >
+            {adding ? (
+              <ActivityIndicator color="white" size="small" />
+            ) : (
+              <Text className="text-white font-sans-medium text-sm">
+                Guardar cancha
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      )}
+    </View>
+  );
+}
+
 // ─── Pantalla principal ───────────────────────────────────────────────────────
 
-type Tab = 'staff' | 'solicitudes';
+type Tab = 'staff' | 'solicitudes' | 'canchas';
 
 export default function ManageScreen() {
   const {
@@ -663,6 +807,7 @@ export default function ManageScreen() {
           {([
             { key: 'staff' as Tab,       label: 'Staff',       icon: UserCheck },
             { key: 'solicitudes' as Tab, label: 'Solicitudes', icon: ClipboardList },
+            { key: 'canchas' as Tab,     label: 'Canchas',     icon: MapPin },
           ]).map(({ key, label, icon: Icon }) => (
             <TouchableOpacity
               key={key}
@@ -695,6 +840,7 @@ export default function ManageScreen() {
             onEquiposChange={(delta) => setEquiposAprobados((prev) => prev + delta)}
           />
         )}
+        {!!torneoId && tab === 'canchas'     && <TabCanchas     torneoId={torneoId} />}
       </ScrollView>
     </View>
   );
