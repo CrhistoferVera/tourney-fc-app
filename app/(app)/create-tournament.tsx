@@ -2,14 +2,13 @@ import { useRouter } from 'expo-router';
 import { useState, useEffect } from 'react';
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
   Platform,
-  ScrollView,
   Text,
   TouchableOpacity,
   View,
   BackHandler,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { ChevronLeft } from 'lucide-react-native';
 import CustomAlert from '../../components/CustomAlert';
 import ProgressBar from '../../components/create-tournament/ProgressBar';
@@ -93,7 +92,12 @@ export default function CreateTournamentScreen() {
   const validateStep = (): boolean => {
     if (step === 1) {
       const errors: Step1Errors = {};
-      if (!form.nombre.trim()) errors.nombre = 'El nombre es obligatorio';
+      const trimmedNombre = form.nombre.trim();
+      if (!trimmedNombre) {
+        errors.nombre = 'El nombre es obligatorio';
+      } else if (trimmedNombre.length < 3) {
+        errors.nombre = 'El nombre debe tener al menos 3 caracteres';
+      }
       if (!form.zona.trim()) errors.zona = 'La zona es obligatoria';
       if (!form.fechaInicio) errors.fechaInicio = 'Selecciona la fecha de inicio';
       if (!form.fechaFin) errors.fechaFin = 'Selecciona la fecha de fin';
@@ -241,10 +245,7 @@ export default function CreateTournamentScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      className="flex-1 bg-mist"
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
+    <View className="flex-1 bg-mist">
       {/* Header */}
       <View className="bg-primary px-6 pt-14 pb-4">
         <View className="flex-row items-center">
@@ -255,11 +256,15 @@ export default function CreateTournamentScreen() {
         </View>
       </View>
 
-      <ScrollView
+      <KeyboardAwareScrollView
         className="flex-1"
-        contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
+        contentContainerStyle={{ padding: 20, paddingBottom: 60 }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
+        enableOnAndroid={true}
+        enableAutomaticScroll={true}
+        extraHeight={Platform.OS === 'ios' ? 20 : 150}
+        extraScrollHeight={Platform.OS === 'ios' ? 20 : 150}
       >
         <ProgressBar step={step} />
 
@@ -382,7 +387,7 @@ export default function CreateTournamentScreen() {
             </TouchableOpacity>
           </View>
         )}
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       <CustomAlert
         visible={alert.visible}
@@ -392,6 +397,6 @@ export default function CreateTournamentScreen() {
         onConfirm={alert.onConfirm}
         onCancel={alert.onCancel}
       />
-    </KeyboardAvoidingView>
+    </View>
   );
 }

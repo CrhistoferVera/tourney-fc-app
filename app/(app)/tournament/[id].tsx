@@ -18,6 +18,7 @@ import {
   publishTournament,
   startTournament,
   Tournament,
+  deleteTournament,
 } from '../../../services/tournamentService';
 import { getFixture, Partido } from '../../../services/fixtureService';
 import MatchCard from '../../../components/tournament/MatchCard';
@@ -104,30 +105,50 @@ function NavItem({ icon: Icon, iconColor, iconBg, label, subtitle, onPress, last
 function BannerBorrador({
   publishing,
   onPublish,
+  deleting,
+  onDelete,
 }: {
   readonly publishing: boolean;
   readonly onPublish: () => void;
+  readonly deleting: boolean;
+  readonly onDelete: () => void;
 }) {
   return (
-    <View className="bg-accent-soft border border-accent rounded-2xl px-4 py-3 mb-4 flex-row items-center justify-between">
-      <View className="flex-1 mr-3">
-        <Text className="text-accent font-sans-medium text-sm">Torneo en borrador</Text>
-        <Text className="text-carbon text-xs mt-0.5">
-          Publícalo para que los equipos puedan inscribirse.
-        </Text>
+    <View className="bg-accent-soft border border-accent rounded-2xl px-4 py-3 mb-4">
+      <View className="flex-row items-center justify-between">
+        <View className="flex-1 mr-3">
+          <Text className="text-accent font-sans-medium text-sm">Torneo en borrador</Text>
+          <Text className="text-carbon text-xs mt-0.5">
+            Publícalo para que los equipos puedan inscribirse.
+          </Text>
+        </View>
       </View>
-      <TouchableOpacity
-        onPress={onPublish}
-        disabled={publishing}
-        className="bg-accent rounded-xl px-3 py-2"
-        activeOpacity={0.85}
-      >
-        {publishing ? (
-          <ActivityIndicator color="white" size="small" />
-        ) : (
-          <Text className="text-white font-sans-medium text-xs">Publicar</Text>
-        )}
-      </TouchableOpacity>
+      <View className="flex-row gap-2 justify-end mt-3">
+        <TouchableOpacity
+          onPress={onDelete}
+          disabled={deleting || publishing}
+          className="border border-danger rounded-xl px-3 py-2 bg-white"
+          activeOpacity={0.8}
+        >
+          {deleting ? (
+            <ActivityIndicator color="#E53935" size="small" />
+          ) : (
+            <Text className="text-danger font-sans-medium text-xs">Eliminar borrador</Text>
+          )}
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={onPublish}
+          disabled={deleting || publishing}
+          className="bg-accent rounded-xl px-4 py-2"
+          activeOpacity={0.85}
+        >
+          {publishing ? (
+            <ActivityIndicator color="white" size="small" />
+          ) : (
+            <Text className="text-white font-sans-medium text-xs">Publicar torneo</Text>
+          )}
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -183,13 +204,14 @@ function BannerIniciar({
 export default function TournamentDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { alertState, hideAlert, showError, showConfirm } = useAlert();
+  const { alertState, hideAlert, showError, showSuccess, showConfirm } = useAlert();
 
   const [tournament, setTournament] = useState<Tournament | null>(null);
   const [partidos, setPartidos] = useState<Partido[]>([]);
   const [loading,    setLoading]    = useState(true);
   const [publishing, setPublishing] = useState(false);
   const [starting,   setStarting]   = useState(false);
+  const [deleting,   setDeleting]   = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -227,6 +249,32 @@ export default function TournamentDetailScreen() {
       'Publicar torneo',
       'El torneo pasará a "En inscripción" y será visible para todos.',
       doPublish,
+    );
+  };
+
+  const doDelete = async () => {
+    setDeleting(true);
+    try {
+      await deleteTournament(tournament!.id);
+      showSuccess(
+        'Borrador eliminado',
+        'El borrador del torneo ha sido eliminado exitosamente.',
+        () => {
+          router.replace('/home');
+        }
+      );
+    } catch {
+      showError('Error', 'No se pudo eliminar el borrador del torneo.');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleDelete = () => {
+    showConfirm(
+      'Eliminar borrador',
+      '¿Estás seguro de que deseas eliminar este borrador? Esta acción no se puede deshacer.',
+      doDelete,
     );
   };
 
@@ -458,7 +506,12 @@ export default function TournamentDetailScreen() {
         showsVerticalScrollIndicator={false}
       >
         {showBannerBorrador && (
-          <BannerBorrador publishing={publishing} onPublish={handlePublish} />
+          <BannerBorrador
+            publishing={publishing}
+            onPublish={handlePublish}
+            deleting={deleting}
+            onDelete={handleDelete}
+          />
         )}
         {showBannerEsperando && (
           <BannerEsperando inscritos={tournament.equiposInscritos ?? 0} max={tournament.maxEquipos} />
