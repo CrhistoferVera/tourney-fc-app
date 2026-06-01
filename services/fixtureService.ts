@@ -59,13 +59,8 @@ export interface RondaFixture {
 
 export function partidoCopaFinalizado(p: Partido): boolean {
   if (p.faseJuego === 'FINALIZADO') return true;
-  return (
-    p.golesLocal !== null &&
-    p.golesVisitante !== null &&
-    (p.estado === 'CONFIRMADO' ||
-      p.estado === 'ESPERANDO_CONFIRMACION' ||
-      p.estado === 'EN_DISPUTA')
-  );
+  if (p.faseJuego === 'PENALES' && p.golesPenalesLocal !== null && p.golesPenalesVisitante !== null) return true;
+  return false;
 }
 
 export type ScheduleMode = 'programar' | 'editar';

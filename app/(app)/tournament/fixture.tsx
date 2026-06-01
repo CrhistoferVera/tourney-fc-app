@@ -80,7 +80,7 @@ export default function FixtureScreen() {
 
   // Floating schedule/edit button tracks the currently viewed round (only for lista views)
   const floatingScheduleBtn = (() => {
-    if (!isOrganizadorOStaff || !enCursoOFinalizado || !isListaView) return null;
+    if (!isOrganizadorOStaff || !isListaView) return null;
     const current = rondasLista[rondaActual];
     if (!current) return null;
     const mode = getRondaScheduleMode(current.ronda, rondas, estadoLocal);

@@ -200,7 +200,6 @@ function getWinnerOfMatch(match: {
       escudo: match.shield2,
     };
   }
-  // Empate resuelto (penales): el backend ya definió el ganador en el partido real
   return null;
 }
 
@@ -236,7 +235,7 @@ export default function BracketView({
     const roundMatches = Array.from({ length: matchCount }, (__, m) => {
       const real = realRonda?.partidos[m];
       
-      // If we have a real match in the database, use it
+      
       if (real) {
         const finished = partidoCopaFinalizado(real);
         return {
@@ -246,8 +245,8 @@ export default function BracketView({
           team2: real.equipoVisitante.nombre,
           team2Id: real.equipoVisitante.id,
           shield2: real.equipoVisitante.escudo,
-          score1: real.golesLocal,
-          score2: real.golesVisitante,
+          score1: finished ? real.golesLocal : null,
+          score2: finished ? real.golesVisitante : null,
           finished,
           tbd: false,
         };
