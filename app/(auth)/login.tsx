@@ -4,9 +4,8 @@ import {
   TextInput,
   Pressable,
   ActivityIndicator,
-  ScrollView,
-  KeyboardAvoidingView,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../store/authStore';
@@ -83,9 +82,8 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView behavior="padding" className="flex-1 bg-white">
+    <KeyboardAwareScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled" className="flex-1 bg-white">
       <CustomAlert {...alertState} onConfirm={alertState.onConfirm} onCancel={hideAlert} />
-      <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
         <View className="items-center mt-20">
           <View className="rounded-full bg-primary p-6">
             <Trophy color={Colors.white} size={38} />
@@ -108,8 +106,9 @@ export default function LoginScreen() {
             autoCapitalize="none"
             value={email}
             onChangeText={(v) => {
-              setEmail(v);
-              validateEmail(v);
+              const normalized = v.toLowerCase();
+              setEmail(normalized);
+              validateEmail(normalized);
             }}
           />
           {emailError ? (
@@ -173,7 +172,6 @@ export default function LoginScreen() {
             </Text>
           </Text>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardAwareScrollView>
   );
 }

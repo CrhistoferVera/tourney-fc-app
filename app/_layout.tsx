@@ -4,6 +4,7 @@ import '../global.css';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useAuthStore } from '../store/authStore';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -37,9 +38,9 @@ export default function RootLayout() {
   if (!loaded) return null;
 
   return (
-    <>
+    <KeyboardProvider>
       <AuthGuard />
       <Stack screenOptions={{ headerShown: false }} />
-    </>
+    </KeyboardProvider>
   );
 }

@@ -4,9 +4,8 @@ import {
   TextInput,
   Pressable,
   ActivityIndicator,
-  ScrollView,
-  KeyboardAvoidingView,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { api } from '../../services/api';
@@ -33,9 +32,15 @@ export default function RegisterScreen() {
   const [confirmError, setConfirmError] = useState('');
 
   const validateNombre = (v: string) => {
-    if (v.length < 3) setNombreError('El nombre debe tener al menos 3 caracteres');
-    else if (v.length > 50) setNombreError('El nombre no puede exceder 50 caracteres');
-    else setNombreError('');
+    if (v.trim().length < 3) {
+      setNombreError('El nombre debe tener al menos 3 caracteres');
+    } else if (v.trim().length > 50) {
+      setNombreError('El nombre no puede exceder 50 caracteres');
+    } else if (/[^a-zA-ZáéíóúÁÉÍÓÚàèìòùÀÈÌÒÙâêîôûÂÊÎÔÛãõÃÕñÑüÜçÇ\s'.\-]/.test(v)) {
+      setNombreError('El nombre solo puede contener letras');
+    } else {
+      setNombreError('');
+    }
   };
 
   const validateEmail = (v: string) => {
@@ -94,9 +99,8 @@ export default function RegisterScreen() {
   };
 
   return (
-    <KeyboardAvoidingView behavior="padding" className="flex-1 bg-white">
+    <KeyboardAwareScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled" className="flex-1 bg-white">
       <CustomAlert {...alertState} onConfirm={alertState.onConfirm} onCancel={hideAlert} />
-      <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
         <View className="items-center mt-20">
           <View className="rounded-full bg-primary p-6">
             <Trophy color={Colors.white} size={38} />
@@ -117,8 +121,9 @@ export default function RegisterScreen() {
             placeholderTextColor={Colors.carbon}
             value={nombre}
             onChangeText={(v) => {
-              setNombre(v);
-              validateNombre(v);
+              const filtered = v.replace(/\d/g, '');
+              setNombre(filtered);
+              validateNombre(filtered);
             }}
           />
           {nombreError ? (
@@ -136,8 +141,9 @@ export default function RegisterScreen() {
             autoCapitalize="none"
             value={email}
             onChangeText={(v) => {
-              setEmail(v);
-              validateEmail(v);
+              const normalized = v.toLowerCase();
+              setEmail(normalized);
+              validateEmail(normalized);
             }}
           />
           {emailError ? (
@@ -226,7 +232,6 @@ export default function RegisterScreen() {
             Al crear una cuenta, aceptas nuestros términos de servicio y política de privacidad
           </Text>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardAwareScrollView>
   );
 }

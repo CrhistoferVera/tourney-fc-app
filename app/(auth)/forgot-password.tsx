@@ -4,8 +4,8 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
-  ScrollView,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { api } from '../../services/api';
@@ -49,7 +49,7 @@ export default function ForgotPasswordScreen() {
   };
 
   return (
-    <ScrollView className="flex-1 bg-white" contentContainerStyle={{ flexGrow: 1 }}>
+    <KeyboardAwareScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled" className="flex-1 bg-white">
       <CustomAlert {...alertState} onConfirm={alertState.onConfirm} onCancel={hideAlert} />
 
       <View className="flex-1 px-6 pt-20 pb-8">
@@ -102,6 +102,6 @@ export default function ForgotPasswordScreen() {
           <Text className="text-carbon text-base">Volver al inicio de sesión</Text>
         </TouchableOpacity>
       </View>
-    </ScrollView>
+    </KeyboardAwareScrollView>
   );
 }
