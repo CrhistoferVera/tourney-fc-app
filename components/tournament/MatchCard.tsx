@@ -72,8 +72,7 @@ export default function MatchCard({ partido, canEdit, onPress }: Props) {
     partido.faseJuego === 'FINALIZADO' || 
     partido.faseJuego === 'PRIMER_TIEMPO' || 
     partido.faseJuego === 'SEGUNDO_TIEMPO' || 
-    partido.faseJuego === 'PENALES' || 
-    partido.estado === 'EN_DISPUTA'
+    partido.faseJuego === 'PENALES'
   );
   
   const penLocal = partido.golesPenalesLocal ?? null;
