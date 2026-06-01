@@ -256,7 +256,23 @@ export default function ScheduleRoundScreen() {
       campoId: string;
     }>;
 
-    for (const sched of pendingSchedules) {
+    for (let i = 0; i < pendingSchedules.length; i += 1) {
+      const sched = pendingSchedules[i];
+
+      for (let j = i + 1; j < pendingSchedules.length; j += 1) {
+        const otherSched = pendingSchedules[j];
+        if (otherSched.campoId !== sched.campoId) continue;
+        if (
+          campoHorarioConflicto(sched.targetMs, {
+            fecha: new Date(otherSched.targetMs).toISOString(),
+            faseJuego: 'PREVIA',
+            estado: 'PENDIENTE',
+          }, bufferMs)
+        ) {
+          return `Conflicto entre "${sched.label}" y "${otherSched.label}": la cancha no está libre con al menos ${hoursText} de separación.`;
+        }
+      }
+
       for (const other of allPartidosTorneo) {
         if (other.id === sched.partidoId) continue;
         const otherCampoId = other.campo?.id;
