@@ -13,6 +13,7 @@ import { Feather } from '@expo/vector-icons';
 import { MinusCircle, PlusCircle, Users, Settings2, UserCheck, ClipboardList, MapPin } from 'lucide-react-native';
 import { updateTournament, startTournament, getCamposByTournament, CampoDetalle, addCampoToTournament } from '../../../services/tournamentService';
 import { getFixture } from '../../../services/fixtureService';
+import { toDateOnlyString } from '../../../utils/matchDate';
 import { userService, User } from '../../../services/userService';
 import { api } from '../../../services/api';
 import { useAuthStore } from '../../../store/authStore';
@@ -623,7 +624,7 @@ function TabAjustes({
 }) {
   const { alertState, hideAlert, showError, showSuccess, showConfirm } = useAlert();
 
-  const [calendarOpen, setCalendarOpen] = useState<'inicio' | 'fin' | null>(null);
+  const [calendarOpen, setCalendarOpen] = useState<'fin' | null>(null);
   const [fechaInicio, setFechaInicio] = useState(fechaInicioInicial?.slice(0, 10) ?? '');
   const [fechaFin, setFechaFin] = useState(fechaFinInicial?.slice(0, 10) ?? '');
   const [maxEquipos, setMaxEquipos] = useState(maxEquiposInicial ?? '4');
@@ -646,8 +647,8 @@ function TabAjustes({
         for (const r of rondas) {
           for (const p of r.partidos) {
             if (!p.fecha) continue;
-            const d = p.fecha.split('T')[0];
-            if (!latest || d > latest) latest = d;
+            const d = toDateOnlyString(p.fecha);
+            if (d && (!latest || d > latest)) latest = d;
           }
         }
         setUltimaFechaPartido(latest);
@@ -711,7 +712,7 @@ function TabAjustes({
     try {
       const payload = isEnCurso
         ? { fechaFin }
-        : { fechaInicio, fechaFin, maxEquipos: Number.parseInt(maxEquipos, 10) };
+        : { fechaFin, maxEquipos: Number.parseInt(maxEquipos, 10) };
       await updateTournament(torneoId, payload);
       showSuccess('Torneo actualizado', 'Los cambios fueron guardados exitosamente');
     } catch (e: any) {
@@ -722,31 +723,24 @@ function TabAjustes({
   };
 
   return (
-    <View>
+    <View style={{ width: '100%' }}>
       <CustomAlert {...alertState} onConfirm={alertState.onConfirm} onCancel={hideAlert} />
 
-      <View className="bg-white rounded-2xl px-4 py-4 mb-4 gap-4">
-        <View className="flex-row gap-3">
-          {isEnCurso ? (
-            <View className="flex-1">
-              <Text className="text-carbon text-sm font-sans-medium mb-1">Fecha inicio</Text>
-              <View className="bg-mist rounded-xl px-4 py-3 border border-mist">
-                <Text className="text-night font-sans text-sm">{toDisplayDate(fechaInicio)}</Text>
-              </View>
-              <Text className="text-carbon text-xs mt-1">
-                No se puede modificar con el torneo en curso
-              </Text>
+      <View
+        className="bg-white rounded-2xl mb-4"
+        style={{ paddingHorizontal: 16, paddingVertical: 16, overflow: 'hidden' }}
+      >
+        {/* Fechas en columna para que no se salgan de pantalla */}
+        <View style={{ gap: 12, marginBottom: 16 }}>
+          <View>
+            <Text className="text-carbon text-sm font-sans-medium mb-1">Fecha inicio</Text>
+            <View className="bg-mist rounded-xl px-4 py-3 border border-mist">
+              <Text className="text-night font-sans text-sm">{toDisplayDate(fechaInicio)}</Text>
             </View>
-          ) : (
-            <DatePickerField
-              label="Fecha inicio"
-              value={fechaInicio}
-              onChange={(v) => setFechaInicio(v)}
-              visible={calendarOpen === 'inicio'}
-              onOpen={() => setCalendarOpen('inicio')}
-              onClose={() => setCalendarOpen(null)}
-            />
-          )}
+            <Text className="text-carbon text-xs mt-1">
+              La fecha de inicio no se puede modificar
+            </Text>
+          </View>
           <DatePickerField
             label="Fecha fin"
             value={fechaFin}
@@ -756,62 +750,89 @@ function TabAjustes({
             onOpen={() => setCalendarOpen('fin')}
             onClose={() => setCalendarOpen(null)}
           />
+          {ultimaFechaPartido ? (
+            <Text className="text-carbon text-xs">
+              Último partido programado: {toDisplayDate(ultimaFechaPartido)}
+            </Text>
+          ) : null}
         </View>
 
-        <View>
-          <View style={{ height: 1, backgroundColor: '#EBF0EC', marginBottom: 16 }} />
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-            <Users size={14} color="#3D4F44" />
-            <Text style={{ color: '#3D4F44', fontFamily: 'Inter_500Medium', fontSize: 12 }}>
-              Máximo de equipos
+        <View style={{ height: 1, backgroundColor: '#EBF0EC', marginBottom: 14 }} />
+
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+          <Users size={14} color="#3D4F44" />
+          <Text style={{ color: '#3D4F44', fontFamily: 'Inter_500Medium', fontSize: 12 }}>
+            Máximo de equipos
+          </Text>
+        </View>
+
+        {canEditEquipos ? (
+          <View style={{ alignItems: 'center', paddingVertical: 4 }}>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                width: '100%',
+                maxWidth: 280,
+                paddingHorizontal: 8,
+              }}
+            >
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => {
+                  const cur = Number.parseInt(maxEquipos, 10) || 4;
+                  const next = Math.max(Math.max(4, equiposAprobados || 4), cur - 2);
+                  setMaxEquipos(String(next));
+                }}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <MinusCircle size={36} color="#0D7A3E" strokeWidth={1.5} />
+              </TouchableOpacity>
+              <View style={{ alignItems: 'center', flex: 1, paddingHorizontal: 8 }}>
+                <Text
+                  style={{
+                    fontFamily: 'Inter_600SemiBold',
+                    fontSize: 44,
+                    color: '#0D7A3E',
+                    lineHeight: 48,
+                  }}
+                >
+                  {maxEquipos}
+                </Text>
+                <Text
+                  style={{
+                    color: '#3D4F44',
+                    fontSize: 11,
+                    fontFamily: 'Inter_400Regular',
+                    textAlign: 'center',
+                  }}
+                >
+                  {equiposAprobados} aprobado{equiposAprobados === 1 ? '' : 's'}
+                </Text>
+              </View>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => {
+                  const cur = Number.parseInt(maxEquipos, 10) || 4;
+                  setMaxEquipos(String(Math.min(32, cur + 2)));
+                }}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <PlusCircle size={36} color="#0D7A3E" strokeWidth={1.5} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          <View className="items-center py-2">
+            <Text style={{ fontFamily: 'Inter_600SemiBold', fontSize: 40, color: '#0D7A3E' }}>
+              {maxEquipos}
+            </Text>
+            <Text className="text-carbon text-xs text-center mt-1 px-2">
+              No se puede modificar con el torneo en curso o finalizado
             </Text>
           </View>
-          {canEditEquipos ? (
-            <View style={{ alignItems: 'center', paddingVertical: 8 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 24 }}>
-                <TouchableOpacity
-                  activeOpacity={0.7}
-                  onPress={() => {
-                    const cur = Number.parseInt(maxEquipos, 10) || 4;
-                    const next = Math.max(Math.max(4, equiposAprobados || 4), cur - 2);
-                    setMaxEquipos(String(next));
-                  }}
-                >
-                  <MinusCircle size={42} color="#0D7A3E" strokeWidth={1.5} />
-                </TouchableOpacity>
-                <View style={{ alignItems: 'center' }}>
-                  <Text style={{ fontFamily: 'Inter_600SemiBold', fontSize: 56, color: '#0D7A3E', lineHeight: 62 }}>
-                    {maxEquipos}
-                  </Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
-                    <Users size={12} color="#3D4F44" />
-                    <Text style={{ color: '#3D4F44', fontSize: 11, fontFamily: 'Inter_400Regular' }}>
-                      {equiposAprobados} aprobado{equiposAprobados === 1 ? '' : 's'} · equipos máx.
-                    </Text>
-                  </View>
-                </View>
-                <TouchableOpacity
-                  activeOpacity={0.7}
-                  onPress={() => {
-                    const cur = Number.parseInt(maxEquipos, 10) || 4;
-                    setMaxEquipos(String(Math.min(32, cur + 2)));
-                  }}
-                >
-                  <PlusCircle size={42} color="#0D7A3E" strokeWidth={1.5} />
-                </TouchableOpacity>
-              </View>
-            </View>
-          ) : (
-            <View className="items-center py-2">
-              <Text style={{ fontFamily: 'Inter_600SemiBold', fontSize: 48, color: '#0D7A3E' }}>
-                {maxEquipos}
-              </Text>
-              <Text className="text-carbon text-xs text-center mt-1">
-                No se puede modificar con el torneo en curso o finalizado
-              </Text>
-            </View>
-          )}
-        </View>
+        )}
       </View>
 
       <TouchableOpacity
