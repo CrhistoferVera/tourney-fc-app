@@ -160,7 +160,9 @@ export default function ExplorarSection({
                 item={item}
                 onPress={() => onPress(item.id)}
                 onInscribirse={
-                  !item.rolUsuario && item.estado === 'EN_INSCRIPCION'
+                  !item.rolUsuario &&
+                  !(item as any).tieneSolicitudPendiente &&
+                  item.estado === 'EN_INSCRIPCION'
                     ? () =>
                         router.push({
                           pathname: '/(app)/tournament/inscribirse',
