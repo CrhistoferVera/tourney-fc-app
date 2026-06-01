@@ -147,6 +147,13 @@ export const controlLiveMatch = async (
   );
 };
 
+export const updateMatch = async (
+  id: string,
+  payload: { golesLocal?: number; golesVisitante?: number; golesPenalesLocal?: number; golesPenalesVisitante?: number }
+): Promise<Partido> => {
+  return api.patch(`/matches/${id}`, payload, getToken());
+};
+
 export const addMatchEvent = async (
   id: string,
   payload: { tipo: TipoEvento; equipoId: string; jugadorId?: string; minuto?: number; detalle?: string; asistenciaJugadorId?: string }
