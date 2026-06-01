@@ -19,6 +19,7 @@ import { getCamposByTournament, CampoDetalle, getTournamentById, Tournament } fr
 import DatePickerField from '../../../components/create-tournament/DatePickerField';
 import CustomAlert from '../../../components/CustomAlert';
 import { useAlert } from '../../../hooks/useAlert';
+import { fechaPartidoFromIso, fechaPartidoToIso, formatPartidoFecha, campoHorarioConflicto } from '../../../utils/matchDate';
 
 interface MatchHorario {
   date: string;
@@ -170,6 +171,7 @@ export default function ScheduleRoundScreen() {
   const maxDate = toDateOnly(fechaFin);
 
   const [partidos, setPartidos] = useState<Partido[]>([]);
+  const [allPartidosTorneo, setAllPartidosTorneo] = useState<Partido[]>([]);
   const [campos, setCampos] = useState<CampoDetalle[]>([]);
   const [torneo, setTorneo] = useState<Tournament | null>(null);
   const [loading,    setLoading]    = useState(true);
@@ -189,16 +191,17 @@ export default function ScheduleRoundScreen() {
       const rondaData = rondas.find((r) => r.ronda === rondaNum);
       const ps = rondaData?.partidos ?? [];
       setPartidos(ps);
+      setAllPartidosTorneo(rondas.flatMap((r) => r.partidos));
       setCampos(camposList);
       setTorneo(torneoData);
 
       const init: Record<string, MatchHorario> = {};
       for (const p of ps) {
         if (p.fecha) {
-          const d = new Date(p.fecha);
+          const { date, time } = fechaPartidoFromIso(p.fecha);
           init[p.id] = {
-            date: d.toISOString().split('T')[0],
-            time: `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`,
+            date,
+            time,
             campoId: p.campo?.id ?? null,
           };
         } else {
@@ -225,35 +228,49 @@ export default function ScheduleRoundScreen() {
     });
 
   const checkLocalConflicts = (): string | null => {
-    const activeSchedules = partidos
+    const isFutbol11 = torneo?.modalidad === 'FUTBOL_11';
+    const bufferMs = (isFutbol11 ? 120 : 75) * 60 * 1000;
+    const hoursText = isFutbol11 ? '2 horas' : '1 hora y 15 minutos';
+
+    const pendingSchedules = partidos
       .filter((p) => p.estado !== 'EN_CURSO' && p.faseJuego !== 'FINALIZADO')
       .map((p) => {
         const h = horarios[p.id];
-        if (!h?.date || !h?.time || !h?.campoId) return null;
+        if (!h?.date || !h?.time || !h?.campoId || !validateTime(h.time)) return null;
         try {
-          const dt = new Date(`${h.date}T${h.time}:00`);
-          return { partidoId: p.id, label: `${p.equipoLocal.nombre} vs ${p.equipoVisitante.nombre}`, date: dt, campoId: h.campoId };
+          const targetMs = new Date(fechaPartidoToIso(h.date, h.time)).getTime();
+          return {
+            partidoId: p.id,
+            label: `${p.equipoLocal.nombre} vs ${p.equipoVisitante.nombre}`,
+            targetMs,
+            campoId: h.campoId,
+          };
         } catch {
           return null;
         }
       })
-      .filter(Boolean) as Array<{ partidoId: string; label: string; date: Date; campoId: string }>;
+      .filter(Boolean) as Array<{
+      partidoId: string;
+      label: string;
+      targetMs: number;
+      campoId: string;
+    }>;
 
-    const isFutbol11 = torneo?.modalidad === 'FUTBOL_11';
-    const diffMinutes = isFutbol11 ? 120 : 75;
-    const diffMs = diffMinutes * 60 * 1000;
-
-    for (let i = 0; i < activeSchedules.length; i++) {
-      for (let j = i + 1; j < activeSchedules.length; j++) {
-        const a = activeSchedules[i];
-        const b = activeSchedules[j];
-
-        if (a.campoId === b.campoId) {
-          const diff = Math.abs(a.date.getTime() - b.date.getTime());
-          if (diff < diffMs) {
-            const hoursText = isFutbol11 ? '2 horas' : '1 hora y 15 minutos';
-            return `Conflicto entre "${a.label}" y "${b.label}": ya hay un partido programado en la misma cancha con menos de ${hoursText} de diferencia.`;
-          }
+    for (const sched of pendingSchedules) {
+      for (const other of allPartidosTorneo) {
+        if (other.id === sched.partidoId) continue;
+        const otherCampoId = other.campo?.id;
+        if (!otherCampoId || otherCampoId !== sched.campoId) continue;
+        if (
+          campoHorarioConflicto(sched.targetMs, {
+            fecha: other.fecha,
+            faseJuego: other.faseJuego,
+            estado: other.estado,
+            finalizadoEn: other.finalizadoEn,
+          }, bufferMs)
+        ) {
+          const otherLabel = `${other.equipoLocal.nombre} vs ${other.equipoVisitante.nombre}`;
+          return `Conflicto entre "${sched.label}" y "${otherLabel}": la cancha no está libre con al menos ${hoursText} de separación.`;
         }
       }
     }
@@ -274,7 +291,7 @@ export default function ScheduleRoundScreen() {
         if (p.estado === 'EN_CURSO' || p.faseJuego === 'FINALIZADO') continue;
         const h = horarios[p.id];
         if (!h?.date || !validateTime(h?.time ?? '')) continue;
-        const fecha = `${h.date}T${h.time}:00`;
+        const fecha = fechaPartidoToIso(h.date, h.time);
         await updateMatch(p.id, {
           fecha,
           ...(h.campoId ? { campoId: h.campoId } : {}),

@@ -7,10 +7,10 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getFixture, generateFixture, RondaFixture } from '../../../services/fixtureService';
+import {getFixture,generateFixture,RondaFixture,filterRondasCopaVisibles,getRondaScheduleMode,} from '../../../services/fixtureService';
 import { confirmAllMatches } from '../../../services/matchService';
 import { getTeamsByTournament } from '../../../services/teamsService';
 import MatchCard from '../../../components/tournament/MatchCard';
@@ -58,20 +58,34 @@ export default function FixtureScreen() {
       : (maxEquipos === null || cupoCompleto) && !enCursoOFinalizado;
   const showFloatingConfirm = isOrganizadorOStaff && !enCursoOFinalizado && rondas.length > 0;
 
+  const allMatchesScheduled = useMemo(
+    () => rondas.length > 0 && rondas.every((r) => r.partidos.every((p) => p.fecha)),
+    [rondas],
+  );
+
+  /** En copa: solo fechas/rondas desbloqueadas (ronda anterior con ganadores). */
+  const rondasLista = useMemo(
+    () => (isBracket ? filterRondasCopaVisibles(rondas) : rondas),
+    [rondas, isBracket],
+  );
+
+  useEffect(() => {
+    if (rondaActual >= rondasLista.length && rondasLista.length > 0) {
+      setRondaActual(rondasLista.length - 1);
+    }
+  }, [rondasLista.length, rondaActual]);
+
   // Lista view active: Liga always, Copa only when lista tab is selected
   const isListaView = !isBracket || bracketTab === 'lista';
 
   // Floating schedule/edit button tracks the currently viewed round (only for lista views)
   const floatingScheduleBtn = (() => {
     if (!isOrganizadorOStaff || !enCursoOFinalizado || !isListaView) return null;
-    const current = rondas[rondaActual];
+    const current = rondasLista[rondaActual];
     if (!current) return null;
-    const allScheduled = current.partidos.every((p) => p.fecha !== null);
-    if (allScheduled) return { mode: 'editar' as ScheduleMode, ronda: current };
-    const prev = rondaActual > 0 ? rondas[rondaActual - 1] : null;
-    const prevDone = !prev || prev.partidos.every((p) => p.fecha !== null);
-    if (prevDone) return { mode: 'programar' as ScheduleMode, ronda: current };
-    return null;
+    const mode = getRondaScheduleMode(current.ronda, rondas, estadoLocal);
+    if (!mode) return null;
+    return { mode, ronda: current };
   })();
 
   const fetchFixture = useCallback(async () => {
@@ -147,9 +161,25 @@ export default function FixtureScreen() {
   };
 
   const handleConfirmAll = () => {
+    if (!allMatchesScheduled) {
+      const firstUnscheduled =
+        rondas.find((r) => r.partidos.some((p) => !p.fecha)) ?? rondas[0];
+      showConfirm(
+        'Programar fechas',
+        'Antes de confirmar el fixture debes asignar fecha, hora y cancha a todos los partidos.',
+        () => {
+          if (firstUnscheduled) {
+            goToScheduleRound(firstUnscheduled, 'programar');
+          }
+        },
+        'Programar ahora',
+        'Cancelar',
+      );
+      return;
+    }
     showConfirm(
-      'Confirmar todos los partidos',
-      'Se confirmarán todos los partidos y el torneo pasará a "En curso". Ya no se podrán agregar ni quitar equipos.',
+      'Confirmar fixture',
+      'Se confirmarán todos los partidos programados y el torneo pasará a "En curso". Ya no se podrán agregar ni quitar equipos.',
       async () => {
         setConfirmingAll(true);
         try {
@@ -158,12 +188,12 @@ export default function FixtureScreen() {
           showSuccess('¡Torneo iniciado!', 'Todos los partidos fueron confirmados.');
           await fetchFixture();
         } catch (e: any) {
-          showError('Error', e.message ?? 'No se pudo confirmar los partidos');
+          showError('Error', e.message ?? 'No se pudo confirmar el fixture');
         } finally {
           setConfirmingAll(false);
         }
       },
-      'Confirmar todo',
+      'Confirmar fixture',
       'Cancelar',
     );
   };
@@ -222,7 +252,7 @@ export default function FixtureScreen() {
 
   // ── Round navigation bar (shared between Liga and Copa lista) ─────────────
   const renderRoundNav = () => {
-    if (rondas.length <= 1) return null;
+    if (rondasLista.length <= 1) return null;
     return (
       <View className="flex-row items-center justify-between px-4 py-2 bg-white border-b border-mist">
         <TouchableOpacity
@@ -233,21 +263,21 @@ export default function FixtureScreen() {
           <Feather name="chevron-left" size={22} color={rondaActual === 0 ? '#CBD5CB' : '#0F1A14'} />
         </TouchableOpacity>
         <Text className="text-night font-sans-medium text-sm">
-          {rondas[rondaActual]?.label}
+          {rondasLista[rondaActual]?.label}
           {'  '}
           <Text className="text-carbon font-sans text-xs">
-            {rondaActual + 1} / {rondas.length}
+            {rondaActual + 1} / {rondasLista.length}
           </Text>
         </Text>
         <TouchableOpacity
-          onPress={() => setRondaActual((r) => Math.min(rondas.length - 1, r + 1))}
-          disabled={rondaActual === rondas.length - 1}
+          onPress={() => setRondaActual((r) => Math.min(rondasLista.length - 1, r + 1))}
+          disabled={rondaActual === rondasLista.length - 1}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
           <Feather
             name="chevron-right"
             size={22}
-            color={rondaActual === rondas.length - 1 ? '#CBD5CB' : '#0F1A14'}
+            color={rondaActual === rondasLista.length - 1 ? '#CBD5CB' : '#0F1A14'}
           />
         </TouchableOpacity>
       </View>
@@ -271,14 +301,14 @@ export default function FixtureScreen() {
           />
         }
       >
-        {rondas.length === 0 ? (
+        {rondasLista.length === 0 ? (
           renderEmpty()
         ) : (
           <>
             {isOrganizadorOStaff && !enCursoOFinalizado && (
               <View className="mb-4">{renderRegenBtn()}</View>
             )}
-            {rondas[rondaActual]?.partidos.map((partido) => (
+            {rondasLista[rondaActual]?.partidos.map((partido) => (
               <MatchCard
                 key={partido.id}
                 partido={partido}
@@ -413,15 +443,20 @@ export default function FixtureScreen() {
           <TouchableOpacity
             className="bg-primary rounded-2xl py-4 items-center flex-row justify-center gap-2"
             style={{ shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 10, elevation: 6 }}
-            onPress={handleConfirmAll}
+            onPress={allMatchesScheduled ? handleConfirmAll : () => {
+              const first = rondas.find((r) => r.partidos.some((p) => !p.fecha)) ?? rondas[0];
+              if (first) goToScheduleRound(first, 'programar');
+            }}
             disabled={confirmingAll}
           >
             {confirmingAll ? (
               <ActivityIndicator color="white" />
             ) : (
               <>
-                <Feather name="check-circle" size={18} color="white" />
-                <Text className="text-white font-sans-medium text-base">Confirmar fixture</Text>
+                <Feather name={allMatchesScheduled ? 'check-circle' : 'clock'} size={18} color="white" />
+                <Text className="text-white font-sans-medium text-base">
+                  {allMatchesScheduled ? 'Confirmar fixture' : 'Programar fechas del fixture'}
+                </Text>
               </>
             )}
           </TouchableOpacity>
