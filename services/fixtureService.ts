@@ -57,6 +57,57 @@ export interface RondaFixture {
   partidos: Partido[];
 }
 
+export function partidoCopaFinalizado(p: Partido): boolean {
+  if (p.faseJuego === 'FINALIZADO') return true;
+  return (
+    p.golesLocal !== null &&
+    p.golesVisitante !== null &&
+    (p.estado === 'CONFIRMADO' ||
+      p.estado === 'ESPERANDO_CONFIRMACION' ||
+      p.estado === 'EN_DISPUTA')
+  );
+}
+
+export type ScheduleMode = 'programar' | 'editar';
+
+export function getRondaScheduleMode(
+  rondaNum: number,
+  rondas: RondaFixture[],
+  estadoTorneo: string | undefined,
+): ScheduleMode | null {
+  if (estadoTorneo !== 'EN_CURSO') return null;
+  const realRonda = rondas.find((ro) => ro.ronda === rondaNum);
+  if (!realRonda || realRonda.partidos.length === 0) return null;
+
+  if (rondaNum > 1) {
+    const prevReal = rondas.find((ro) => ro.ronda === rondaNum - 1);
+    if (!prevReal || !prevReal.partidos.every(partidoCopaFinalizado)) return null;
+  }
+
+  const allScheduled = realRonda.partidos.every((p) => p.fecha !== null);
+  return allScheduled ? 'editar' : 'programar';
+}
+export function filterRondasCopaVisibles(rondas: RondaFixture[]): RondaFixture[] {
+  const sorted = [...rondas].sort((a, b) => a.ronda - b.ronda);
+  const visible: RondaFixture[] = [];
+
+  for (const ronda of sorted) {
+    if (ronda.partidos.length === 0) continue;
+
+    if (ronda.ronda === 1) {
+      visible.push(ronda);
+      continue;
+    }
+
+    const prev = sorted.find((r) => r.ronda === ronda.ronda - 1);
+    if (!prev || !prev.partidos.every(partidoCopaFinalizado)) continue;
+
+    visible.push(ronda);
+  }
+
+  return visible;
+}
+
 const getToken = () => useAuthStore.getState().token ?? undefined;
 
 export const generateFixture = async (torneoId: string): Promise<RondaFixture[]> => {

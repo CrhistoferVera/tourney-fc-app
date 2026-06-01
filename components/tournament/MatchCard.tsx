@@ -1,5 +1,6 @@
 import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { Partido } from '../../services/fixtureService';
+import { formatPartidoFecha } from '../../utils/matchDate';
 
 interface Props {
   readonly partido: Partido;
@@ -7,17 +8,7 @@ interface Props {
   readonly onPress?: (partido: Partido) => void;
 }
 
-const formatFecha = (fecha: string | null) => {
-  if (!fecha) return 'Sin fecha';
-  const d = new Date(fecha);
-  return d.toLocaleDateString('es-BO', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-};
+const formatFecha = (fecha: string | null) => formatPartidoFecha(fecha);
 
 function Shield({ escudo, nombre }: { readonly escudo: string | null; readonly nombre: string }) {
   if (escudo) {

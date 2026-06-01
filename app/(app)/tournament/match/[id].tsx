@@ -30,6 +30,7 @@ import { getTournamentById, Tournament } from '../../../../services/tournamentSe
 import { getTeamById, Jugador } from '../../../../services/teamsService';
 import { useAlert } from '../../../../hooks/useAlert';
 import CustomAlert from '../../../../components/CustomAlert';
+import { formatPartidoFecha } from '../../../../utils/matchDate';
 
 function MatchEventIcon({ tipo, size, color }: { tipo: TipoEvento; size: number; color: string }) {
   if (tipo === 'GOL' || tipo === 'PENAL_FALLADO') {
@@ -134,7 +135,10 @@ function ConfettiParticle({ delay }: ParticleProps) {
   const color = useMemo(() => colors[Math.floor(Math.random() * colors.length)], []);
   const sizeWidth = useMemo(() => Math.floor(Math.random() * 8) + 6, []);
   const sizeHeight = useMemo(() => Math.floor(Math.random() * 10) + 8, []);
-  const startX = useMemo(() => Math.random() * SCREEN_WIDTH, []);
+  const startX = useMemo(
+    () => SCREEN_WIDTH / 2 + (Math.random() - 0.5) * SCREEN_WIDTH * 0.55,
+    [],
+  );
   const swayDistance = useMemo(() => (Math.random() - 0.5) * 80, []);
   const rotateValue = useMemo(() => `${Math.floor(Math.random() * 360)}deg`, []);
   const rotateTo = useMemo(() => `${Math.floor(Math.random() * 720) + 360}deg`, []);
@@ -209,14 +213,11 @@ export default function MatchScreen() {
 
   const [showCelebration, setShowCelebration] = useState(false);
   const [winnerInfo, setWinnerInfo] = useState<{ nombre: string; escudo: string | null } | null>(null);
+  const celebrationShownRef = useRef(false);
 
   const closeCelebration = () => {
     setShowCelebration(false);
     setWinnerInfo(null);
-    showSuccess(
-      'Partido Finalizado',
-      'El partido ha finalizado. Tienes un máximo de 3 minutos para realizar cualquier corrección o edición en los eventos.',
-    );
   };
 
   // Modal de evento
@@ -271,14 +272,30 @@ export default function MatchScreen() {
   };
 
   // ─── Fetch ──────────────────────────────────────────────────────────
+  const maybeShowTournamentWinner = useCallback((m: Partido) => {
+    if (celebrationShownRef.current || !m.ganadorTorneo) return;
+    if (m.faseJuego !== 'FINALIZADO') return;
+
+    const finishedAt = m.finalizadoEn
+      ? new Date(m.finalizadoEn).getTime()
+      : new Date(m.updatedAt).getTime();
+    const withinGrace = Date.now() - finishedAt <= 3 * 60 * 1000;
+    if (!withinGrace) return;
+
+    celebrationShownRef.current = true;
+    setWinnerInfo(m.ganadorTorneo ?? null);
+    setShowCelebration(true);
+  }, []);
+
   const fetchMatch = useCallback(async () => {
     try {
       const m = await getMatchById(id);
       setPartido(m);
+      maybeShowTournamentWinner(m);
     } catch {
       showError('Error', 'No se pudo cargar el partido');
     }
-  }, [id]);
+  }, [id, maybeShowTournamentWinner]);
 
   const fetchAll = useCallback(async () => {
     try {
@@ -286,12 +303,13 @@ export default function MatchScreen() {
       setPartido(m);
       const t = await getTournamentById(m.torneoId);
       setTorneo(t);
+      maybeShowTournamentWinner(m);
     } catch {
       showError('Error', 'No se pudo cargar el partido');
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, maybeShowTournamentWinner]);
 
   useEffect(() => {
     fetchAll();
@@ -412,6 +430,7 @@ export default function MatchScreen() {
         await fetchAll();
         if (action === 'END_MATCH') {
           if (res.ganadorTorneo) {
+            celebrationShownRef.current = true;
             setWinnerInfo(res.ganadorTorneo);
             setShowCelebration(true);
           } else {
@@ -440,10 +459,7 @@ export default function MatchScreen() {
         const now = Date.now();
         const tenMinutesMs = 10 * 60 * 1000;
         if (now < scheduledTime || now > scheduledTime + tenMinutesMs) {
-          const formattedScheduled = new Date(partido.fecha).toLocaleString('es-ES', {
-            dateStyle: 'short',
-            timeStyle: 'short',
-          });
+          const formattedScheduled = formatPartidoFecha(partido.fecha);
           doControlAction(
             action,
             `ADVERTENCIA: El partido está programado para el ${formattedScheduled}. ¿Estás seguro de iniciar este partido en la fecha y hora actual?`
@@ -976,10 +992,13 @@ export default function MatchScreen() {
       {/* ── CELEBRATION MODAL ── */}
       <Modal visible={showCelebration} transparent animationType="fade" statusBarTranslucent>
         <View style={styles.celebrationOverlay}>
-          {showCelebration &&
-            Array.from({ length: 80 }).map((_, idx) => (
-              <ConfettiParticle key={idx} delay={idx * 60} />
-            ))}
+          {showCelebration && (
+            <View style={styles.confettiLayer} pointerEvents="none">
+              {Array.from({ length: 80 }).map((_, idx) => (
+                <ConfettiParticle key={idx} delay={idx * 60} />
+              ))}
+            </View>
+          )}
           <Animated.View style={styles.celebrationCard}>
             <View style={styles.celebrationGoldBorder} />
             <View style={styles.trophyContainer}>
@@ -1248,6 +1267,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
+  },
+  confettiLayer: {
+    ...StyleSheet.absoluteFillObject,
+    overflow: 'hidden',
   },
   celebrationCard: {
     backgroundColor: '#FFFFFF',
