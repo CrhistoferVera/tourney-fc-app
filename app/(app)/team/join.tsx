@@ -73,7 +73,12 @@ export default function JoinTeamScreen() {
       <CustomAlert {...alertState} onConfirm={alertState.onConfirm} onCancel={hideAlert} />
 
       <View className="bg-primary px-6 pt-14 pb-4 flex-row items-center">
-        <TouchableOpacity onPress={() => router.back()} className="mr-3">
+        <TouchableOpacity
+          onPress={() =>
+            router.canGoBack() ? router.back() : router.replace('/(app)/(tabs)/home')
+          }
+          className="mr-3"
+        >
           <Feather name="arrow-left" size={22} color="white" />
         </TouchableOpacity>
         <Text className="text-white text-xl font-sans-medium flex-1">Unirse a un equipo</Text>

@@ -6,7 +6,7 @@ import * as Location from 'expo-location';
 interface Props {
   visible: boolean;
   onClose: () => void;
-  onConfirm: (address: string) => void;
+  onConfirm: (data: { direccion: string; latitud: number; longitud: number }) => void;
 }
 
 const DEFAULT_REGION: Region = {
@@ -72,7 +72,12 @@ export default function MapPickerModal({ visible, onClose, onConfirm }: Props) {
   };
 
   const handleConfirm = () => {
-    onConfirm(resolvedAddress);
+    if (!markerCoords) return;
+    onConfirm({
+      direccion: resolvedAddress,
+      latitud: markerCoords.latitude,
+      longitud: markerCoords.longitude,
+    });
     onClose();
   };
 

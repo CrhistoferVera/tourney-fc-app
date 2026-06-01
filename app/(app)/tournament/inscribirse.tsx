@@ -13,6 +13,7 @@ import CustomAlert from '../../../components/CustomAlert';
 import RosterSelector from '../../../components/team/RosterSelector';
 import ShieldDisplay from '../../../components/tournament/ShieldDisplay';
 import { useAlert } from '../../../hooks/useAlert';
+import { useAuthStore } from '../../../store/authStore';
 import { solicitarInscripcion } from '../../../services/inscriptionService';
 import {
   getMyTeams,
@@ -49,6 +50,7 @@ export default function InscribirseScreen() {
     zona?: string;
   }>();
   const router = useRouter();
+  const { usuario } = useAuthStore();
   const { alertState, hideAlert, showError, showSuccess } = useAlert();
 
   const [fetchedTournament, setFetchedTournament] = useState<any>(null);
@@ -79,7 +81,11 @@ export default function InscribirseScreen() {
   // ── Cargar mis equipos (solo donde soy capitán) ────────────────────────────
   useEffect(() => {
     getMyTeams()
-      .then((teams) => setMyTeams(teams.filter((t) => t.esCapitan)))
+      .then((teams) =>
+        setMyTeams(
+          teams.filter((t) => t.esCapitan || t.capitanId === usuario?.id),
+        ),
+      )
       .catch((e: any) => showError('Error', e.message ?? 'No se pudieron cargar tus equipos.'))
       .finally(() => setLoadingTeams(false));
   }, []);

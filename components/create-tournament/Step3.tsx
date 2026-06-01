@@ -35,9 +35,15 @@ export default function Step3({
     setMapOpen(true);
   };
 
-  const handleMapConfirm = (address: string) => {
+  const handleMapConfirm = (data: { direccion: string; latitud: number; longitud: number }) => {
     if (editingIndex !== null) {
-      updateCampo(editingIndex, 'direccion', address);
+      onChangeCampos(
+        campos.map((c, i) =>
+          i === editingIndex
+            ? { ...c, direccion: data.direccion, latitud: data.latitud, longitud: data.longitud }
+            : c,
+        ),
+      );
     }
     setEditingIndex(null);
   };

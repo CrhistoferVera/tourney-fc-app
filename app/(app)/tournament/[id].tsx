@@ -6,6 +6,7 @@ import {
   BarChart2,
   Settings2,
   Shield,
+  MapPin,
   ChevronRight,
 } from 'lucide-react-native';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
@@ -361,6 +362,12 @@ export default function TournamentDetailScreen() {
       params: { id: tournament!.id, rol: tournament!.rolUsuario ?? '' },
     } as never);
 
+  const goToCanchas = () =>
+    router.push({
+      pathname: '/(app)/tournament/canchas',
+      params: { id: tournament!.id, nombre: tournament!.nombre },
+    } as never);
+
   const goToTabla = () =>
     router.push({
       pathname: '/(app)/tournament/tabla',
@@ -700,6 +707,14 @@ export default function TournamentDetailScreen() {
             label="Equipos"
             subtitle="Ver todos los equipos inscritos"
             onPress={canVerFixture ? goToEquipos : undefined}
+          />
+          <NavItem
+            icon={MapPin}
+            iconColor="#0D7A3E"
+            iconBg="#D4F5E2"
+            label="Canchas"
+            subtitle="Ubicación de las sedes"
+            onPress={!isDraft ? goToCanchas : undefined}
           />
           {canVerMiEquipo && (
             <NavItem

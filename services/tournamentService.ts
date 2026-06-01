@@ -8,12 +8,16 @@ export type TournamentModality = 'FUTBOL_5' | 'FUTBOL_7' | 'FUTBOL_11';
 export interface Campo {
   nombre: string;
   direccion: string;
+  latitud?: number | null;
+  longitud?: number | null;
 }
 
 export interface CampoDetalle {
   id: string;
   nombre: string;
   direccion: string | null;
+  latitud?: number | null;
+  longitud?: number | null;
 }
 
 export interface Tournament {
@@ -175,7 +179,7 @@ export const uploadTournamentImage = async (uri: string): Promise<{ url: string 
 
 export const addCampoToTournament = async (
   torneoId: string,
-  dto: { nombre: string; direccion?: string },
+  dto: { nombre: string; direccion?: string; latitud?: number; longitud?: number },
 ): Promise<CampoDetalle> => {
   const token = getToken();
   return api.post(`/tournaments/${torneoId}/campos`, dto, token ?? undefined);

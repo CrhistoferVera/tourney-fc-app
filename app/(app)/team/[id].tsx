@@ -39,6 +39,13 @@ export default function TeamScreen() {
 
   const esCapitan = !!team && !!usuario && team.capitanId === usuario.id;
 
+  // Vuelve atrás si hay historial; si se llegó por deep link (sin stack
+  // previo), cae a la lista de equipos.
+  const goBack = () => {
+    if (router.canGoBack()) router.back();
+    else router.replace('/(app)/(tabs)/mis-equipos' as never);
+  };
+
   const fetchTeam = useCallback(async () => {
     if (!id) return;
     try {
@@ -91,7 +98,7 @@ export default function TeamScreen() {
         setActuando(true);
         try {
           await deleteTeam(team.id);
-          showSuccess('Equipo eliminado', 'El equipo fue eliminado correctamente.', () => router.back());
+          showSuccess('Equipo eliminado', 'El equipo fue eliminado correctamente.', () => goBack());
         } catch (e: any) {
           showError('Error', e.message ?? 'No se pudo eliminar el equipo.');
         } finally {
@@ -110,7 +117,7 @@ export default function TeamScreen() {
         setActuando(true);
         try {
           await leaveTeam(team.id);
-          showSuccess('Saliste del equipo', 'Ya no formas parte de este equipo.', () => router.back());
+          showSuccess('Saliste del equipo', 'Ya no formas parte de este equipo.', () => goBack());
         } catch (e: any) {
           showError('Error', e.message ?? 'No se pudo salir del equipo.');
         } finally {
@@ -132,7 +139,7 @@ export default function TeamScreen() {
     return (
       <View className="flex-1 bg-mist">
         <View className="bg-primary px-6 pt-14 pb-4 flex-row items-center">
-          <TouchableOpacity onPress={() => router.back()} className="mr-3">
+          <TouchableOpacity onPress={() => goBack()} className="mr-3">
             <Feather name="arrow-left" size={22} color="white" />
           </TouchableOpacity>
           <Text className="text-white text-xl font-sans-medium flex-1">Equipo</Text>
@@ -150,7 +157,7 @@ export default function TeamScreen() {
       <CustomAlert {...alertState} onConfirm={alertState.onConfirm} onCancel={hideAlert} />
 
       <View className="bg-primary px-6 pt-14 pb-4 flex-row items-center">
-        <TouchableOpacity onPress={() => router.back()} className="mr-3">
+        <TouchableOpacity onPress={() => goBack()} className="mr-3">
           <Feather name="arrow-left" size={22} color="white" />
         </TouchableOpacity>
         <Text className="text-white text-xl font-sans-medium flex-1" numberOfLines={1}>
