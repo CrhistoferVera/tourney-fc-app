@@ -277,6 +277,7 @@ export default function MatchScreen() {
     return new Set<string>(kickedInCurrentCycle);
   }, [partido, selectedEquipoId, jugadoresLocal, jugadoresVisitante, expelledPlayerIds]);
 
+  const [isEditingMatch, setIsEditingMatch] = useState(false);
   const [isEditingScore, setIsEditingScore] = useState(false);
   const [editGolesLocal, setEditGolesLocal] = useState<number>(0);
   const [editGolesVisitante, setEditGolesVisitante] = useState<number>(0);
@@ -309,7 +310,9 @@ export default function MatchScreen() {
       await fetchAll();
       showSuccess('Éxito', 'Resultado del partido actualizado correctamente.');
     } catch (e: any) {
-      showError('Error', e.message ?? 'No se pudo guardar el resultado');
+      console.error('Error saving score:', e);
+      const msg = Array.isArray(e.message) ? e.message.join(', ') : (e.message || 'No se pudo guardar el resultado');
+      showError('Error', msg);
     } finally {
       setActionLoading(false);
     }
@@ -488,7 +491,7 @@ export default function MatchScreen() {
   const isReadyToStart = partido.estado === 'CONFIRMADO' && partido.faseJuego === 'PREVIA';
   const faseBadge = getFaseBadgeStyle(partido, torneo);
 
-  const showEventControls = isLive || (isMatchFinished && canEditEvents);
+  const showEventControls = isLive || (isMatchFinished && canEditEvents && isEditingMatch);
 
   // ─── Acciones de control ─────────────────────────────────────────────
   const doControlAction = (
@@ -556,16 +559,40 @@ export default function MatchScreen() {
     } else if (action === 'END_MATCH') {
       if (partido.faseJuego === 'PRIMER_TIEMPO') {
         doControlAction('END_MATCH', '¿Finalizar el partido?');
+      } else if (partido.faseJuego === 'PENALES') {
+        const penLocal = partido.golesPenalesLocal ?? 0;
+        const penVisitante = partido.golesPenalesVisitante ?? 0;
+
+        if (penLocal === penVisitante) {
+          showError('Error', 'No se puede finalizar el partido como empate durante la tanda de penales.');
+          return;
+        }
+
+        const localShootoutKicks = (partido.eventos ?? []).filter(ev => 
+          ev.equipoId === partido.equipoLocal.id &&
+          (ev.detalle === 'PENAL' || ev.tipo === 'PENAL_FALLADO' || ev.minuto === null || ev.minuto === undefined)
+        ).length;
+        const visitanteShootoutKicks = (partido.eventos ?? []).filter(ev => 
+          ev.equipoId === partido.equipoVisitante.id &&
+          (ev.detalle === 'PENAL' || ev.tipo === 'PENAL_FALLADO' || ev.minuto === null || ev.minuto === undefined)
+        ).length;
+
+        if (localShootoutKicks < 5 || visitanteShootoutKicks < 5) {
+          showConfirm(
+            'Advertencia',
+            '¿Estás seguro de finalizar el partido antes de completar los 5 penales?',
+            () => doControlAction(action, '¿Finalizar el partido?')
+          );
+        } else {
+          doControlAction(action, '¿Finalizar el partido?');
+        }
       } else {
         const requiredMinutes = halfLimit * 2;
         const finishAction = () => {
-          const confirmMsg = partido.faseJuego === 'PENALES' ? '¿Finalizar el partido?' : '¿Terminar el segundo tiempo?';
-          doControlAction(action, confirmMsg);
+          doControlAction(action, '¿Terminar el segundo tiempo?');
         };
 
-        if (partido.faseJuego === 'PENALES') {
-          finishAction();
-        } else if (displayMinutes < requiredMinutes) {
+        if (displayMinutes < requiredMinutes) {
           showConfirm(
             'Confirmar',
             `¡Advertencia! Aún no se han jugado los ${requiredMinutes} minutos reglamentarios. ¿Deseas terminar el segundo tiempo antes de tiempo?`,
@@ -599,7 +626,8 @@ export default function MatchScreen() {
     closeModal();
     setActionLoading(true);
     try {
-      const isPenal = partido.faseJuego === 'PENALES';
+      const wasPenales = partido.faseJuego === 'PENALES';
+      const isPenal = wasPenales || (partido.faseJuego === 'FINALIZADO' && partido.golesPenalesLocal !== null);
       await addMatchEvent(partido.id, {
         tipo: selectedEvent.tipo,
         equipoId,
@@ -608,7 +636,23 @@ export default function MatchScreen() {
         detalle: isPenal ? 'PENAL' : undefined,
         asistenciaJugadorId,
       });
-      await fetchMatch();
+      
+      const updated = await getMatchById(id);
+      setPartido(updated);
+      maybeShowTournamentWinner(updated);
+
+      if (wasPenales && updated.faseJuego === 'FINALIZADO') {
+        if (updated.ganadorTorneo) {
+          celebrationShownRef.current = true;
+          setWinnerInfo(updated.ganadorTorneo);
+          setShowCelebration(true);
+        } else {
+          showSuccess(
+            'Partido Finalizado',
+            'La tanda de penales ha concluido y el partido ha finalizado. Tienes un máximo de 3 minutos para realizar cualquier corrección.'
+          );
+        }
+      }
     } catch (e: any) {
       showError('Error', e.message ?? 'No se pudo guardar el evento');
     } finally {
@@ -624,7 +668,7 @@ export default function MatchScreen() {
   };
 
   const onSelectJugador = (jugadorId?: string) => {
-    if (selectedEvent?.tipo === 'GOL') {
+    if (selectedEvent?.tipo === 'GOL' && partido.faseJuego !== 'PENALES') {
       setGoalScorerId(jugadorId ?? null);
       setModalStep('asistencia');
     } else {
@@ -692,7 +736,8 @@ export default function MatchScreen() {
         </View>
 
         {/* Botón borrar (solo admin) */}
-        {isAdmin && canEditEvents && (
+        {isAdmin && (isLive ? true : (isMatchFinished && canEditEvents && isEditingMatch)) &&
+          !(partido.golesPenalesLocal !== null && ev.tipo === 'GOL' && ev.detalle !== 'PENAL') && (
           <TouchableOpacity onPress={() => deleteEvent(ev)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={styles.eventDeleteBtn}>
             <Feather name="trash-2" size={13} color="#EF4444" />
           </TouchableOpacity>
@@ -759,10 +804,17 @@ export default function MatchScreen() {
             <Text style={styles.sectionTitle}>Control del partido</Text>
 
             {isMatchFinished ? (
-              <View style={styles.ctrlRow}>
-                <CtrlBtn icon="edit" label="Editar Partido" color="#0D7A3E"
-                  onPress={startEditingScore} />
-              </View>
+              isEditingMatch ? (
+                <View style={styles.ctrlRow}>
+                  <CtrlBtn icon="check-circle" label="Finalizar Edición" color="#6B7280"
+                    onPress={() => setIsEditingMatch(false)} />
+                </View>
+              ) : (
+                <View style={styles.ctrlRow}>
+                  <CtrlBtn icon="edit" label="Editar Partido" color="#0D7A3E"
+                    onPress={() => setIsEditingMatch(true)} />
+                </View>
+              )
             ) : (
               <>
                 {/* Botones de fase */}
