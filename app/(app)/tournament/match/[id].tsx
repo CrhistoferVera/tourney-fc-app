@@ -277,48 +277,6 @@ export default function MatchScreen() {
     return new Set<string>(kickedInCurrentCycle);
   }, [partido, selectedEquipoId, jugadoresLocal, jugadoresVisitante, expelledPlayerIds]);
 
-  const [isEditingMatch, setIsEditingMatch] = useState(false);
-  const [isEditingScore, setIsEditingScore] = useState(false);
-  const [editGolesLocal, setEditGolesLocal] = useState<number>(0);
-  const [editGolesVisitante, setEditGolesVisitante] = useState<number>(0);
-  const [editGolesPenalesLocal, setEditGolesPenalesLocal] = useState<number>(0);
-  const [editGolesPenalesVisitante, setEditGolesPenalesVisitante] = useState<number>(0);
-
-  const startEditingScore = () => {
-    if (!partido) return;
-    setEditGolesLocal(partido.golesLocal ?? 0);
-    setEditGolesVisitante(partido.golesVisitante ?? 0);
-    setEditGolesPenalesLocal(partido.golesPenalesLocal ?? 0);
-    setEditGolesPenalesVisitante(partido.golesPenalesVisitante ?? 0);
-    setIsEditingScore(true);
-  };
-
-  const saveEditedScore = async () => {
-    if (!partido) return;
-    setActionLoading(true);
-    try {
-      const hasPenalties = partido.golesPenalesLocal !== null && partido.golesPenalesVisitante !== null;
-      await updateMatch(partido.id, {
-        golesLocal: editGolesLocal,
-        golesVisitante: editGolesVisitante,
-        ...(hasPenalties && {
-          golesPenalesLocal: editGolesPenalesLocal,
-          golesPenalesVisitante: editGolesPenalesVisitante,
-        }),
-      });
-      setIsEditingScore(false);
-      await fetchAll();
-      showSuccess('Éxito', 'Resultado del partido actualizado correctamente.');
-    } catch (e: any) {
-      console.error('Error saving score:', e);
-      const msg = Array.isArray(e.message) ? e.message.join(', ') : (e.message || 'No se pudo guardar el resultado');
-      showError('Error', msg);
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-
   // Cronómetro
   const [displayMinutes, setDisplayMinutes] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -351,12 +309,6 @@ export default function MatchScreen() {
   const maybeShowTournamentWinner = useCallback((m: Partido) => {
     if (celebrationShownRef.current || !m.ganadorTorneo) return;
     if (m.faseJuego !== 'FINALIZADO') return;
-
-    const finishedAt = m.finalizadoEn
-      ? new Date(m.finalizadoEn).getTime()
-      : new Date(m.updatedAt).getTime();
-    const withinGrace = Date.now() - finishedAt <= 3 * 60 * 1000;
-    if (!withinGrace) return;
 
     celebrationShownRef.current = true;
     setWinnerInfo(m.ganadorTorneo ?? null);
@@ -471,11 +423,6 @@ export default function MatchScreen() {
   }, [partido]);
 
   const isMatchFinished = partido?.faseJuego === 'FINALIZADO';
-  const canEditEvents = useMemo(() => {
-    if (!partido || !isMatchFinished) return true;
-    const finishedAt = partido.finalizadoEn ? new Date(partido.finalizadoEn).getTime() : new Date(partido.updatedAt).getTime();
-    return Date.now() - finishedAt <= 3 * 60 * 1000;
-  }, [isMatchFinished, partido?.finalizadoEn, partido?.updatedAt]);
 
   // ─── Loading ────────────────────────────────────────────────────────
   if (loading || !partido) {
@@ -487,11 +434,16 @@ export default function MatchScreen() {
   }
 
   const isAdmin = torneo?.rolUsuario === 'ORGANIZADOR' || torneo?.rolUsuario === 'STAFF';
-  const isLive = partido.faseJuego === 'PRIMER_TIEMPO' || partido.faseJuego === 'SEGUNDO_TIEMPO' || partido.faseJuego === 'PENALES';
+  const isLive =
+    partido.faseJuego === 'PRIMER_TIEMPO' ||
+    partido.faseJuego === 'MEDIO_TIEMPO' ||
+    partido.faseJuego === 'SEGUNDO_TIEMPO' ||
+    partido.faseJuego === 'PENALES';
   const isReadyToStart = partido.estado === 'CONFIRMADO' && partido.faseJuego === 'PREVIA';
+  const hasPenalties = partido.golesPenalesLocal !== null && partido.golesPenalesVisitante !== null;
   const faseBadge = getFaseBadgeStyle(partido, torneo);
 
-  const showEventControls = isLive || (isMatchFinished && canEditEvents && isEditingMatch);
+  const showEventControls = isLive;
 
   // ─── Acciones de control ─────────────────────────────────────────────
   const doControlAction = (
@@ -511,10 +463,7 @@ export default function MatchScreen() {
             setWinnerInfo(res.ganadorTorneo);
             setShowCelebration(true);
           } else {
-            showSuccess(
-              'Partido Finalizado',
-              'El partido ha finalizado. Tienes un máximo de 3 minutos para realizar cualquier corrección o edición en los eventos.',
-            );
+            showSuccess('Partido Finalizado', 'El partido ha finalizado.');
           }
         }
       } catch (e: any) {
@@ -647,10 +596,7 @@ export default function MatchScreen() {
           setWinnerInfo(updated.ganadorTorneo);
           setShowCelebration(true);
         } else {
-          showSuccess(
-            'Partido Finalizado',
-            'La tanda de penales ha concluido y el partido ha finalizado. Tienes un máximo de 3 minutos para realizar cualquier corrección.'
-          );
+          showSuccess('Partido Finalizado', 'La tanda de penales ha concluido y el partido ha finalizado.');
         }
       }
     } catch (e: any) {
@@ -736,8 +682,9 @@ export default function MatchScreen() {
         </View>
 
         {/* Botón borrar (solo admin) */}
-        {isAdmin && (isLive ? true : (isMatchFinished && canEditEvents && isEditingMatch)) &&
-          !(partido.golesPenalesLocal !== null && ev.tipo === 'GOL' && ev.detalle !== 'PENAL') && (
+        {isAdmin && isLive &&
+          !(partido.golesPenalesLocal !== null && partido.golesPenalesVisitante !== null &&
+            (ev.tipo === 'GOL' || ev.tipo === 'ASISTENCIA') && ev.detalle !== 'PENAL') && (
           <TouchableOpacity onPress={() => deleteEvent(ev)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={styles.eventDeleteBtn}>
             <Feather name="trash-2" size={13} color="#EF4444" />
           </TouchableOpacity>
@@ -799,90 +746,124 @@ export default function MatchScreen() {
       <ScrollView style={styles.body} contentContainerStyle={{ paddingBottom: bottom + 24 }} showsVerticalScrollIndicator={false}>
 
         {/* ── Panel de Control (solo admin) ── */}
-        {isAdmin && (isLive || isReadyToStart || (isMatchFinished && canEditEvents)) && (
+        {isAdmin && (isLive || isReadyToStart) && (
           <View style={styles.card}>
             <Text style={styles.sectionTitle}>Control del partido</Text>
 
-            {isMatchFinished ? (
-              isEditingMatch ? (
-                <View style={styles.ctrlRow}>
-                  <CtrlBtn icon="check-circle" label="Finalizar Edición" color="#6B7280"
-                    onPress={() => setIsEditingMatch(false)} />
-                </View>
-              ) : (
-                <View style={styles.ctrlRow}>
-                  <CtrlBtn icon="edit" label="Editar Partido" color="#0D7A3E"
-                    onPress={() => setIsEditingMatch(true)} />
-                </View>
-              )
-            ) : (
-              <>
-                {/* Botones de fase */}
-                <View style={styles.ctrlRow}>
-                  {partido.faseJuego === 'PREVIA' && (
-                    <CtrlBtn icon="play-circle" label="Iniciar 1er Tiempo" color="#0D7A3E"
-                      onPress={() => handleControlActionPress('START_FIRST_HALF')} />
-                  )}
-                  {partido.faseJuego === 'PRIMER_TIEMPO' && (
-                    <>
-                      <CtrlBtn icon="pause-circle" label="Medio Tiempo" color="#F59E0B"
-                        onPress={() => handleControlActionPress('PAUSE_HALF_TIME')} />
-                      <CtrlBtn icon="x-circle" label="Finalizar" color="#EF4444"
-                        onPress={() => handleControlActionPress('END_MATCH')} />
-                    </>
-                  )}
-                  {partido.faseJuego === 'MEDIO_TIEMPO' && (
-                    <CtrlBtn icon="play-circle" label="Iniciar 2do Tiempo" color="#0D7A3E"
-                      onPress={() => handleControlActionPress('START_SECOND_HALF')} />
-                  )}
-                  {partido.faseJuego === 'SEGUNDO_TIEMPO' && (
-                    <>
-                      {partido.cronometroIniciadoEn !== null ? (
-                        <CtrlBtn icon="x-circle" label="Terminar 2do Tiempo" color="#EF4444"
-                          onPress={() => handleControlActionPress('END_MATCH')} />
-                      ) : (
-                        // Pausado tras fin de tiempo reglamentario en empate de copa
-                        (torneo?.formato === 'COPA' || torneo?.formato === 'ELIMINATORIA') &&
-                        partido.golesLocal === partido.golesVisitante && (
-                          <CtrlBtn icon="play-circle" label="Iniciar Penales" color="#D97706"
-                            onPress={() => handleControlActionPress('START_PENALTIES')} />
-                        )
-                      )}
-                    </>
-                  )}
-                  {partido.faseJuego === 'PENALES' && (
-                    <CtrlBtn icon="x-circle" label="Finalizar Partido" color="#EF4444"
-                      onPress={() => handleControlActionPress('END_MATCH')} />
-                  )}
-                </View>
+            {/* Botones de fase */}
+            <View style={styles.ctrlRow}>
+              {partido.faseJuego === 'PREVIA' && (
+                <CtrlBtn
+                  icon="play-circle"
+                  label="Iniciar 1er Tiempo"
+                  color="#0D7A3E"
+                  onPress={() => handleControlActionPress('START_FIRST_HALF')}
+                />
+              )}
 
-                {/* Botones de eventos */}
-                {showEventControls && (
-                  <>
-                    <View style={styles.divider} />
-                    <Text style={styles.sectionSubtitle}>Registrar evento</Text>
-                    <View style={styles.eventGrid}>
-                      {EVENT_CONFIGS.filter((ev) => {
-                        if (ev.tipo === 'PENAL_FALLADO') {
-                          return partido.faseJuego === 'PENALES';
-                        }
-                        return true;
-                      }).map((ev) => (
-                        <TouchableOpacity
-                          key={ev.tipo}
-                          style={[styles.eventBtn, { backgroundColor: ev.bgColor, borderColor: ev.borderColor }]}
-                          onPress={() => openEventFlow(ev)}
-                          activeOpacity={0.75}
-                        >
-                          <View style={[styles.eventIconCircle, { backgroundColor: ev.iconBg }]}>
-                            <MatchEventIcon tipo={ev.tipo} size={18} color={ev.iconColor} />
-                          </View>
-                          <Text style={[styles.eventLabel, { color: ev.textColor }]}>{ev.label}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  </>
-                )}
+              {partido.faseJuego === 'PRIMER_TIEMPO' && (
+                <>
+                  <CtrlBtn
+                    icon="pause-circle"
+                    label="Medio Tiempo"
+                    color="#F59E0B"
+                    onPress={() => handleControlActionPress('PAUSE_HALF_TIME')}
+                  />
+                  <CtrlBtn
+                    icon="x-circle"
+                    label="Finalizar"
+                    color="#EF4444"
+                    onPress={() => handleControlActionPress('END_MATCH')}
+                  />
+                </>
+              )}
+
+              {partido.faseJuego === 'MEDIO_TIEMPO' && (
+                <CtrlBtn
+                  icon="play-circle"
+                  label="Iniciar 2do Tiempo"
+                  color="#0D7A3E"
+                  onPress={() => handleControlActionPress('START_SECOND_HALF')}
+                />
+              )}
+
+              {partido.faseJuego === 'SEGUNDO_TIEMPO' && (
+                <>
+                  {partido.cronometroIniciadoEn !== null ? (
+                    <CtrlBtn
+                      icon="x-circle"
+                      label="Terminar 2do Tiempo"
+                      color="#EF4444"
+                      onPress={() => handleControlActionPress('END_MATCH')}
+                    />
+                  ) : (
+                    <>
+                      {(torneo?.formato === 'COPA' || torneo?.formato === 'ELIMINATORIA') &&
+                        partido.golesLocal === partido.golesVisitante && (
+                          <CtrlBtn
+                            icon="play-circle"
+                            label="Iniciar Penales"
+                            color="#D97706"
+                            onPress={() => handleControlActionPress('START_PENALTIES')}
+                          />
+                        )}
+                    </>
+                  )}
+                </>
+              )}
+
+              {partido.faseJuego === 'PENALES' && (
+                <CtrlBtn
+                  icon="x-circle"
+                  label="Finalizar Partido"
+                  color="#EF4444"
+                  onPress={() => handleControlActionPress('END_MATCH')}
+                />
+              )}
+            </View>
+
+            {/* Botones de eventos */}
+            {showEventControls && (
+              <>
+                <View style={styles.divider} />
+                <Text style={styles.sectionSubtitle}>Registrar evento</Text>
+                <View style={styles.eventGrid}>
+                  {EVENT_CONFIGS.filter((ev) => {
+                    if (ev.tipo === 'PENAL_FALLADO') {
+                      return partido.faseJuego === 'PENALES';
+                    }
+                    return true;
+                  }).map((ev) => (
+                    <TouchableOpacity
+                      key={ev.tipo}
+                      style={[
+                        styles.eventBtn,
+                        {
+                          backgroundColor: ev.bgColor,
+                          borderColor: ev.borderColor,
+                        },
+                      ]}
+                      onPress={() => openEventFlow(ev)}
+                      activeOpacity={0.75}
+                    >
+                      <View
+                        style={[
+                          styles.eventIconCircle,
+                          { backgroundColor: ev.iconBg },
+                        ]}
+                      >
+                        <MatchEventIcon
+                          tipo={ev.tipo}
+                          size={18}
+                          color={ev.iconColor}
+                        />
+                      </View>
+                      <Text style={[styles.eventLabel, { color: ev.textColor }]}>
+                        {ev.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
               </>
             )}
           </View>
@@ -1193,106 +1174,7 @@ export default function MatchScreen() {
         </View>
       </Modal>
 
-      {/* ── MODAL DE EDICIÓN DE MARCADOR ── */}
-      <Modal visible={isEditingScore} transparent animationType="slide" onRequestClose={() => setIsEditingScore(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalSheet}>
-            <View style={styles.handle} />
-            <View style={styles.modalHeader}>
-              <View style={[styles.modalIconCircle, { backgroundColor: '#DCFCE7' }]}>
-                <Feather name="edit" size={22} color="#0D7A3E" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.modalTitle}>Editar Resultado</Text>
-                <Text style={styles.modalSubtitle}>Modifica los goles y guarda los cambios</Text>
-              </View>
-              <TouchableOpacity onPress={() => setIsEditingScore(false)}>
-                <Feather name="x" size={22} color="#6B7280" />
-              </TouchableOpacity>
-            </View>
 
-            <ScrollView contentContainerStyle={{ gap: 20, paddingBottom: 20 }} showsVerticalScrollIndicator={false}>
-              {/* Goles Regular Time */}
-              <Text style={styles.sectionSubtitle}>Tiempo Reglamentario</Text>
-
-              {/* Local */}
-              <View style={styles.counterRow}>
-                <Text style={styles.counterLabel} numberOfLines={1}>{partido.equipoLocal.nombre}</Text>
-                <View style={styles.counterContainer}>
-                  <TouchableOpacity onPress={() => setEditGolesLocal(Math.max(0, editGolesLocal - 1))} style={styles.counterBtn}>
-                    <Feather name="minus" size={16} color="#374151" />
-                  </TouchableOpacity>
-                  <Text style={styles.counterValue}>{editGolesLocal}</Text>
-                  <TouchableOpacity onPress={() => setEditGolesLocal(editGolesLocal + 1)} style={styles.counterBtn}>
-                    <Feather name="plus" size={16} color="#374151" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              {/* Visitante */}
-              <View style={styles.counterRow}>
-                <Text style={styles.counterLabel} numberOfLines={1}>{partido.equipoVisitante.nombre}</Text>
-                <View style={styles.counterContainer}>
-                  <TouchableOpacity onPress={() => setEditGolesVisitante(Math.max(0, editGolesVisitante - 1))} style={styles.counterBtn}>
-                    <Feather name="minus" size={16} color="#374151" />
-                  </TouchableOpacity>
-                  <Text style={styles.counterValue}>{editGolesVisitante}</Text>
-                  <TouchableOpacity onPress={() => setEditGolesVisitante(editGolesVisitante + 1)} style={styles.counterBtn}>
-                    <Feather name="plus" size={16} color="#374151" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              {/* Penales (si aplica) */}
-              {partido.golesPenalesLocal !== null && partido.golesPenalesVisitante !== null && (
-                <>
-                  <View style={styles.divider} />
-                  <Text style={styles.sectionSubtitle}>Tanda de Penales</Text>
-
-                  {/* Local Penales */}
-                  <View style={styles.counterRow}>
-                    <Text style={styles.counterLabel} numberOfLines={1}>{partido.equipoLocal.nombre} (Pen.)</Text>
-                    <View style={styles.counterContainer}>
-                      <TouchableOpacity onPress={() => setEditGolesPenalesLocal(Math.max(0, editGolesPenalesLocal - 1))} style={styles.counterBtn}>
-                        <Feather name="minus" size={16} color="#374151" />
-                      </TouchableOpacity>
-                      <Text style={styles.counterValue}>{editGolesPenalesLocal}</Text>
-                      <TouchableOpacity onPress={() => setEditGolesPenalesLocal(editGolesPenalesLocal + 1)} style={styles.counterBtn}>
-                        <Feather name="plus" size={16} color="#374151" />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-
-                  {/* Visitante Penales */}
-                  <View style={styles.counterRow}>
-                    <Text style={styles.counterLabel} numberOfLines={1}>{partido.equipoVisitante.nombre} (Pen.)</Text>
-                    <View style={styles.counterContainer}>
-                      <TouchableOpacity onPress={() => setEditGolesPenalesVisitante(Math.max(0, editGolesPenalesVisitante - 1))} style={styles.counterBtn}>
-                        <Feather name="minus" size={16} color="#374151" />
-                      </TouchableOpacity>
-                      <Text style={styles.counterValue}>{editGolesPenalesVisitante}</Text>
-                      <TouchableOpacity onPress={() => setEditGolesPenalesVisitante(editGolesPenalesVisitante + 1)} style={styles.counterBtn}>
-                        <Feather name="plus" size={16} color="#374151" />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                </>
-              )}
-
-              <View style={[styles.divider, { marginVertical: 10 }]} />
-
-              <View style={{ flexDirection: 'row', gap: 12 }}>
-                <TouchableOpacity style={[styles.ctrlBtn, { backgroundColor: '#6B7280', flex: 1, margin: 0 }]} onPress={() => setIsEditingScore(false)}>
-                  <Text style={styles.ctrlBtnLabel}>Cancelar</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.ctrlBtn, { backgroundColor: '#0D7A3E', flex: 1, margin: 0 }]} onPress={saveEditedScore}>
-                  <Text style={styles.ctrlBtnLabel}>Guardar</Text>
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
 
       {/* ── Loading overlay ── */}
       {actionLoading && (
