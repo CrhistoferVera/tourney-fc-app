@@ -8,6 +8,7 @@ import {
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
+import { useAuthStore } from '../../store/authStore';
 import { api } from '../../services/api';
 import CustomAlert from '../../components/CustomAlert';
 import { useAlert } from '../../hooks/useAlert';
@@ -16,6 +17,7 @@ import { Colors } from '../../constants/Colors';
 
 export default function RegisterScreen() {
   const router = useRouter();
+  const { setToken, setUsuario } = useAuthStore();
   const { alertState, hideAlert, showError, showSuccess } = useAlert();
 
   const [nombre, setNombre] = useState('');
@@ -78,9 +80,18 @@ export default function RegisterScreen() {
         email,
         password,
       });
-      if (data.registrado) {
+      if (data.accessToken) {
         showSuccess('Cuenta creada', 'Tu cuenta fue creada exitosamente', () => {
-          router.replace('/(auth)/login');
+          // Al guardar el token, el AuthGuard redirige automáticamente
+          // (a unirse al equipo si hay invitación pendiente, o a home).
+          setToken(data.accessToken);
+          setUsuario({
+            id: data.id,
+            nombre: data.nombre,
+            email: data.email,
+            fotoPerfil: data.fotoPerfil,
+            zona: data.zona,
+          });
         });
       } else {
         showError('Error al registrarse', data.message ?? 'No se pudo crear la cuenta');
