@@ -336,6 +336,7 @@ export default function TournamentDetailScreen() {
         estado: tournament!.estado,
         maxEquipos: String(tournament!.maxEquipos),
         equiposAprobados: String(tournament!.equiposAprobados ?? 0),
+        formato: tournament!.formato ?? '',
       },
     } as never);
 
@@ -416,7 +417,9 @@ export default function TournamentDetailScreen() {
   const isLiga         = tournament.formato === 'LIGA';
   const isBracketFmt   = tournament.formato === 'COPA' || tournament.formato === 'ELIMINATORIA';
   const canVerTabla    = canVerFixture && (isLiga || isBracketFmt);
-  const canGestionar   = isOrganizer && (isDraft || isInscripcion);
+  const canGestionar   =
+    isOrganizer &&
+    (isDraft || isInscripcion || tournament.estado === 'EN_CURSO');
   const canVerMiEquipo = isCapitan || isJugador;
 
   // Filtrar partidos en curso (estado EN_CURSO o con fase de juego activa en vivo)
@@ -471,6 +474,7 @@ export default function TournamentDetailScreen() {
   const showBannerEsperando        = isInscripcion && (isOrganizer || isStaff) && !equiposFull;
   const showBannerSolicitudPending = isInscripcion && !tournament.rolUsuario && !!tournament.tieneSolicitudPendiente;
   const showBannerInscribirse      = isInscripcion && !tournament.rolUsuario && !tournament.tieneSolicitudPendiente;
+  const isStaffOrOrganizer         = isOrganizer || isStaff;
 
   // ── Render ───────────────────────────────────────────────────────────────────
 
@@ -560,6 +564,81 @@ export default function TournamentDetailScreen() {
           </TouchableOpacity>
         )}
 
+        {tournament.estado === 'FINALIZADO' && tournament.ganadorTorneo && (
+          <View
+            className="rounded-2xl mb-4 overflow-hidden"
+            style={{
+              backgroundColor: '#0D7A3E',
+              elevation: 4,
+              shadowColor: '#0D7A3E',
+              shadowOpacity: 0.35,
+              shadowRadius: 12,
+            }}
+          >
+            <View className="px-5 py-5 items-center">
+              <View
+                style={{
+                  backgroundColor: 'rgba(255,255,255,0.15)',
+                  borderRadius: 40,
+                  padding: 10,
+                  marginBottom: 10,
+                }}
+              >
+                <Trophy size={36} color="#FCD34D" />
+              </View>
+              <Text
+                style={{
+                  color: '#D4F5E2',
+                  fontFamily: 'Inter_600SemiBold',
+                  fontSize: 11,
+                  letterSpacing: 1.2,
+                  textTransform: 'uppercase',
+                  marginBottom: 8,
+                }}
+              >
+                {tournament.formato === 'LIGA' ? 'Campeón de la liga' : 'Campeón del torneo'}
+              </Text>
+              {tournament.ganadorTorneo.escudo ? (
+                <Image
+                  source={{ uri: tournament.ganadorTorneo.escudo }}
+                  style={{ width: 72, height: 72, borderRadius: 36, marginBottom: 10, borderWidth: 3, borderColor: '#FCD34D' }}
+                />
+              ) : (
+                <View
+                  style={{
+                    width: 72,
+                    height: 72,
+                    borderRadius: 36,
+                    backgroundColor: 'rgba(255,255,255,0.2)',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: 10,
+                    borderWidth: 3,
+                    borderColor: '#FCD34D',
+                  }}
+                >
+                  <Text style={{ color: 'white', fontSize: 28, fontFamily: 'Inter_600SemiBold' }}>
+                    {tournament.ganadorTorneo.nombre.charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+              )}
+              <Text
+                style={{
+                  color: 'white',
+                  fontFamily: 'Inter_600SemiBold',
+                  fontSize: 22,
+                  textAlign: 'center',
+                }}
+              >
+                {tournament.ganadorTorneo.nombre}
+              </Text>
+              <Text style={{ color: '#D4F5E2', fontSize: 13, textAlign: 'center', marginTop: 6 }}>
+                Felicitaciones al equipo campeón
+              </Text>
+            </View>
+          </View>
+        )}
+
         {/* Info card */}
         <View
           className="bg-white rounded-2xl px-4 py-4 mb-4"
@@ -632,6 +711,17 @@ export default function TournamentDetailScreen() {
               onPress={goToMiEquipo}
             />
           )}
+          {canVerFixture && (
+            <NavItem
+              icon={BarChart2}
+              iconColor="#3D4F44"
+              iconBg="#EBF0EC"
+              label="Estadísticas"
+              subtitle="Goleadores, tarjetas y más"
+              onPress={goToEstadisticas}
+              last={!canGestionar}
+            />
+          )}
           {canGestionar && (
             <NavItem
               icon={Settings2}
@@ -640,17 +730,6 @@ export default function TournamentDetailScreen() {
               label="Gestionar torneo"
               subtitle="Administrar staff, equipos y fechas"
               onPress={goToManage}
-              last
-            />
-          )}
-          {!canGestionar && (
-            <NavItem
-              icon={BarChart2}
-              iconColor="#3D4F44"
-              iconBg="#EBF0EC"
-              label="Estadísticas"
-              subtitle="Goleadores, tarjetas y más"
-              onPress={goToEstadisticas}
               last
             />
           )}
@@ -711,15 +790,20 @@ export default function TournamentDetailScreen() {
                 key={partido.id}
                 partido={partido}
                 onPress={() => {
-                  if (partido.estado === 'PENDIENTE') {
-                    showError('Partido no programado', 'Debes programar primero estos partidos');
+                  const sinProgramar =
+                    partido.estado === 'PENDIENTE' && !partido.fecha;
+                  if (sinProgramar && isStaffOrOrganizer) {
+                    showError(
+                      'Partido no programado',
+                      'Debes programar primero la fecha, hora y cancha de este partido.',
+                    );
                     goToFixture();
-                  } else {
-                    router.push({
-                      pathname: '/(app)/tournament/match/[id]',
-                      params: { id: partido.id },
-                    } as any);
+                    return;
                   }
+                  router.push({
+                    pathname: '/(app)/tournament/match/[id]',
+                    params: { id: partido.id },
+                  } as any);
                 }}
               />
             ))}

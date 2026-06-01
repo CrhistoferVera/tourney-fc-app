@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, ScrollView, Image, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { RondaFixture } from '../../services/fixtureService';
+import { RondaFixture, partidoCopaFinalizado, getRondaScheduleMode, ScheduleMode } from '../../services/fixtureService';
 
 // ── Layout constants ──────────────────────────────────────────────────────────
 const MATCH_H = 72;
@@ -49,6 +49,7 @@ interface TeamRowProps {
   escudo: string | null;
   score: number | null | undefined;
   scoreOponente?: number | null;
+  showScore?: boolean;
   tbd: boolean;
   border?: boolean;
   isMine?: boolean;
@@ -60,12 +61,13 @@ function TeamRow({
   escudo,
   score,
   scoreOponente,
+  showScore = false,
   tbd,
   border,
   isMine,
   onPress,
 }: TeamRowProps) {
-  const marcador = hasMarcador(score, scoreOponente);
+  const marcador = showScore && hasMarcador(score, scoreOponente);
   
   const sNum = score ?? 0;
   const sOpNum = scoreOponente ?? 0;
@@ -159,8 +161,6 @@ function TeamRow({
 }
 
 // ── Props ─────────────────────────────────────────────────────────────────────
-type ScheduleMode = 'programar' | 'editar';
-
 interface BracketViewProps {
   rondas: RondaFixture[];
   maxEquipos: number;
@@ -172,43 +172,36 @@ interface BracketViewProps {
   onPressTeam?: (teamId: string) => void;
 }
 
-// ── Returns button type for a bracket round ───────────────────────────────────
-function getRondaButtonType(
-  r: number,
-  rondas: RondaFixture[],
-  estadoTorneo: string | undefined,
-): ScheduleMode | null {
-  if (estadoTorneo !== 'EN_CURSO') return null;
-  const realRonda = rondas.find((ro) => ro.ronda === r + 1);
-  if (!realRonda || realRonda.partidos.length === 0) return null;
-  const allScheduled = realRonda.partidos.every((p) => p.fecha !== null);
-  if (allScheduled) return 'editar';
-  if (r === 0) return 'programar';
-  const prevReal = rondas.find((ro) => ro.ronda === r);
-  return !prevReal || prevReal.partidos.every((p) => p.fecha !== null) ? 'programar' : null;
-}
-
-function getWinnerOfMatch(match: any) {
-  if (match.tbd || match.score1 === null || match.score2 === null) return null;
+function getWinnerOfMatch(match: {
+  tbd?: boolean;
+  finished?: boolean;
+  score1: number | null;
+  score2: number | null;
+  team1: string;
+  team1Id: string | null;
+  shield1: string | null;
+  team2: string;
+  team2Id: string | null;
+  shield2: string | null;
+}) {
+  if (match.tbd || !match.finished) return null;
+  if (match.score1 === null || match.score2 === null) return null;
   if (match.score1 > match.score2) {
     return {
       nombre: match.team1,
       id: match.team1Id,
       escudo: match.shield1,
     };
-  } else if (match.score2 > match.score1) {
+  }
+  if (match.score2 > match.score1) {
     return {
       nombre: match.team2,
       id: match.team2Id,
       escudo: match.shield2,
     };
   }
-  // Empate: el local avanza (mismo criterio que el backend)
-  return {
-    nombre: match.team1,
-    id: match.team1Id,
-    escudo: match.shield1,
-  };
+  // Empate resuelto (penales): el backend ya definió el ganador en el partido real
+  return null;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -245,6 +238,7 @@ export default function BracketView({
       
       // If we have a real match in the database, use it
       if (real) {
+        const finished = partidoCopaFinalizado(real);
         return {
           team1: real.equipoLocal.nombre,
           team1Id: real.equipoLocal.id,
@@ -254,6 +248,7 @@ export default function BracketView({
           shield2: real.equipoVisitante.escudo,
           score1: real.golesLocal,
           score2: real.golesVisitante,
+          finished,
           tbd: false,
         };
       }
@@ -276,7 +271,6 @@ export default function BracketView({
           computedTeam1 = winner1.nombre;
           computedTeam1Id = winner1.id;
           computedShield1 = winner1.escudo;
-          isTbd = false;
         }
         
         const parentMatch2 = prevRound.matches[m * 2 + 1];
@@ -285,8 +279,9 @@ export default function BracketView({
           computedTeam2 = winner2.nombre;
           computedTeam2Id = winner2.id;
           computedShield2 = winner2.escudo;
-          isTbd = false;
         }
+
+        isTbd = !winner1 || !winner2;
       }
       
       return {
@@ -298,6 +293,7 @@ export default function BracketView({
         shield2: computedShield2,
         score1: null,
         score2: null,
+        finished: false,
         tbd: isTbd,
       };
     });
@@ -381,7 +377,7 @@ export default function BracketView({
           const x = colLeft(r);
           const btnType =
             showScheduleControls && isOrganizador
-              ? getRondaButtonType(r, rondas, estadoTorneo)
+              ? getRondaScheduleMode(round.rondaNum, rondas, estadoTorneo)
               : null;
 
           return (
@@ -461,9 +457,10 @@ export default function BracketView({
                       escudo={match.shield1}
                       score={match.score1}
                       scoreOponente={match.score2}
-                      tbd={match.tbd}
+                      showScore={match.finished}
+                      tbd={match.team1 === 'Por definir'}
                       border
-                      isMine={!match.tbd && miEquipoId === match.team1Id}
+                      isMine={match.team1 !== 'Por definir' && miEquipoId === match.team1Id}
                       onPress={
                         onPressTeam && match.team1Id
                           ? () => onPressTeam(match.team1Id!)
@@ -475,8 +472,9 @@ export default function BracketView({
                       escudo={match.shield2}
                       score={match.score2}
                       scoreOponente={match.score1}
-                      tbd={match.tbd}
-                      isMine={!match.tbd && miEquipoId === match.team2Id}
+                      showScore={match.finished}
+                      tbd={match.team2 === 'Por definir'}
+                      isMine={match.team2 !== 'Por definir' && miEquipoId === match.team2Id}
                       onPress={
                         onPressTeam && match.team2Id
                           ? () => onPressTeam(match.team2Id!)

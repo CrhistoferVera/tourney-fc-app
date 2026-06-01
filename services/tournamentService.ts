@@ -35,6 +35,7 @@ export interface Tournament {
   equiposAprobados?: number;
   totalPartidos?: number;
   tieneSolicitudPendiente?: boolean;
+  ganadorTorneo?: { nombre: string; escudo: string | null } | null;
 }
 
 export interface CreateTournamentDto {
