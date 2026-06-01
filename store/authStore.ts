@@ -13,9 +13,12 @@ interface Usuario {
 interface AuthStore {
   token: string | null;
   usuario: Usuario | null;
+  pendingInviteCode: string | null;
   setToken: (token: string) => void;
   setUsuario: (usuario: Usuario) => void;
   clearAuth: () => void;
+  setPendingInviteCode: (code: string) => void;
+  clearPendingInviteCode: () => void;
 }
 
 export const useAuthStore = create<AuthStore>()(
@@ -23,9 +26,12 @@ export const useAuthStore = create<AuthStore>()(
     (set) => ({
       token: null,
       usuario: null,
+      pendingInviteCode: null,
       setToken: (token) => set({ token }),
       setUsuario: (usuario) => set({ usuario }),
       clearAuth: () => set({ token: null, usuario: null }),
+      setPendingInviteCode: (code) => set({ pendingInviteCode: code }),
+      clearPendingInviteCode: () => set({ pendingInviteCode: null }),
     }),
     {
       name: 'auth-storage',

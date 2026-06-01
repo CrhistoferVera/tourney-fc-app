@@ -1,9 +1,11 @@
 import { View, Text, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Trophy } from 'lucide-react-native';
+import { useAuthStore } from '../store/authStore';
 
 export default function WelcomeScreen() {
   const router = useRouter();
+  const pendingInviteCode = useAuthStore((s) => s.pendingInviteCode);
 
   return (
     <View className="flex-1 bg-white px-6">
@@ -16,6 +18,14 @@ export default function WelcomeScreen() {
         <Text className="text-carbon text-base text-center leading-6">
           Gestiona tus torneos de fútbol amateur{'\n'}de forma simple y profesional
         </Text>
+
+        {pendingInviteCode ? (
+          <View className="bg-primary-light border border-primary rounded-2xl px-4 py-3 mt-6">
+            <Text className="text-primary font-sans-medium text-sm text-center">
+              Te invitaron a un equipo. Inicia sesión o regístrate para unirte.
+            </Text>
+          </View>
+        ) : null}
       </View>
 
       {/* Botones abajo */}
