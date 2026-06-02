@@ -6,6 +6,7 @@ import {
   TextInput,
   ActivityIndicator,
   Image,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState, useCallback, useRef, useEffect } from 'react';
@@ -723,7 +724,7 @@ function TabAjustes({
   };
 
   return (
-    <View style={{ width: '100%' }}>
+    <KeyboardAvoidingView behavior="padding" className="flex-1 bg-mist">
       <CustomAlert {...alertState} onConfirm={alertState.onConfirm} onCancel={hideAlert} />
 
       <View
@@ -984,6 +985,6 @@ export default function ManageScreen() {
         )}
         {!!torneoId && tab === 'canchas' && <TabCanchas torneoId={torneoId} />}
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }

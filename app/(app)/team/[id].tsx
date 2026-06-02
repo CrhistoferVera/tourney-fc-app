@@ -4,6 +4,7 @@ import { useCallback, useState, useRef } from 'react';
 import {
   ActivityIndicator,
   Image,
+  KeyboardAvoidingView,
   RefreshControl,
   ScrollView,
   Text,
@@ -177,7 +178,7 @@ export default function TeamScreen() {
   }
 
   return (
-    <View className="flex-1 bg-mist">
+    <KeyboardAvoidingView behavior="padding" className="flex-1 bg-mist">
       <CustomAlert {...alertState} onConfirm={alertState.onConfirm} onCancel={hideAlert} />
 
       <View className="bg-primary px-6 pt-14 pb-4 flex-row items-center">
@@ -421,6 +422,6 @@ export default function TeamScreen() {
           </TouchableOpacity>
         )}
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
