@@ -246,11 +246,6 @@ function PersonalStatGrid({
       value: stats.tarjetasRojas,
       label: 'Rojas',
     },
-    {
-      icon: <MaterialCommunityIcons name="close-circle-outline" size={20} color="#9B59B6" />,
-      value: stats.penalesFallados,
-      label: 'Pen. fallados',
-    },
   ];
 
   return (
@@ -312,11 +307,6 @@ function PersonalRankings({
       icon: <CardIcon color="#E53935" />,
       label: 'Tarjetas rojas',
       pos: stats.posicionRojas,
-    },
-    {
-      icon: <MaterialCommunityIcons name="close-circle-outline" size={16} color="#9B59B6" />,
-      label: 'Penales fallados',
-      pos: stats.posicionPenalesFallados,
     },
   ];
 
@@ -572,10 +562,6 @@ export default function EstadisticasScreen() {
               {/* Tarjetas rojas */}
               <SectionTitle>🟥 Tarjetas rojas</SectionTitle>
               <LeaderboardCard entries={data?.rojas ?? []} />
-
-              {/* Penales fallados */}
-              <SectionTitle>❌ Penales fallados</SectionTitle>
-              <LeaderboardCard entries={data?.penalesFallados ?? []} />
             </>
           ) : (
             <>

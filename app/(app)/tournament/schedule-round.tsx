@@ -6,7 +6,6 @@ import {
   Platform,
   ScrollView,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -17,6 +16,7 @@ import { getFixture, Partido, RondaFixture } from '../../../services/fixtureServ
 import { updateMatch } from '../../../services/matchService';
 import { getCamposByTournament, CampoDetalle, getTournamentById, Tournament } from '../../../services/tournamentService';
 import DatePickerField from '../../../components/create-tournament/DatePickerField';
+import TimePickerField from '../../../components/create-tournament/TimePickerField';
 import CustomAlert from '../../../components/CustomAlert';
 import { useAlert } from '../../../hooks/useAlert';
 import { fechaPartidoFromIso, fechaPartidoToIso, formatPartidoFecha, campoHorarioConflicto } from '../../../utils/matchDate';
@@ -178,6 +178,7 @@ export default function ScheduleRoundScreen() {
   const [saving, setSaving] = useState(false);
   const [horarios, setHorarios] = useState<Record<string, MatchHorario>>({});
   const [activeDatePicker, setActiveDatePicker] = useState<string | null>(null);
+  const [activeTimePicker, setActiveTimePicker] = useState<string | null>(null);
   const [activeCampoPicker, setActiveCampoPicker] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
@@ -478,39 +479,20 @@ export default function ScheduleRoundScreen() {
                       />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text
-                        style={{
-                          color: '#3D4F44',
-                          fontSize: 14,
-                          fontWeight: '500',
-                          marginBottom: 4,
-                        }}
-                      >
-                        Hora
-                      </Text>
-                      <TextInput
+                      <TimePickerField
+                        label="Hora"
                         value={h.time}
-                        onChangeText={(text) => updateHorario(partido.id, { time: text })}
-                        placeholder="HH:MM"
-                        keyboardType="numbers-and-punctuation"
-                        maxLength={5}
+                        onChange={(time) => updateHorario(partido.id, { time })}
                         editable={!isNonEditable}
-                        style={{
-                          backgroundColor: isNonEditable ? '#F3F4F6' : 'white',
-                          borderRadius: 12,
-                          paddingHorizontal: 16,
-                          paddingVertical: 12,
-                          borderWidth: 1,
-                          borderColor: !timeOk ? '#EF4444' : '#EBF0EC',
-                          fontSize: 14,
-                          color: isNonEditable ? '#9CA3AF' : '#0F1A14',
+                        error={timeOk ? undefined : 'Formato inválido (HH:MM)'}
+                        visible={activeTimePicker === partido.id}
+                        onOpen={() => {
+                          if (!isNonEditable) {
+                            setActiveTimePicker(partido.id);
+                          }
                         }}
+                        onClose={() => setActiveTimePicker(null)}
                       />
-                      {!timeOk && (
-                        <Text style={{ color: '#EF4444', fontSize: 11, marginTop: 3 }}>
-                          Formato inválido (HH:MM)
-                        </Text>
-                      )}
                     </View>
                   </View>
 

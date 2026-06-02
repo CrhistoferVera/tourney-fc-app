@@ -137,12 +137,10 @@ export interface EstadisticasPersonales {
   asistencias: number;
   tarjetasAmarillas: number;
   tarjetasRojas: number;
-  penalesFallados: number;
   posicionGoles: number | null;
   posicionAsistencias: number | null;
   posicionAmarillas: number | null;
   posicionRojas: number | null;
-  posicionPenalesFallados: number | null;
 }
 
 export interface TorneoEstadisticas {
@@ -151,7 +149,6 @@ export interface TorneoEstadisticas {
   asistentes: EntradaLiderato[];
   amarillas: EntradaLiderato[];
   rojas: EntradaLiderato[];
-  penalesFallados: EntradaLiderato[];
   estadisticasPersonales: EstadisticasPersonales | null;
 }
 
