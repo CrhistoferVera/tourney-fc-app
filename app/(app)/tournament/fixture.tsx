@@ -53,9 +53,7 @@ export default function FixtureScreen() {
   const enCursoOFinalizado = estadoLocal === 'EN_CURSO' || estadoLocal === 'FINALIZADO';
   const cupoCompleto = maxEquipos !== null && equiposInscritos >= maxEquipos;
   const puedeGenerar =
-    rol === 'ORGANIZADOR'
-      ? !enCursoOFinalizado
-      : (maxEquipos === null || cupoCompleto) && !enCursoOFinalizado;
+    (maxEquipos === null || cupoCompleto) && !enCursoOFinalizado;
   const showFloatingConfirm = isOrganizadorOStaff && !enCursoOFinalizado && rondas.length > 0;
 
   const allMatchesScheduled = useMemo(
