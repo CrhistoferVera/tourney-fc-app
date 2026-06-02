@@ -32,6 +32,12 @@ import { getTeamById, Jugador } from '../../../../services/teamsService';
 import { useAlert } from '../../../../hooks/useAlert';
 import CustomAlert from '../../../../components/CustomAlert';
 import { formatPartidoFecha } from '../../../../utils/matchDate';
+import PenaltyShootoutTracker from '../../../../components/tournament/PenaltyShootoutTracker';
+
+// Un tiro de tanda de penales se identifica de forma fiable por detalle === 'PENAL'
+// (el backend lo marca así de forma autoritativa). Esto evita confundirlo con un penal
+// fallado del tiempo regular.
+const isShootoutEvent = (ev: EventoPartido) => ev.detalle === 'PENAL';
 
 function MatchEventIcon({ tipo, size, color }: { tipo: TipoEvento; size: number; color: string }) {
   if (tipo === 'GOL' || tipo === 'PENAL_FALLADO') {
@@ -242,21 +248,26 @@ export default function MatchScreen() {
     if (selectedEvent && selectedEvent.tipo !== 'GOL' && selectedEvent.tipo !== 'PENAL_FALLADO') {
       return null;
     }
-    const penaltyEvents = (partido.eventos ?? []).filter((ev) => {
-      return ev.detalle === 'PENAL' || ev.tipo === 'PENAL_FALLADO' || ev.minuto === null || ev.minuto === undefined;
-    });
+    const penaltyEvents = (partido.eventos ?? [])
+      .filter(isShootoutEvent)
+      .slice()
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
     const K = penaltyEvents.length;
-    return K % 2 === 0 ? partido.equipoLocal.id : partido.equipoVisitante.id;
+    // El primer penal lo puede patear cualquiera: sin turno fijado todavía.
+    if (K === 0) return null;
+    const firstTeamId = penaltyEvents[0].equipoId;
+    const otherTeamId =
+      firstTeamId === partido.equipoLocal.id ? partido.equipoVisitante.id : partido.equipoLocal.id;
+    return K % 2 === 0 ? firstTeamId : otherTeamId;
   }, [partido, selectedEvent]);
 
   const kickedPlayerIdsInCurrentCycle = useMemo(() => {
     if (!partido || partido.faseJuego !== 'PENALES' || !selectedEquipoId) {
       return new Set<string>();
     }
-    const teamPenalties = (partido.eventos ?? []).filter((ev) => {
-      const isPenaltyEvent = ev.detalle === 'PENAL' || ev.tipo === 'PENAL_FALLADO' || ev.minuto === null || ev.minuto === undefined;
-      return ev.equipoId === selectedEquipoId && isPenaltyEvent;
-    });
+    const teamPenalties = (partido.eventos ?? []).filter(
+      (ev) => ev.equipoId === selectedEquipoId && isShootoutEvent(ev),
+    );
 
     const teamPlayers = selectedEquipoId === partido.equipoLocal.id ? jugadoresLocal : jugadoresVisitante;
     const eligiblePlayers = teamPlayers.filter((j) => !expelledPlayerIds.has(j.id));
@@ -404,9 +415,12 @@ export default function MatchScreen() {
 
   const groupedEvents = useMemo(() => {
     if (!partido?.eventos || partido.eventos.length === 0) return null;
-    const goles = partido.eventos.filter((e) => e.tipo === 'GOL' || e.tipo === 'ASISTENCIA');
-    const tarjetas = partido.eventos.filter((e) => e.tipo === 'TARJETA_AMARILLA' || e.tipo === 'TARJETA_ROJA');
-    const otros = partido.eventos.filter((e) => e.tipo !== 'GOL' && e.tipo !== 'ASISTENCIA' && e.tipo !== 'TARJETA_AMARILLA' && e.tipo !== 'TARJETA_ROJA');
+    // Los tiros de la tanda de penales se muestran solo en el tracker, no en "Eventos".
+    const eventos = partido.eventos.filter((e) => !isShootoutEvent(e));
+    if (eventos.length === 0) return null;
+    const goles = eventos.filter((e) => e.tipo === 'GOL' || e.tipo === 'ASISTENCIA');
+    const tarjetas = eventos.filter((e) => e.tipo === 'TARJETA_AMARILLA' || e.tipo === 'TARJETA_ROJA');
+    const otros = eventos.filter((e) => e.tipo !== 'GOL' && e.tipo !== 'ASISTENCIA' && e.tipo !== 'TARJETA_AMARILLA' && e.tipo !== 'TARJETA_ROJA');
     return { goles, tarjetas, otros };
   }, [partido]);
 
@@ -510,13 +524,11 @@ export default function MatchScreen() {
           return;
         }
 
-        const localShootoutKicks = (partido.eventos ?? []).filter(ev => 
-          ev.equipoId === partido.equipoLocal.id &&
-          (ev.detalle === 'PENAL' || ev.tipo === 'PENAL_FALLADO' || ev.minuto === null || ev.minuto === undefined)
+        const localShootoutKicks = (partido.eventos ?? []).filter(
+          ev => ev.equipoId === partido.equipoLocal.id && isShootoutEvent(ev),
         ).length;
-        const visitanteShootoutKicks = (partido.eventos ?? []).filter(ev => 
-          ev.equipoId === partido.equipoVisitante.id &&
-          (ev.detalle === 'PENAL' || ev.tipo === 'PENAL_FALLADO' || ev.minuto === null || ev.minuto === undefined)
+        const visitanteShootoutKicks = (partido.eventos ?? []).filter(
+          ev => ev.equipoId === partido.equipoVisitante.id && isShootoutEvent(ev),
         ).length;
 
         if (localShootoutKicks < 5 || visitanteShootoutKicks < 5) {
@@ -653,7 +665,7 @@ export default function MatchScreen() {
 
         <View style={styles.eventCenter}>
           <Text style={styles.eventMinute}>
-            {ev.detalle === 'PENAL' || ev.tipo === 'PENAL_FALLADO' || ev.minuto === null || ev.minuto === undefined ? 'Pen.' : `${ev.minuto}'`}
+            {isShootoutEvent(ev) ? 'Pen.' : `${ev.minuto}'`}
           </Text>
           <View style={[styles.eventIconDot, { backgroundColor: iconBg }]}>
             <MatchEventIcon tipo={ev.tipo} size={12} color={iconColor} />
@@ -726,6 +738,10 @@ export default function MatchScreen() {
       </View>
 
       <ScrollView style={styles.body} contentContainerStyle={{ paddingBottom: bottom + 24 }} showsVerticalScrollIndicator={false}>
+
+        {(partido.faseJuego === 'PENALES' || hasPenalties) && (
+          <PenaltyShootoutTracker partido={partido} nextTeamId={nextPenaltyTeamId} />
+        )}
 
         {esperandoInicioTorneo && (
           <View style={styles.card}>
