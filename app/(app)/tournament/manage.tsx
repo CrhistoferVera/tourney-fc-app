@@ -879,7 +879,7 @@ function TabAjustes({
           )}
         </TouchableOpacity>
       )}
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -985,6 +985,6 @@ export default function ManageScreen() {
         )}
         {!!torneoId && tab === 'canchas' && <TabCanchas torneoId={torneoId} />}
       </ScrollView>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
