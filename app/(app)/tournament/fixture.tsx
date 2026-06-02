@@ -305,10 +305,7 @@ export default function FixtureScreen() {
           renderEmpty()
         ) : (
           <>
-            {isOrganizadorOStaff && !enCursoOFinalizado && (
-              <View className="mb-4">{renderRegenBtn()}</View>
-            )}
-            {rondasLista[rondaActual]?.partidos.map((partido) => (
+            {rondas[rondaActual]?.partidos.map((partido) => (
               <MatchCard
                 key={partido.id}
                 partido={partido}
@@ -359,6 +356,11 @@ export default function FixtureScreen() {
       {/* Round navigation bar — Liga always, Copa only on lista tab */}
       {isListaView && !loading && renderRoundNav()}
 
+      {/* Regen button — always above content */}
+      {isOrganizadorOStaff && !enCursoOFinalizado && rondas.length > 0 && (
+        <View className="mx-4 mt-3">{renderRegenBtn()}</View>
+      )}
+
       {/* Main content */}
       {loading ? (
         <View className="flex-1 items-center justify-center">
@@ -370,11 +372,6 @@ export default function FixtureScreen() {
           renderEmpty()
         ) : (
           <View className="flex-1">
-            {/* Regen button above tabs */}
-            {isOrganizadorOStaff && !enCursoOFinalizado && (
-              <View className="mx-4 mt-3">{renderRegenBtn()}</View>
-            )}
-
             {/* Tab selector */}
             <View
               style={{
