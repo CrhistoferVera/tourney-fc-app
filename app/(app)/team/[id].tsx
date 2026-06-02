@@ -1,6 +1,6 @@
 import { Feather } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useRef } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -23,6 +23,7 @@ import {
   leaveTeam,
   MyTeam,
 } from '../../../services/teamsService';
+import { userService, User } from '../../../services/userService';
 
 export default function TeamScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -36,6 +37,10 @@ export default function TeamScreen() {
   const [emailInvitar, setEmailInvitar] = useState('');
   const [invitando, setInvitando] = useState(false);
   const [actuando, setActuando] = useState(false);
+  const [jugadorQuery, setJugadorQuery] = useState('');
+  const [jugadorResults, setJugadorResults] = useState<User[]>([]);
+  const [searching, setSearchinging] = useState(false);
+  const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const esCapitan = !!team && !!usuario && team.capitanId === usuario.id;
 
@@ -80,6 +85,8 @@ export default function TeamScreen() {
     try {
       await invitePlayer(team.id, email);
       setEmailInvitar('');
+      setJugadorQuery('');
+      setJugadorResults([]);
       await fetchTeam();
       showSuccess('Invitación enviada', `Se envió una invitación a ${email}.`);
     } catch (e: any) {
@@ -88,6 +95,23 @@ export default function TeamScreen() {
       setInvitando(false);
     }
   };
+
+  const handleSearch = useCallback((text: string) => {
+    setJugadorQuery(text);
+    setJugadorResults([]);
+    if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    if (!text.trim() || text.length < 2) return;
+    searchTimeout.current = setTimeout(async () => {
+      setSearchinging(true);
+      try {
+        const yaInvitados = new Set(team?.invitaciones.map((i) => i.email) ?? []);
+        const yaMiembros = new Set(team?.jugadores.map((j) => j.usuario.email) ?? []);
+        const results = await userService.searchUsers(text.trim());
+        setJugadorResults(results.filter((u) => !yaInvitados.has(u.email) && !yaMiembros.has(u.email)));
+      } catch { setJugadorResults([]); }
+      finally { setSearchinging(false); }
+    }, 350);
+  }, [team]);
 
   const handleDelete = () => {
     if (!team) return;
@@ -266,33 +290,60 @@ export default function TeamScreen() {
               className="bg-white rounded-2xl px-4 py-4 mb-5"
               style={{ elevation: 1, shadowColor: '#0F1A14', shadowOpacity: 0.05, shadowRadius: 6 }}
             >
-              <View className="flex-row gap-2 mb-1">
+              <Text className="text-carbon text-xs mb-3">
+                Busca por nombre o correo para invitar jugadores al equipo.
+              </Text>
+              <View className="flex-row items-center bg-mist rounded-xl px-3 py-3 mb-1">
+                <Feather name="search" size={15} color="#3D4F44" style={{ marginRight: 8 }} />
                 <TextInput
-                  className="bg-mist rounded-xl px-4 py-3 text-night text-sm flex-1"
-                  placeholder="Correo del jugador"
+                  className="flex-1 text-night text-sm"
+                  placeholder="Buscar por nombre o correo..."
                   placeholderTextColor="#3D4F44"
-                  keyboardType="email-address"
                   autoCapitalize="none"
-                  value={emailInvitar}
-                  onChangeText={setEmailInvitar}
-                  editable={!invitando}
-                  returnKeyType="send"
-                  onSubmitEditing={handleInvitar}
+                  keyboardType="email-address"
+                  value={jugadorQuery}
+                  onChangeText={handleSearch}
                 />
-                <TouchableOpacity
-                  onPress={handleInvitar}
-                  disabled={invitando}
-                  activeOpacity={0.85}
-                  className="bg-primary rounded-xl px-4 items-center justify-center"
-                  style={{ minWidth: 80 }}
-                >
-                  {invitando ? (
-                    <ActivityIndicator color="white" size="small" />
-                  ) : (
-                    <Text className="text-white font-sans-medium text-sm">Invitar</Text>
-                  )}
-                </TouchableOpacity>
+                {searching && <ActivityIndicator size="small" color="#0D7A3E" />}
+                {!searching && jugadorQuery.length > 0 && (
+                  <TouchableOpacity onPress={() => { setJugadorQuery(''); setJugadorResults([]); }}>
+                    <Feather name="x" size={15} color="#3D4F44" />
+                  </TouchableOpacity>
+                )}
               </View>
+              {jugadorResults.length > 0 && (
+                <View className="border border-mist rounded-xl overflow-hidden mt-1">
+                  {jugadorResults.map((user, index) => (
+                    <TouchableOpacity
+                      key={user.id}
+                      onPress={() => {
+                        setEmailInvitar(user.email);
+                        setJugadorQuery('');
+                        setJugadorResults([]);
+                        handleInvitar();
+                      }}
+                      activeOpacity={0.75}
+                      className={`flex-row items-center px-3 py-3 ${index < jugadorResults.length - 1 ? 'border-b border-mist' : ''}`}
+                    >
+                      <View className="w-8 h-8 rounded-full bg-primary-light items-center justify-center mr-3">
+                        <Text className="text-primary text-xs font-sans-medium">
+                          {user.nombre.charAt(0).toUpperCase()}
+                        </Text>
+                      </View>
+                      <View className="flex-1">
+                        <Text className="text-night text-sm font-sans-medium">{user.nombre}</Text>
+                        <Text className="text-carbon text-xs">{user.email}</Text>
+                      </View>
+                      <Feather name="plus-circle" size={18} color="#0D7A3E" />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+              {jugadorQuery.length >= 2 && !searching && jugadorResults.length === 0 && (
+                <View className="py-3 items-center">
+                  <Text className="text-carbon text-xs">No se encontraron usuarios.</Text>
+                </View>
+              )}
 
               {team.invitaciones.length > 0 && (
                 <View className="mt-3">
