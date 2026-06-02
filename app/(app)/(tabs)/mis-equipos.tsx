@@ -59,14 +59,16 @@ export default function MisEquiposScreen() {
 
       <View className="px-4 pt-4 pb-2 flex-row items-center justify-between">
         <Text className="text-night font-sans-medium text-2xl">Mis equipos</Text>
-        <TouchableOpacity
-          onPress={goToCreate}
-          activeOpacity={0.85}
-          className="bg-primary rounded-xl px-3 py-2 flex-row items-center gap-1"
-        >
-          <Feather name="plus" size={16} color="white" />
-          <Text className="text-white font-sans-medium text-sm">Crear</Text>
-        </TouchableOpacity>
+        {!loading && equipos.length > 0 && (
+          <TouchableOpacity
+            onPress={goToCreate}
+            activeOpacity={0.85}
+            className="bg-primary rounded-xl px-3 py-2 flex-row items-center gap-1"
+          >
+            <Feather name="plus" size={16} color="white" />
+            <Text className="text-white font-sans-medium text-sm">Crear</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {loading ? (
