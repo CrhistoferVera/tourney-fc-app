@@ -1,5 +1,6 @@
+// Convierte un ISO string a fecha y hora local del dispositivo.
+// Usar new Date() en lugar de split manual para que se aplique la zona horaria correcta.
 export function fechaPartidoFromIso(iso: string): { date: string; time: string } {
-
   const trimmed = iso.trim();
   if (!trimmed) return { date: '', time: '' };
   const d = new Date(trimmed);

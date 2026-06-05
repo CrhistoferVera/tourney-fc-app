@@ -20,7 +20,8 @@ function getTeamKicks(partido: Partido, equipoId: string): Resultado[] {
     .map((ev) => (ev.tipo === 'GOL' ? 'GOL' : 'FALLO'));
 }
 
-/** Círculo individual con animación de entrada (escala + opacidad) al aparecer. */
+// Círculo individual de penal. Arranca colapsado (scale 0) cuando se registra
+// un resultado y hace spring hacia scale 1 para dar feedback visual inmediato.
 function PenaltyCircle({ resultado }: { resultado: Resultado | null }) {
   const anim = useRef(new Animated.Value(resultado ? 0 : 1)).current;
 
@@ -115,7 +116,7 @@ export default function PenaltyShootoutTracker({ partido, nextTeamId }: Props) {
   const golesLocal = localKicks.filter((r) => r === 'GOL').length;
   const golesVisitante = visitanteKicks.filter((r) => r === 'GOL').length;
 
-  // Al menos 5 ranuras; en muerte súbita se expande a los tiros realizados.
+  // Se muestran al menos 5 ranuras; si hay muerte súbita el array crece automáticamente
   const slots = Math.max(5, localKicks.length, visitanteKicks.length);
 
   return (

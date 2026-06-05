@@ -228,6 +228,10 @@ export default function ScheduleRoundScreen() {
       return h?.date && validateTime(h?.time ?? '');
     });
 
+  // Valida conflictos de cancha en el cliente antes de enviar al servidor.
+  // Dos pasadas: (1) entre los partidos de esta misma ronda entre sí,
+  // (2) entre los de esta ronda y todos los demás del torneo ya programados.
+  // El backend hace la misma validación, pero esto ahorra un round-trip innecesario.
   const checkLocalConflicts = (): string | null => {
     const isFutbol11 = torneo?.modalidad === 'FUTBOL_11';
     const bufferMs = (isFutbol11 ? 120 : 75) * 60 * 1000;

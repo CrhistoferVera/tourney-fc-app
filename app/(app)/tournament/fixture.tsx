@@ -61,7 +61,8 @@ export default function FixtureScreen() {
     [rondas],
   );
 
-  /** En copa: solo fechas/rondas desbloqueadas (ronda anterior con ganadores). */
+  // En copa, la lista solo muestra las rondas desbloqueadas (la anterior debe estar completa).
+  // En liga se muestran todas las rondas desde el inicio.
   const rondasLista = useMemo(
     () => (isBracket ? filterRondasCopaVisibles(rondas) : rondas),
     [rondas, isBracket],
@@ -73,10 +74,10 @@ export default function FixtureScreen() {
     }
   }, [rondasLista.length, rondaActual]);
 
-  // Lista view active: Liga always, Copa only when lista tab is selected
   const isListaView = !isBracket || bracketTab === 'lista';
 
-  // Floating schedule/edit button tracks the currently viewed round (only for lista views)
+  // El botón flotante de programar/editar sigue la ronda actualmente visible
+  // para que el admin pueda programar sin tener que navegar a otra pantalla
   const floatingScheduleBtn = (() => {
     if (!isOrganizadorOStaff || !isListaView) return null;
     const current = rondasLista[rondaActual];
@@ -86,8 +87,9 @@ export default function FixtureScreen() {
     return { mode, ronda: current };
   })();
 
-  // Época de fixture: invalida GETs en vuelo cuando se (re)genera, para que
-  // una respuesta vieja/vacía no pise el fixture recién generado.
+  // Contador de generación: cada vez que se lanza generateFixture se incrementa.
+  // Los callbacks de fetchFixture en vuelo que tengan un epoch distinto al actual
+  // descartan su respuesta, evitando que el polling sobreescriba el fixture nuevo.
   const fixtureEpoch = useRef(0);
 
   const fetchFixture = useCallback(async () => {
@@ -114,6 +116,8 @@ export default function FixtureScreen() {
   }, [torneoId]);
 
   const isFirstLoad = useRef(true);
+  // useFocusEffect para que el polling empiece solo cuando la pantalla está activa
+  // y se detenga al navegar a otra (ej. al abrir un partido o la programación de ronda)
   useFocusEffect(
     useCallback(() => {
       const load = () => Promise.all([fetchFixture(), fetchEquipos()]);
