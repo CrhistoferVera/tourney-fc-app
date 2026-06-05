@@ -380,7 +380,9 @@ export default function MatchScreen() {
       const startedAt = new Date(partido.cronometroIniciadoEn).getTime();
       const update = () => {
         const diff = Date.now() - startedAt;
-        setDisplayMinutes(partido.minutosJugados + Math.floor(diff / 60000));
+        // Evita minutos negativos por desfase entre el reloj del servidor
+        // (cronometroIniciadoEn) y el del cliente al iniciar el partido.
+        setDisplayMinutes(Math.max(0, partido.minutosJugados + Math.floor(diff / 60000)));
       };
       update();
       intervalRef.current = setInterval(update, 10000);
@@ -585,7 +587,7 @@ export default function MatchScreen() {
         tipo: selectedEvent.tipo,
         equipoId,
         jugadorId,
-        minuto: isPenal ? undefined : displayMinutes,
+        minuto: isPenal ? undefined : Math.max(0, displayMinutes),
         detalle: isPenal ? 'PENAL' : undefined,
         asistenciaJugadorId,
       });

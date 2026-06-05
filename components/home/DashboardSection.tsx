@@ -102,7 +102,6 @@ export default function DashboardSection({
 
   const primerNombre = usuario?.nombre?.split(' ')[0] ?? 'Jugador';
   const torneosCount = data?.torneos?.length ?? 0;
-  const resultadosCount = data?.ultimosResultados?.length ?? 0;
 
   if (loading && !data) {
     return (
@@ -186,7 +185,6 @@ export default function DashboardSection({
               label="Próximo"
               value={data?.proximoPartido ? 1 : 0}
             />
-            <StatChip label="Resultados" value={resultadosCount} />
           </View>
         </View>
       </View>

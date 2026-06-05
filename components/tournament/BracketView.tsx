@@ -75,12 +75,12 @@ function TeamRow({
 
   const sNum = score ?? 0;
   const sOpNum = scoreOponente ?? 0;
-  // Desempate por penales cuando el marcador regular está empatado
+  // Si el partido se definió por penales, los goles de penales son la fuente
+  // autoritativa del ganador (el marcador regular queda empatado).
   const hayPenales = penScore != null && penScoreOponente != null;
-  const empateRegular = marcador && sNum === sOpNum;
   let isWinner = marcador && sNum > sOpNum;
   let isLoser = marcador && sNum < sOpNum;
-  if (empateRegular && hayPenales) {
+  if (marcador && hayPenales) {
     isWinner = penScore! > penScoreOponente!;
     isLoser = penScore! < penScoreOponente!;
   }
@@ -143,7 +143,7 @@ function TeamRow({
             }}
           >
             {score}
-            {empateRegular && hayPenales && (
+            {hayPenales && (
               <Text style={{ fontSize: 9, color: '#6B7280' }}> ({penScore})</Text>
             )}
           </Text>
