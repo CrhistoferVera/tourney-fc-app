@@ -182,3 +182,11 @@ export const addCampoToTournament = async (
   const token = getToken();
   return api.post(`/tournaments/${torneoId}/campos`, dto, token ?? undefined);
 };
+
+export const deleteCampoFromTournament = async (
+  torneoId: string,
+  campoId: string,
+): Promise<{ message: string }> => {
+  const token = getToken();
+  return api.delete(`/tournaments/${torneoId}/campos/${campoId}`, token ?? undefined);
+};

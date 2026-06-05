@@ -1,3 +1,5 @@
+import { Feather } from '@expo/vector-icons';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -9,17 +11,24 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { getFixture, Partido, RondaFixture } from '../../../services/fixtureService';
-import { updateMatch } from '../../../services/matchService';
-import { getCamposByTournament, CampoDetalle, getTournamentById, Tournament } from '../../../services/tournamentService';
 import DatePickerField from '../../../components/create-tournament/DatePickerField';
 import TimePickerField from '../../../components/create-tournament/TimePickerField';
 import CustomAlert from '../../../components/CustomAlert';
 import { useAlert } from '../../../hooks/useAlert';
-import { fechaPartidoFromIso, fechaPartidoToIso, formatPartidoFecha, campoHorarioConflicto } from '../../../utils/matchDate';
+import { getFixture, Partido, RondaFixture } from '../../../services/fixtureService';
+import { updateMatch } from '../../../services/matchService';
+import {
+  CampoDetalle,
+  getCamposByTournament,
+  getTournamentById,
+  Tournament,
+} from '../../../services/tournamentService';
+import {
+  campoHorarioConflicto,
+  fechaPartidoFromIso,
+  fechaPartidoToIso,
+} from '../../../utils/matchDate';
 
 interface MatchHorario {
   date: string;
@@ -174,7 +183,7 @@ export default function ScheduleRoundScreen() {
   const [allPartidosTorneo, setAllPartidosTorneo] = useState<Partido[]>([]);
   const [campos, setCampos] = useState<CampoDetalle[]>([]);
   const [torneo, setTorneo] = useState<Tournament | null>(null);
-  const [loading,    setLoading]    = useState(true);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [horarios, setHorarios] = useState<Record<string, MatchHorario>>({});
   const [activeDatePicker, setActiveDatePicker] = useState<string | null>(null);
@@ -221,7 +230,8 @@ export default function ScheduleRoundScreen() {
     fetchData();
   }, [fetchData]);
 
-  const allFilled = partidos.length > 0 &&
+  const allFilled =
+    partidos.length > 0 &&
     partidos.every((p) => {
       if (p.estado === 'EN_CURSO' || p.faseJuego === 'FINALIZADO') return true;
       const h = horarios[p.id];
@@ -268,11 +278,15 @@ export default function ScheduleRoundScreen() {
         const otherSched = pendingSchedules[j];
         if (otherSched.campoId !== sched.campoId) continue;
         if (
-          campoHorarioConflicto(sched.targetMs, {
-            fecha: new Date(otherSched.targetMs).toISOString(),
-            faseJuego: 'PREVIA',
-            estado: 'PENDIENTE',
-          }, bufferMs)
+          campoHorarioConflicto(
+            sched.targetMs,
+            {
+              fecha: new Date(otherSched.targetMs).toISOString(),
+              faseJuego: 'PREVIA',
+              estado: 'PENDIENTE',
+            },
+            bufferMs,
+          )
         ) {
           return `Conflicto entre "${sched.label}" y "${otherSched.label}": la cancha no está libre con al menos ${hoursText} de separación.`;
         }
@@ -283,12 +297,16 @@ export default function ScheduleRoundScreen() {
         const otherCampoId = other.campo?.id;
         if (!otherCampoId || otherCampoId !== sched.campoId) continue;
         if (
-          campoHorarioConflicto(sched.targetMs, {
-            fecha: other.fecha,
-            faseJuego: other.faseJuego,
-            estado: other.estado,
-            finalizadoEn: other.finalizadoEn,
-          }, bufferMs)
+          campoHorarioConflicto(
+            sched.targetMs,
+            {
+              fecha: other.fecha,
+              faseJuego: other.faseJuego,
+              estado: other.estado,
+              finalizadoEn: other.finalizadoEn,
+            },
+            bufferMs,
+          )
         ) {
           const otherLabel = `${other.equipoLocal.nombre} vs ${other.equipoVisitante.nombre}`;
           return `Conflicto entre "${sched.label}" y "${otherLabel}": la cancha no está libre con al menos ${hoursText} de separación.`;
@@ -409,7 +427,8 @@ export default function ScheduleRoundScreen() {
               const h = horarios[partido.id] ?? { date: '', time: '', campoId: null };
               const timeOk = !h.time || validateTime(h.time);
               const campoSeleccionado = campos.find((c) => c.id === h.campoId);
-              const isNonEditable = partido.estado === 'EN_CURSO' || partido.faseJuego === 'FINALIZADO';
+              const isNonEditable =
+                partido.estado === 'EN_CURSO' || partido.faseJuego === 'FINALIZADO';
 
               return (
                 <View
@@ -426,9 +445,20 @@ export default function ScheduleRoundScreen() {
                   }}
                 >
                   {isNonEditable && (
-                    <View style={{ backgroundColor: '#FEE2E2', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, alignSelf: 'flex-start', marginBottom: 12 }}>
+                    <View
+                      style={{
+                        backgroundColor: '#FEE2E2',
+                        borderRadius: 8,
+                        paddingHorizontal: 10,
+                        paddingVertical: 4,
+                        alignSelf: 'flex-start',
+                        marginBottom: 12,
+                      }}
+                    >
                       <Text style={{ color: '#B91C1C', fontSize: 11, fontWeight: '700' }}>
-                        {partido.estado === 'EN_CURSO' ? 'Partido en curso - No editable' : 'Partido finalizado - No editable'}
+                        {partido.estado === 'EN_CURSO'
+                          ? 'Partido en curso - No editable'
+                          : 'Partido finalizado - No editable'}
                       </Text>
                     </View>
                   )}
@@ -447,7 +477,14 @@ export default function ScheduleRoundScreen() {
                     >
                       {partido.equipoLocal.nombre}
                     </Text>
-                    <Text style={{ color: '#6B7280', fontSize: 12, fontWeight: '500', paddingHorizontal: 10 }}>
+                    <Text
+                      style={{
+                        color: '#6B7280',
+                        fontSize: 12,
+                        fontWeight: '500',
+                        paddingHorizontal: 10,
+                      }}
+                    >
                       vs
                     </Text>
                     <Text
