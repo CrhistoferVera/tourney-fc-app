@@ -10,6 +10,7 @@ interface Props {
   formato: TournamentFormat | '';
   onChangeEquipos: (n: number) => void;
   onChangeCampos: (campos: Campo[]) => void;
+  error?: string;
 }
 
 export default function Step3({
@@ -18,6 +19,7 @@ export default function Step3({
   formato,
   onChangeEquipos,
   onChangeCampos,
+  error,
 }: Props) {
   const [mapOpen, setMapOpen] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -240,6 +242,8 @@ export default function Step3({
         onClose={() => setMapOpen(false)}
         onConfirm={handleMapConfirm}
       />
+
+      {error ? <Text className="text-danger text-xs mt-2">{error}</Text> : null}
     </>
   );
 }

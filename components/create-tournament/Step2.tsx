@@ -31,15 +31,20 @@ const MODALIDADES: { value: TournamentModality; label: string; jugadores: number
   { value: 'FUTBOL_11', label: 'Fútbol 11', jugadores: 11, maxJugadores: 22, color: '#F5820D', bg: '#FEF0DC', icon: Users },
 ];
 
+export interface Step2Errors {
+  formato?: string;
+  modalidad?: string;
+}
+
 interface Props {
   formato: TournamentFormat | '';
   modalidad: TournamentModality | '';
   onChange: (v: TournamentFormat) => void;
   onChangeModalidad: (v: TournamentModality) => void;
-  error?: string;
+  errors?: Step2Errors;
 }
 
-export default function Step2({ formato, modalidad, onChange, onChangeModalidad, error }: Props) {
+export default function Step2({ formato, modalidad, onChange, onChangeModalidad, errors }: Props) {
   const selectedModalidad = MODALIDADES.find((m) => m.value === modalidad);
 
   return (
@@ -112,6 +117,8 @@ export default function Step2({ formato, modalidad, onChange, onChangeModalidad,
           </TouchableOpacity>
         );
       })}
+
+      {errors?.formato ? <Text className="text-danger text-xs mb-2">{errors.formato}</Text> : null}
 
       {/* Separador */}
       <View style={{ height: 1, backgroundColor: '#EBF0EC', marginVertical: 8 }} />
@@ -238,7 +245,7 @@ export default function Step2({ formato, modalidad, onChange, onChangeModalidad,
         </View>
       )}
 
-      {error ? <Text className="text-danger text-xs mt-3">{error}</Text> : null}
+      {errors?.modalidad ? <Text className="text-danger text-xs mt-3">{errors.modalidad}</Text> : null}
     </>
   );
 }

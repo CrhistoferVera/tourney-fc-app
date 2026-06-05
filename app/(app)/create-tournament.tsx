@@ -13,7 +13,7 @@ import { ChevronLeft } from 'lucide-react-native';
 import CustomAlert from '../../components/CustomAlert';
 import ProgressBar from '../../components/create-tournament/ProgressBar';
 import Step1, { Step1Errors } from '../../components/create-tournament/Step1';
-import Step2 from '../../components/create-tournament/Step2';
+import Step2, { Step2Errors } from '../../components/create-tournament/Step2';
 import Step3 from '../../components/create-tournament/Step3';
 import Step5 from '../../components/create-tournament/Step5';
 import {
@@ -72,7 +72,8 @@ export default function CreateTournamentScreen() {
   const [step, setStep] = useState(1);
   const [form, setForm] = useState<FormData>(INITIAL_FORM);
   const [step1Errors, setStep1Errors] = useState<Step1Errors>({});
-  const [step2Error, setStep2Error] = useState('');
+  const [step2Errors, setStep2Errors] = useState<Step2Errors>({});
+  const [step3Error, setStep3Error] = useState('');
   const [calendarOpen, setCalendarOpen] = useState<'inicio' | 'fin' | null>(null);
   const [saving, setSaving] = useState(false);
   const [alert, setAlert] = useState<AlertState>({
@@ -105,15 +106,26 @@ export default function CreateTournamentScreen() {
       return Object.keys(errors).length === 0;
     }
     if (step === 2) {
-      if (!form.formato) {
-        setStep2Error('Debes seleccionar un formato');
+      const errors: Step2Errors = {};
+      if (!form.formato) errors.formato = 'Debes seleccionar un formato de torneo';
+      if (!form.modalidad) errors.modalidad = 'Debes seleccionar una modalidad de juego';
+      setStep2Errors(errors);
+      return Object.keys(errors).length === 0;
+    }
+    if (step === 3) {
+      const nonTotallyEmptyCampos = form.campos.filter(c => c.nombre.trim() !== '' || c.direccion.trim() !== '');
+      
+      if (nonTotallyEmptyCampos.length !== form.campos.length) {
+        setTimeout(() => setForm(prev => ({ ...prev, campos: nonTotallyEmptyCampos })), 0);
+      }
+
+      const hasIncomplete = nonTotallyEmptyCampos.some(c => c.nombre.trim() === '' || c.direccion.trim() === '');
+      
+      if (hasIncomplete) {
+        setStep3Error('Por favor, completa el nombre y la dirección de todas las canchas (o elimina las que no uses).');
         return false;
       }
-      if (!form.modalidad) {
-        setStep2Error('Debes seleccionar la modalidad (Fútbol 5, 7 u 11)');
-        return false;
-      }
-      setStep2Error('');
+      setStep3Error('');
     }
     return true;
   };
@@ -289,6 +301,7 @@ export default function CreateTournamentScreen() {
             modalidad={form.modalidad}
             onChange={(v) => {
               onChange('formato', v);
+              setStep2Errors((prev) => ({ ...prev, formato: undefined }));
               if (v === 'COPA' && ![4, 8, 16, 32].includes(form.maxEquipos)) {
                 // Find nearest valid power of 2 for Copa, default to 8
                 const validCopa = [4, 8, 16, 32];
@@ -300,6 +313,7 @@ export default function CreateTournamentScreen() {
             }}
             onChangeModalidad={(m) => {
               onChange('modalidad', m);
+              setStep2Errors((prev) => ({ ...prev, modalidad: undefined }));
               const limites: Record<string, number> = {
                 FUTBOL_5: 10,
                 FUTBOL_7: 14,
@@ -307,7 +321,7 @@ export default function CreateTournamentScreen() {
               };
               onChange('maxJugadoresPorEquipo', limites[m]);
             }}
-            error={step2Error}
+            errors={step2Errors}
           />
         )}
         {step === 3 && (
@@ -316,7 +330,11 @@ export default function CreateTournamentScreen() {
             campos={form.campos}
             formato={form.formato}
             onChangeEquipos={(n) => onChange('maxEquipos', n)}
-            onChangeCampos={(c) => onChange('campos', c)}
+            onChangeCampos={(c) => {
+              onChange('campos', c);
+              setStep3Error('');
+            }}
+            error={step3Error}
           />
         )}
         {step === 4 && (

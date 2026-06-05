@@ -53,7 +53,6 @@ export default function Step5({
       label: 'Canchas',
       value: campos.length > 0 ? campos.map((c) => c.nombre).join(', ') : 'Sin canchas',
     },
-    { icon: 'shield', label: 'Staff', value: staffEmails.length > 0 ? staffEmails.join(', ') : 'Sin staff' },
   ];
 
   return (
