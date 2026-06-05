@@ -1,4 +1,4 @@
-import { Image, View } from 'react-native';
+import { Image, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
 export interface Preset {
@@ -23,9 +23,11 @@ const PRESET_MAP = new Map(PRESETS.map((p) => [p.id, p]));
 interface Props {
   readonly escudo?: string | null;
   readonly size?: number;
+  /** Optional team name — used to render the initial as a fallback when there is no escudo. */
+  readonly nombre?: string | null;
 }
 
-export default function ShieldDisplay({ escudo, size = 40 }: Props) {
+export default function ShieldDisplay({ escudo, size = 40, nombre }: Props) {
   const radius = Math.round(size * 0.25);
   const iconSize = Math.round(size * 0.46);
 
@@ -78,6 +80,7 @@ export default function ShieldDisplay({ escudo, size = 40 }: Props) {
     );
   }
 
+  const initial = nombre?.trim().charAt(0).toUpperCase();
   return (
     <View
       style={{
@@ -89,7 +92,13 @@ export default function ShieldDisplay({ escudo, size = 40 }: Props) {
         justifyContent: 'center',
       }}
     >
-      <Feather name="shield" size={iconSize} color="#0D7A3E" />
+      {initial ? (
+        <Text style={{ color: '#0D7A3E', fontSize: Math.round(size * 0.42), fontWeight: '700' }}>
+          {initial}
+        </Text>
+      ) : (
+        <Feather name="shield" size={iconSize} color="#0D7A3E" />
+      )}
     </View>
   );
 }

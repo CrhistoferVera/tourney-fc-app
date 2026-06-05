@@ -2,12 +2,11 @@
   "expo": {
     "name": "tourney-fc-app",
     "androidNavigationBar": {
-      "visible": "always",
-      "buttonColor": "#000000",
+      "barStyle": "dark-content",
       "backgroundColor": "#FFFFFF"
     },
     "slug": "tourney-fc-app",
-    "version": "1.0.0",
+    "version": "3.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "tourneyfcapp",
@@ -18,14 +17,14 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#157640",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "config": {
         "googleMaps": {
-          "apiKey": "AIzaSyDgO8GSlZ-AfnZQwkNs4v4fpkBbzavb8uM"
+          "apiKey": "AIzaSyCPRY0RL"
         }
       },
       "edgeToEdgeEnabled": true,

@@ -34,6 +34,7 @@ import { useAlert } from '../../../../hooks/useAlert';
 import CustomAlert from '../../../../components/CustomAlert';
 import { formatPartidoFecha } from '../../../../utils/matchDate';
 import PenaltyShootoutTracker from '../../../../components/tournament/PenaltyShootoutTracker';
+import ShieldDisplay from '../../../../components/tournament/ShieldDisplay';
 
 // Un tiro de tanda de penales se identifica de forma fiable por detalle === 'PENAL'
 // (el backend lo marca así de forma autoritativa). Esto evita confundirlo con un penal
@@ -1188,7 +1189,9 @@ export default function MatchScreen() {
             {winnerInfo && (
               <View style={styles.champWinnerBlock}>
                 {winnerInfo.escudo ? (
-                  <Image source={{ uri: winnerInfo.escudo }} style={styles.champEscudo} />
+                  <View style={[styles.champEscudo, { overflow: 'hidden' }]}>
+                    <ShieldDisplay escudo={winnerInfo.escudo} nombre={winnerInfo.nombre} size={80} />
+                  </View>
                 ) : (
                   <View style={styles.champEscudoFallback}>
                     <Text style={styles.champEscudoFallbackText}>
@@ -1228,26 +1231,14 @@ export default function MatchScreen() {
 function TeamBadge({ nombre, escudo, align = 'left' }: { nombre: string; escudo: string | null; align?: 'left' | 'right' }) {
   return (
     <View style={[styles.teamBadge, align === 'right' && { alignItems: 'flex-end' }]}>
-      {escudo ? (
-        <Image source={{ uri: escudo }} style={styles.escudoSm} />
-      ) : (
-        <View style={styles.escudoSmFallback}>
-          <Text style={styles.escudoSmText}>{nombre.charAt(0)}</Text>
-        </View>
-      )}
+      <ShieldDisplay escudo={escudo} nombre={nombre} size={44} />
       <Text style={styles.teamName} numberOfLines={2}>{nombre}</Text>
     </View>
   );
 }
 
 function TeamBadgeLarge({ nombre, escudo }: { nombre: string; escudo: string | null }) {
-  return escudo ? (
-    <Image source={{ uri: escudo }} style={styles.escudoLg} />
-  ) : (
-    <View style={styles.escudoLgFallback}>
-      <Text style={styles.escudoLgText}>{nombre.charAt(0)}</Text>
-    </View>
-  );
+  return <ShieldDisplay escudo={escudo} nombre={nombre} size={56} />;
 }
 
 function CtrlBtn({ icon, label, color, onPress }: { icon: any; label: string; color: string; onPress: () => void }) {
