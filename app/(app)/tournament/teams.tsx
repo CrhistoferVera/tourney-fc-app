@@ -194,8 +194,8 @@ export default function TeamsScreen() {
           </View>
         ) : (
           <>
-            {/* Solicitudes pendientes — solo para organizador y staff */}
-            {isOrganizadorOStaff && inscripciones.length > 0 && (
+            {/* Solicitudes pendientes — solo para organizador y staff si está en inscripción */}
+            {isOrganizadorOStaff && estado === 'EN_INSCRIPCION' && inscripciones.length > 0 && (
               <View className="mb-4">
                 <View className="flex-row items-center mb-3">
                   <Text className="text-night font-sans-medium text-base flex-1">
