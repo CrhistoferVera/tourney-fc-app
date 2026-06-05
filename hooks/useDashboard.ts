@@ -9,6 +9,8 @@ export interface ProximoPartido {
   direccion: string | null;
   equipoLocal: string;
   equipoVisitante: string;
+  fase?: string | null;
+  formato?: string | null;
 }
 
 export interface Resultado {

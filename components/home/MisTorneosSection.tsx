@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import { Feather } from '@expo/vector-icons';
 import { Tournament } from '../../services/tournamentService';
 import TournamentCard from '../tournament/TournamentCard';
@@ -37,6 +38,14 @@ type Props = {
   refreshing: boolean;
 };
 
+type Filtro = 'activos' | 'inscripcion' | 'finalizados';
+
+const FILTROS: { key: Filtro; label: string }[] = [
+  { key: 'activos', label: 'Activos' },
+  { key: 'inscripcion', label: 'Inscripción' },
+  { key: 'finalizados', label: 'Finalizados' },
+];
+
 export default function MisTorneosSection({
   tournaments,
   loading,
@@ -47,7 +56,14 @@ export default function MisTorneosSection({
   refreshing,
 }: Props) {
   const router = useRouter();
-  const active = tournaments.filter((t) => t.estado !== 'BORRADOR');
+  const [filtro, setFiltro] = useState<Filtro>('activos');
+
+  const active = tournaments.filter((t) => {
+    if (filtro === 'activos') return t.estado === 'EN_CURSO';
+    if (filtro === 'inscripcion') return t.estado === 'EN_INSCRIPCION';
+    if (filtro === 'finalizados') return t.estado === 'FINALIZADO';
+    return false;
+  });
   const drafts = tournaments.filter((t) => t.estado === 'BORRADOR');
 
   if (loading)
@@ -91,8 +107,29 @@ export default function MisTorneosSection({
         </TouchableOpacity>
       </View>
 
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 12, gap: 8 }}
+      >
+        {FILTROS.map((f) => (
+          <TouchableOpacity
+            key={f.key}
+            onPress={() => setFiltro(f.key)}
+            className={`px-4 py-2 rounded-full border ${filtro === f.key ? 'bg-primary border-primary' : 'bg-white border-mist'}`}
+            activeOpacity={0.8}
+          >
+            <Text
+              className={`text-sm font-sans-medium ${filtro === f.key ? 'text-white' : 'text-carbon'}`}
+            >
+              {f.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
       <View className="px-4">
-        <SectionHeader title="Activos" count={active.length} />
+        <SectionHeader title={FILTROS.find(f => f.key === filtro)?.label || 'Torneos'} count={active.length} />
         {active.length === 0 ? (
           <EmptyState icon="award" message="No tienes torneos activos." />
         ) : (

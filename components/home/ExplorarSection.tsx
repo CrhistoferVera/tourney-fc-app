@@ -14,10 +14,18 @@ import { Tournament } from '../../services/tournamentService';
 import TournamentCard from '../tournament/TournamentCard';
 import SectionHeader from '../tournament/SectionHeader';
 
-type Filtro = 'todos' | 'liga' | 'copa' | 'borrador' | 'publicado';
+type Filtro = 'activos' | 'inscripcion' | 'finalizados';
 
 const FILTROS: { key: Filtro; label: string }[] = [
-  { key: 'todos', label: 'Todos' },
+  { key: 'activos', label: 'Activos' },
+  { key: 'inscripcion', label: 'Inscripción' },
+  { key: 'finalizados', label: 'Finalizados' },
+];
+
+type FiltroFormato = 'todos' | 'liga' | 'copa';
+
+const FILTROS_FORMATO: { key: FiltroFormato; label: string }[] = [
+  { key: 'todos', label: 'Todos los formatos' },
   { key: 'liga', label: 'Liga' },
   { key: 'copa', label: 'Copa' },
 ];
@@ -45,7 +53,8 @@ export default function ExplorarSection({
 }: Props) {
   const router = useRouter();
   const [search, setSearch] = useState('');
-  const [filtro, setFiltro] = useState<Filtro>('todos');
+  const [filtro, setFiltro] = useState<Filtro>('activos');
+  const [filtroFormato, setFiltroFormato] = useState<FiltroFormato>('todos');
 
   const myActive = myTournaments.filter((t) => t.estado !== 'BORRADOR');
   const myIds = new Set(myTournaments.map((t) => t.id));
@@ -58,18 +67,24 @@ export default function ExplorarSection({
     return list.filter((t) => t.nombre.toLowerCase().includes(q));
   };
 
+  const applyStatusFilter = (list: Tournament[]) => {
+    if (filtro === 'activos') return list.filter((t) => t.estado === 'EN_CURSO');
+    if (filtro === 'inscripcion') return list.filter((t) => t.estado === 'EN_INSCRIPCION');
+    if (filtro === 'finalizados') return list.filter((t) => t.estado === 'FINALIZADO');
+    return list;
+  };
+
   const applyFormatFilter = (list: Tournament[]) => {
-    if (filtro === 'liga') return list.filter((t) => t.formato === 'LIGA');
-    if (filtro === 'copa') return list.filter((t) => (t as any).formato === 'COPA');
+    if (filtroFormato === 'liga') return list.filter((t) => t.formato === 'LIGA');
+    if (filtroFormato === 'copa') return list.filter((t) => (t as any).formato === 'COPA');
     return list;
   };
 
   const filteredPublished = useMemo(() => {
-    if (filtro === 'borrador') return [];
-    return applySearch(applyFormatFilter(allPublished));
-  }, [search, filtro, myTournaments, publicTournaments]);
+    return applySearch(applyFormatFilter(applyStatusFilter(allPublished)));
+  }, [search, filtro, filtroFormato, myTournaments, publicTournaments]);
 
-  const showPublished = filtro !== 'borrador';
+  const showPublished = true;
 
   if (loading)
     return (
@@ -125,6 +140,27 @@ export default function ExplorarSection({
           >
             <Text
               className={`text-sm font-sans-medium ${filtro === f.key ? 'text-white' : 'text-carbon'}`}
+            >
+              {f.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 12, gap: 8 }}
+      >
+        {FILTROS_FORMATO.map((f) => (
+          <TouchableOpacity
+            key={f.key}
+            onPress={() => setFiltroFormato(f.key)}
+            className={`px-3 py-1 rounded border ${filtroFormato === f.key ? 'bg-primary-dark border-primary-dark' : 'bg-transparent border-mist'}`}
+            activeOpacity={0.8}
+          >
+            <Text
+              className={`text-xs font-sans-medium ${filtroFormato === f.key ? 'text-white' : 'text-carbon'}`}
             >
               {f.label}
             </Text>

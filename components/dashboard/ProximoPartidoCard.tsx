@@ -34,7 +34,11 @@ export default function ProximoPartidoCard({ partido }: Props) {
         <View className="w-8 h-8 rounded-full bg-white/20 items-center justify-center">
           <Feather name="calendar" size={16} color="#FFFFFF" />
         </View>
-        <Text className="text-white font-sans-medium text-sm flex-1">Próximo partido</Text>
+        <Text className="text-white font-sans-medium text-sm flex-1">
+          {partido.formato === 'COPA' || partido.formato === 'ELIMINATORIA' 
+            ? `Próximo partido - ${partido.fase || ''}` 
+            : 'Próximo partido'}
+        </Text>
         <View className="bg-accent px-2.5 py-1 rounded-full">
           <Text className="text-white text-xs font-sans-medium">Pronto</Text>
         </View>

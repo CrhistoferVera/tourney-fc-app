@@ -235,7 +235,7 @@ export default function ScheduleRoundScreen() {
     partidos.every((p) => {
       if (p.estado === 'EN_CURSO' || p.faseJuego === 'FINALIZADO') return true;
       const h = horarios[p.id];
-      return h?.date && validateTime(h?.time ?? '');
+      return h?.date && validateTime(h?.time ?? '') && h?.campoId;
     });
 
   // Valida conflictos de cancha en el cliente antes de enviar al servidor.

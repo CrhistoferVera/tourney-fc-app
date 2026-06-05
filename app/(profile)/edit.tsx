@@ -33,11 +33,14 @@ export default function EditProfileScreen() {
     }
   }, [usuario]);
 
+  const getCharCount = (text: string) => text.replace(/[\r\n]/g, '').length;
+
   const validateNombre = (value: string) => {
     const trimmed = value.trim();
-    if (trimmed.length < 3) {
+    const len = getCharCount(trimmed);
+    if (len < 3) {
       setNombreError('El nombre debe tener al menos 3 caracteres');
-    } else if (trimmed.length > 50) {
+    } else if (len > 50) {
       setNombreError('El nombre no puede exceder 50 caracteres');
     } else {
       setNombreError('');
@@ -45,7 +48,7 @@ export default function EditProfileScreen() {
   };
 
   const handleNombreChange = (value: string) => {
-    if (value.length <= 50) {
+    if (getCharCount(value) <= 50) {
       setNombre(value);
       validateNombre(value);
     }
@@ -79,7 +82,7 @@ export default function EditProfileScreen() {
   const handleSave = async () => {
     const nombreTrimmed = nombre.trim();
     const zonaTrimmed = zona.trim();
-    if (nombreError || nombreTrimmed.length < 3) {
+    if (nombreError || getCharCount(nombreTrimmed) < 3) {
       showError('Error de validación', 'Corrige los errores antes de guardar');
       return;
     }
@@ -136,7 +139,7 @@ export default function EditProfileScreen() {
           <View className="bg-white rounded-2xl p-4">
             <View className="flex-row justify-between mb-1">
               <Text className="text-carbon text-xs">Nombre</Text>
-              <Text className="text-carbon text-xs">{nombre.length}/50</Text>
+              <Text className="text-carbon text-xs">{getCharCount(nombre)}/50</Text>
             </View>
             <TextInput
               className="text-night text-base font-sans-medium"
@@ -144,7 +147,6 @@ export default function EditProfileScreen() {
               onChangeText={handleNombreChange}
               placeholder="Tu nombre"
               placeholderTextColor="#3D4F44"
-              maxLength={50}
             />
             {nombreError ? <Text className="text-danger text-xs mt-1">{nombreError}</Text> : null}
             <Text className="text-carbon text-xs mt-1">Mínimo 3 caracteres</Text>

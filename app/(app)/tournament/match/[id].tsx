@@ -333,6 +333,10 @@ export default function MatchScreen() {
   const maybeShowTournamentWinner = useCallback((m: Partido) => {
     if (celebrationShownRef.current || !m.ganadorTorneo) return;
     if (m.faseJuego !== 'FINALIZADO') return;
+    
+    // Solo mostrar celebración si este es el partido de la Final
+    // y no en partidos de fases previas (ej. semifinales)
+    if (m.fase?.toLowerCase() !== 'final') return;
 
     celebrationShownRef.current = true;
     setWinnerInfo(m.ganadorTorneo ?? null);
