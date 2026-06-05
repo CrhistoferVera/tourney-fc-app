@@ -68,6 +68,10 @@ export default function RegisterScreen() {
       showError('Campos requeridos', 'Completa todos los campos para continuar');
       return;
     }
+    if (password !== confirmPassword) {
+      showError('Datos inválidos', 'Las contraseñas no coinciden');
+      return;
+    }
     if (nombreError || emailError || passwordError || confirmError) {
       showError('Datos inválidos', 'Corrige los errores antes de continuar');
       return;
@@ -174,6 +178,9 @@ export default function RegisterScreen() {
               onChangeText={(v) => {
                 setPassword(v);
                 validatePassword(v);
+                if (confirmPassword) {
+                  setConfirmError(confirmPassword !== v ? 'Las contraseñas no coinciden' : '');
+                }
               }}
             />
             <Pressable onPress={() => setShowPassword(!showPassword)} className="pr-4">
@@ -240,7 +247,13 @@ export default function RegisterScreen() {
           </Text>
 
           <Text className="text-carbon text-xs text-center">
-            Al crear una cuenta, aceptas nuestros términos de servicio y política de privacidad
+            Al crear una cuenta, aceptas nuestros{' '}
+            <Text
+              className="text-primary font-sans-bold"
+              onPress={() => router.push('/(auth)/terms')}
+            >
+              Términos y Condiciones
+            </Text>
           </Text>
         </View>
     </KeyboardAwareScrollView>

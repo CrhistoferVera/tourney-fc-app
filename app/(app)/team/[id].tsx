@@ -75,8 +75,8 @@ export default function TeamScreen() {
     setRefreshing(false);
   }, [fetchTeam]);
 
-  const handleInvitar = async () => {
-    const email = emailInvitar.trim().toLowerCase();
+  const handleInvitar = async (emailArg?: string) => {
+    const email = (emailArg ?? emailInvitar).trim().toLowerCase();
     if (!email) {
       showError('Campo requerido', 'Ingresa el correo del jugador.');
       return;
@@ -318,10 +318,9 @@ export default function TeamScreen() {
                     <TouchableOpacity
                       key={user.id}
                       onPress={() => {
-                        setEmailInvitar(user.email);
                         setJugadorQuery('');
                         setJugadorResults([]);
-                        handleInvitar();
+                        handleInvitar(user.email);
                       }}
                       activeOpacity={0.75}
                       className={`flex-row items-center px-3 py-3 ${index < jugadorResults.length - 1 ? 'border-b border-mist' : ''}`}

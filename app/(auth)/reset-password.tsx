@@ -47,6 +47,10 @@ export default function ResetPasswordScreen() {
       showError('Campos requeridos', 'Completa todos los campos');
       return;
     }
+    if (nuevaPassword !== confirmarPassword) {
+      showError('Datos inválidos', 'Las contraseñas no coinciden');
+      return;
+    }
     if (passwordError || confirmError) {
       showError('Datos inválidos', 'Corrige los errores antes de continuar');
       return;
@@ -94,6 +98,9 @@ export default function ResetPasswordScreen() {
               onChangeText={(v) => {
                 setNuevaPassword(v);
                 validatePassword(v);
+                if (confirmarPassword) {
+                  setConfirmError(confirmarPassword !== v ? 'Las contraseñas no coinciden' : '');
+                }
               }}
             />
             <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>

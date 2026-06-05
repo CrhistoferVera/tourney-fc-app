@@ -22,6 +22,7 @@ export default function EditProfileScreen() {
   const [zona, setZona] = useState('');
   const [fotoPerfil, setFotoPerfil] = useState<string | null>(null);
   const [nombreError, setNombreError] = useState('');
+  const [zonaError, setZonaError] = useState('');
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   useEffect(() => {
@@ -50,6 +51,20 @@ export default function EditProfileScreen() {
     }
   };
 
+  const validateZona = (value: string) => {
+    const trimmed = value.trim();
+    if (trimmed.length > 0 && trimmed.length < 3) {
+      setZonaError('La zona debe tener al menos 3 caracteres');
+    } else {
+      setZonaError('');
+    }
+  };
+
+  const handleZonaChange = (value: string) => {
+    setZona(value);
+    validateZona(value);
+  };
+
   const handlePickPhoto = async () => {
     setUploadingPhoto(true);
     const url = await pickAndUploadPhoto();
@@ -63,14 +78,19 @@ export default function EditProfileScreen() {
 
   const handleSave = async () => {
     const nombreTrimmed = nombre.trim();
+    const zonaTrimmed = zona.trim();
     if (nombreError || nombreTrimmed.length < 3) {
       showError('Error de validación', 'Corrige los errores antes de guardar');
+      return;
+    }
+    if (zonaError || (zonaTrimmed.length > 0 && zonaTrimmed.length < 3)) {
+      showError('Error de validación', 'La zona debe tener al menos 3 caracteres');
       return;
     }
 
     const success = await updateProfile({
       nombre: nombreTrimmed,
-      zona: zona.trim(),
+      zona: zonaTrimmed,
       ...(fotoPerfil && { fotoPerfil }),
     });
 
@@ -136,10 +156,11 @@ export default function EditProfileScreen() {
             <TextInput
               className="text-night text-base font-sans-medium"
               value={zona}
-              onChangeText={setZona}
+              onChangeText={handleZonaChange}
               placeholder="Tu ciudad o zona"
               placeholderTextColor="#3D4F44"
             />
+            {zonaError ? <Text className="text-danger text-xs mt-1">{zonaError}</Text> : null}
           </View>
 
           {/* Botones */}
