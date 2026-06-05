@@ -12,7 +12,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Feather } from '@expo/vector-icons';
 import { MinusCircle, PlusCircle, Users, Settings2, UserCheck, ClipboardList, MapPin } from 'lucide-react-native';
-import { updateTournament, startTournament, getCamposByTournament, CampoDetalle, addCampoToTournament } from '../../../services/tournamentService';
+import { updateTournament, startTournament, getCamposByTournament, CampoDetalle, addCampoToTournament, deleteCampoFromTournament } from '../../../services/tournamentService';
 import { getFixture } from '../../../services/fixtureService';
 import { toDateOnlyString } from '../../../utils/matchDate';
 import { userService, User } from '../../../services/userService';
@@ -21,6 +21,7 @@ import { useAuthStore } from '../../../store/authStore';
 import CustomAlert from '../../../components/CustomAlert';
 import { useAlert } from '../../../hooks/useAlert';
 import DatePickerField from '../../../components/create-tournament/DatePickerField';
+import MapPickerModal from '../../../components/create-tournament/MapPickerModal';
 import ShieldDisplay from '../../../components/tournament/ShieldDisplay';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -450,14 +451,17 @@ function TabSolicitudes({
 // ─── Tab Canchas ──────────────────────────────────────────────────────────────
 
 function TabCanchas({ torneoId }: { readonly torneoId: string }) {
-  const { alertState, hideAlert, showError, showSuccess } = useAlert();
+  const { alertState, hideAlert, showError, showSuccess, showConfirm } = useAlert();
 
   const [campos, setCampos] = useState<CampoDetalle[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [nombre, setNombre] = useState('');
   const [direccion, setDireccion] = useState('');
+  const [latitud, setLatitud] = useState<number | null>(null);
+  const [longitud, setLongitud] = useState<number | null>(null);
   const [adding, setAdding] = useState(false);
+  const [mapOpen, setMapOpen] = useState(false);
 
   const fetchCampos = useCallback(async () => {
     setLoading(true);
@@ -480,15 +484,35 @@ function TabCanchas({ torneoId }: { readonly torneoId: string }) {
       await addCampoToTournament(torneoId, {
         nombre: nombre.trim(),
         direccion: direccion.trim() || undefined,
+        latitud: latitud !== null ? latitud : undefined,
+        longitud: longitud !== null ? longitud : undefined,
       });
       setNombre('');
       setDireccion('');
+      setLatitud(null);
+      setLongitud(null);
       setShowForm(false);
       showSuccess('Cancha agregada', 'La cancha fue agregada exitosamente al torneo.');
       await fetchCampos();
     } catch (e: any) {
       showError('Error', e.message ?? 'No se pudo agregar la cancha.');
     } finally { setAdding(false); }
+  };
+
+  const handleRemoveCampo = (campoId: string, nombreCampo: string) => {
+    showConfirm(
+      'Eliminar cancha',
+      `¿Estás seguro de que deseas eliminar la cancha "${nombreCampo}"?`,
+      async () => {
+        try {
+          await deleteCampoFromTournament(torneoId, campoId);
+          showSuccess('Cancha eliminada', 'La cancha ha sido eliminada del torneo.');
+          await fetchCampos();
+        } catch (e: any) {
+          showError('No se pudo eliminar', e.message ?? 'Error al eliminar la cancha');
+        }
+      }
+    );
   };
 
   const renderLista = () => {
@@ -519,6 +543,12 @@ function TabCanchas({ torneoId }: { readonly torneoId: string }) {
               <Text className="text-night text-sm font-sans-medium">{c.nombre}</Text>
               {c.direccion && <Text className="text-carbon text-xs">{c.direccion}</Text>}
             </View>
+            <TouchableOpacity 
+              onPress={() => handleRemoveCampo(c.id, c.nombre)}
+              className="p-2"
+            >
+              <Feather name="trash-2" size={18} color="#EF4444" />
+            </TouchableOpacity>
           </View>
         ))}
       </>
@@ -534,7 +564,13 @@ function TabCanchas({ torneoId }: { readonly torneoId: string }) {
           Canchas{campos.length > 0 ? ` (${campos.length})` : ''}
         </Text>
         <TouchableOpacity
-          onPress={() => { setShowForm((p) => !p); setNombre(''); setDireccion(''); }}
+          onPress={() => { 
+            setShowForm((p) => !p); 
+            setNombre(''); 
+            setDireccion(''); 
+            setLatitud(null);
+            setLongitud(null);
+          }}
           className="flex-row items-center gap-1 bg-primary rounded-xl px-3 py-2"
           activeOpacity={0.8}
         >
@@ -564,13 +600,35 @@ function TabCanchas({ torneoId }: { readonly torneoId: string }) {
           </View>
           <View className="mb-4">
             <Text className="text-carbon text-xs mb-1">Dirección (opcional)</Text>
-            <TextInput
-              className="bg-mist rounded-xl px-3 py-2.5 text-night text-sm"
-              placeholder="Ej: Av. Principal 123..."
-              placeholderTextColor="#9CA3AF"
-              value={direccion}
-              onChangeText={setDireccion}
-            />
+            <View className="flex-row items-center">
+              <TextInput
+                className="flex-1 bg-mist rounded-xl px-3 py-2.5 text-night text-sm"
+                placeholder="Ej: Av. Principal 123..."
+                placeholderTextColor="#9CA3AF"
+                value={direccion}
+                onChangeText={(val) => {
+                  setDireccion(val);
+                  setLatitud(null);
+                  setLongitud(null);
+                }}
+              />
+              <TouchableOpacity
+                onPress={() => setMapOpen(true)}
+                style={{
+                  marginLeft: 8,
+                  backgroundColor: '#D4F5E2',
+                  borderRadius: 10,
+                  paddingHorizontal: 12,
+                  paddingVertical: 10,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 4,
+                }}
+              >
+                <MapPin size={14} color="#0D7A3E" />
+                <Text style={{ color: '#0D7A3E', fontSize: 13, fontFamily: 'Inter_500Medium' }}>Mapa</Text>
+              </TouchableOpacity>
+            </View>
           </View>
           <TouchableOpacity
             className="bg-primary rounded-xl py-3 items-center"
@@ -587,6 +645,17 @@ function TabCanchas({ torneoId }: { readonly torneoId: string }) {
           </TouchableOpacity>
         </View>
       )}
+
+      <MapPickerModal
+        visible={mapOpen}
+        onConfirm={(data) => {
+          setDireccion(data.direccion);
+          setLatitud(data.latitud);
+          setLongitud(data.longitud);
+          setMapOpen(false);
+        }}
+        onClose={() => setMapOpen(false)}
+      />
     </View>
   );
 }
@@ -937,9 +1006,17 @@ export default function ManageScreen() {
   const [equiposAprobados, setEquiposAprobados] = useState(Number.parseInt(equiposAprobadosInicial ?? '0', 10));
   const [estado, setEstado] = useState(estadoInicial ?? '');
 
+  const showSolicitudes = estado === 'INSCRIPCION' || estado === 'BORRADOR';
+
+  useEffect(() => {
+    if (tab === 'solicitudes' && !showSolicitudes) {
+      setTab('staff');
+    }
+  }, [showSolicitudes, tab]);
+
   const tabs: { key: Tab; label: string; icon: typeof UserCheck }[] = [
     { key: 'staff', label: 'Staff', icon: UserCheck },
-    { key: 'solicitudes', label: 'Solicitudes', icon: ClipboardList },
+    ...(showSolicitudes ? [{ key: 'solicitudes' as Tab, label: 'Solicitudes', icon: ClipboardList }] : []),
     { key: 'canchas', label: 'Canchas', icon: MapPin },
     { key: 'ajustes', label: 'Ajustes', icon: Settings2 },
   ];
@@ -1005,7 +1082,7 @@ export default function ManageScreen() {
           />
         )}
         {!!torneoId && tab === 'staff' && <TabStaff torneoId={torneoId} />}
-        {!!torneoId && tab === 'solicitudes' && (
+        {!!torneoId && tab === 'solicitudes' && showSolicitudes && (
           <TabSolicitudes
             torneoId={torneoId}
             onEquiposChange={(delta) => setEquiposAprobados((prev) => prev + delta)}

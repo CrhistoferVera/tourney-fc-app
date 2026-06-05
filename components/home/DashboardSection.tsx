@@ -6,7 +6,7 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
-import { Link } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import { useEffect, useCallback, useState, type ReactNode } from 'react';
 import type { ComponentProps } from 'react';
 import { Feather } from '@expo/vector-icons';
@@ -84,6 +84,7 @@ export default function DashboardSection({
   const { data, loading, error, fetchDashboard } = useDashboard();
   const { usuario } = useAuthStore();
   const [refreshing, setRefreshing] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     fetchDashboard();
@@ -237,7 +238,11 @@ export default function DashboardSection({
           <View>
             <SectionTitle icon="bar-chart-2" title="Últimos resultados" />
             {data.ultimosResultados.map((r) => (
-              <ResultadoCard key={r.id} resultado={r} />
+              <ResultadoCard 
+                key={r.id} 
+                resultado={r} 
+                onPress={() => router.push({ pathname: '/(app)/tournament/match/[id]', params: { id: r.id } } as any)} 
+              />
             ))}
           </View>
         ) : null}

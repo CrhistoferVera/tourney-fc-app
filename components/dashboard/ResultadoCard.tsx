@@ -1,9 +1,10 @@
-import { View, Text } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Resultado } from '../../hooks/useDashboard';
 
 interface Props {
   resultado: Resultado;
+  onPress?: () => void;
 }
 
 const formatFecha = (fecha: string | null) => {
@@ -16,13 +17,13 @@ const formatFecha = (fecha: string | null) => {
   });
 };
 
-export default function ResultadoCard({ resultado }: Props) {
-  const confirmado = resultado.estadoConfirmacion === 'CONFIRMADO';
+export default function ResultadoCard({ resultado, onPress }: Props) {
   const tieneMarcador =
     resultado.golesLocal !== null && resultado.golesVisitante !== null;
 
   return (
-    <View
+    <TouchableOpacity
+      onPress={onPress}
       className="mx-4 mb-3 rounded-2xl bg-white overflow-hidden"
       style={{
         elevation: 2,
@@ -62,22 +63,20 @@ export default function ResultadoCard({ resultado }: Props) {
           )}
         </View>
         <View
-          className={`flex-row items-center gap-1 px-2 py-0.5 rounded-full ${
-            confirmado ? 'bg-primary-light' : 'bg-accent-soft'
-          }`}
+          className="flex-row items-center gap-1 px-2 py-0.5 rounded-full bg-primary-light"
         >
           <Feather
-            name={confirmado ? 'check-circle' : 'clock'}
+            name="check-circle"
             size={11}
-            color={confirmado ? '#0D7A3E' : '#F5820D'}
+            color="#0D7A3E"
           />
           <Text
-            className={`text-xs font-sans-medium ${confirmado ? 'text-primary' : 'text-accent'}`}
+            className="text-xs font-sans-medium text-primary"
           >
-            {confirmado ? 'Confirmado' : 'Pendiente'}
+            Finalizado
           </Text>
         </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }

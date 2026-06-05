@@ -10,6 +10,7 @@ import {
   Animated,
   Easing,
   Dimensions,
+  RefreshControl,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
@@ -218,6 +219,7 @@ export default function MatchScreen() {
   const [torneo, setTorneo] = useState<Tournament | null>(null);
   const [loading,    setLoading]    = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const [showCelebration, setShowCelebration] = useState(false);
   const [winnerInfo, setWinnerInfo] = useState<{ nombre: string; escudo: string | null } | null>(null);
@@ -331,6 +333,10 @@ export default function MatchScreen() {
   const maybeShowTournamentWinner = useCallback((m: Partido) => {
     if (celebrationShownRef.current || !m.ganadorTorneo) return;
     if (m.faseJuego !== 'FINALIZADO') return;
+    
+    // Solo mostrar celebración si este es el partido de la Final
+    // y no en partidos de fases previas (ej. semifinales)
+    if (m.fase?.toLowerCase() !== 'final') return;
 
     celebrationShownRef.current = true;
     setWinnerInfo(m.ganadorTorneo ?? null);
@@ -360,6 +366,12 @@ export default function MatchScreen() {
       setLoading(false);
     }
   }, [id, maybeShowTournamentWinner]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await fetchAll();
+    setRefreshing(false);
+  }, [fetchAll]);
 
   // Carga inicial completa + polling cada 10s solo para el partido (sin recargar el torneo)
   // para mantener el marcador y los eventos actualizados durante el partido en vivo.
@@ -760,7 +772,19 @@ export default function MatchScreen() {
         <Text style={styles.faseSubtitle}>{partido.fase || 'Fase de grupos'}</Text>
       </View>
 
-      <ScrollView style={styles.body} contentContainerStyle={{ paddingBottom: bottom + 24 }} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.body} 
+        contentContainerStyle={{ paddingBottom: bottom + 24 }} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#0D7A3E"
+            colors={['#0D7A3E']}
+          />
+        }
+      >
 
         {(partido.faseJuego === 'PENALES' || hasPenalties) && (
           <PenaltyShootoutTracker partido={partido} nextTeamId={nextPenaltyTeamId} />

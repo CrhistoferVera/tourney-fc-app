@@ -87,6 +87,9 @@ export function getRondaScheduleMode(
     if (!prevReal || !prevReal.partidos.every(partidoCopaFinalizado)) return null;
   }
 
+  const allFinished = realRonda.partidos.every(partidoCopaFinalizado);
+  if (allFinished) return null;
+
   const allScheduled = realRonda.partidos.every((p) => p.fecha !== null);
   return allScheduled ? 'editar' : 'programar';
 }
