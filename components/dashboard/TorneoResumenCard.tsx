@@ -4,7 +4,7 @@ import { TorneoResumen } from '../../hooks/useDashboard';
 
 interface Props {
   torneo: TorneoResumen;
-  onPress: (id: string) => void;
+  onPress: (torneo: TorneoResumen) => void;
 }
 
 const FORMAT_LABEL: Record<string, string> = {
@@ -38,7 +38,7 @@ export default function TorneoResumenCard({ torneo, onPress }: Props) {
 
   return (
     <TouchableOpacity
-      onPress={() => onPress(torneo.id)}
+      onPress={() => onPress(torneo)}
       activeOpacity={0.85}
       className="mb-3 rounded-2xl overflow-hidden bg-white flex-row"
       style={{

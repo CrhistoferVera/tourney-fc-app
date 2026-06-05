@@ -14,6 +14,7 @@ import { useAuthStore } from '../../store/authStore';
 import { useDashboard } from '../../hooks/useDashboard';
 import ProximoPartidoCard from '../dashboard/ProximoPartidoCard';
 import TorneoResumenCard from '../dashboard/TorneoResumenCard';
+import { TorneoResumen } from '../../hooks/useDashboard';
 import ResultadoCard from '../dashboard/ResultadoCard';
 
 function SectionTitle({
@@ -78,7 +79,7 @@ function EmptyCard({
 export default function DashboardSection({
   onPressTorneo,
 }: {
-  onPressTorneo: (id: string) => void;
+  onPressTorneo: (torneo: TorneoResumen) => void;
 }) {
   const { data, loading, error, fetchDashboard } = useDashboard();
   const { usuario } = useAuthStore();

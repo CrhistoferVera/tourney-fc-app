@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useState, useEffect } from 'react';
 import {
   ActivityIndicator,
@@ -19,6 +19,8 @@ import Step5 from '../../components/create-tournament/Step5';
 import {
   Campo,
   createTournament,
+  updateTournament,
+  getTournamentById,
   publishTournament,
   TournamentFormat,
   TournamentModality,
@@ -67,6 +69,8 @@ type AlertState = {
 
 export default function CreateTournamentScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
+  const id = params.id as string | undefined;
   const { token } = useAuthStore();
 
   const [step, setStep] = useState(1);
@@ -143,8 +147,8 @@ export default function CreateTournamentScreen() {
       if (hasData) {
         showAlert({
           type: 'confirm',
-          title: 'Cancelar creación',
-          message: '¿Estás seguro de que deseas salir? Perderás todos los datos del torneo.',
+          title: id ? 'Salir sin guardar' : 'Cancelar creación',
+          message: id ? '¿Estás seguro de que deseas salir? Perderás los cambios no guardados.' : '¿Estás seguro de que deseas salir? Perderás todos los datos del torneo.',
           onConfirm: () => {
             hideAlert();
             router.back();
@@ -165,7 +169,42 @@ export default function CreateTournamentScreen() {
 
     const backHandler = BackHandler.addEventListener('hardwareBackPress', onBackPress);
     return () => backHandler.remove();
-  }, [step]); // Dependencias: step (para que `back` use el valor actual de step)
+  }, [step, id, form]);
+
+  useEffect(() => {
+    if (id) {
+      getTournamentById(id).then(t => {
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        const todayStr = `${yyyy}-${mm}-${dd}`;
+
+        let parsedInicio = t.fechaInicio ? t.fechaInicio.split('T')[0] : '';
+        if (parsedInicio && parsedInicio < todayStr) parsedInicio = '';
+
+        let parsedFin = t.fechaFin ? t.fechaFin.split('T')[0] : '';
+        if (parsedFin && parsedFin < todayStr) parsedFin = '';
+
+        setForm({
+          nombre: t.nombre,
+          descripcion: t.descripcion || '',
+          zona: t.zona || '',
+          fechaInicio: parsedInicio,
+          fechaFin: parsedFin,
+          formato: t.formato || '',
+          modalidad: t.modalidad || '',
+          maxEquipos: t.maxEquipos || 8,
+          maxJugadoresPorEquipo: t.maxJugadoresPorEquipo || 22,
+          campos: t.campos ? t.campos.map(c => ({ nombre: c.nombre, direccion: c.direccion || '', latitud: c.latitud, longitud: c.longitud })) : [],
+          staffEmails: [],
+          imagen: t.imagen || undefined,
+        });
+      }).catch(err => {
+        console.error('Error loading draft:', err);
+      });
+    }
+  }, [id]);
 
   const buildDto = (imageUrl?: string) => ({
     nombre: form.nombre,
@@ -198,7 +237,12 @@ export default function CreateTournamentScreen() {
     setSaving(true);
     try {
       const imageUrl = await handleUploadImage();
-      await createTournament(buildDto(imageUrl));
+      const dto = buildDto(imageUrl);
+      if (id) {
+        await updateTournament(id, dto);
+      } else {
+        await createTournament(dto);
+      }
       showAlert({
         type: 'success',
         title: 'Borrador guardado',
@@ -231,8 +275,15 @@ export default function CreateTournamentScreen() {
         setSaving(true);
         try {
           const imageUrl = await handleUploadImage();
-          const created = await createTournament(buildDto(imageUrl));
-          await publishTournament(created.id);
+          const dto = buildDto(imageUrl);
+          let tId = id;
+          if (tId) {
+            await updateTournament(tId, dto);
+          } else {
+            const created = await createTournament(dto);
+            tId = created.id;
+          }
+          await publishTournament(tId);
           showAlert({
             type: 'success',
             title: '¡Publicado!',

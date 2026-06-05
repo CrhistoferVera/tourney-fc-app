@@ -32,7 +32,7 @@ type Props = {
   loading: boolean;
   error: string | null;
   onRetry: () => void;
-  onPress: (id: string) => void;
+  onPress: (tournament: Tournament) => void;
   onRefresh: () => void;
   refreshing: boolean;
 };
@@ -97,7 +97,7 @@ export default function MisTorneosSection({
           <EmptyState icon="award" message="No tienes torneos activos." />
         ) : (
           active.map((item) => (
-            <TournamentCard key={item.id} item={item} onPress={() => onPress(item.id)} />
+            <TournamentCard key={item.id} item={item} onPress={() => onPress(item)} />
           ))
         )}
       </View>
@@ -108,7 +108,7 @@ export default function MisTorneosSection({
           <EmptyState icon="edit-3" message="No tienes borradores." />
         ) : (
           drafts.map((item) => (
-            <TournamentCard key={item.id} item={item} onPress={() => onPress(item.id)} />
+            <TournamentCard key={item.id} item={item} onPress={() => onPress(item)} />
           ))
         )}
       </View>
