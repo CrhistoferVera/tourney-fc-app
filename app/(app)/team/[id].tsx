@@ -22,6 +22,7 @@ import {
   getTeamById,
   invitePlayer,
   leaveTeam,
+  removePlayer,
   MyTeam,
 } from '../../../services/teamsService';
 import { userService, User } from '../../../services/userService';
@@ -152,6 +153,26 @@ export default function TeamScreen() {
     );
   };
 
+  const handleRemovePlayer = (targetUserId: string, nombreJugador: string) => {
+    if (!team) return;
+    showConfirm(
+      'Eliminar jugador',
+      `¿Seguro que quieres eliminar a ${nombreJugador} del equipo?`,
+      async () => {
+        setActuando(true);
+        try {
+          await removePlayer(team.id, targetUserId);
+          showSuccess('Jugador eliminado', `${nombreJugador} ya no forma parte del equipo.`);
+          await fetchTeam();
+        } catch (e: any) {
+          showError('Error', e.message ?? 'No se pudo eliminar al jugador.');
+        } finally {
+          setActuando(false);
+        }
+      },
+    );
+  };
+
   if (loading) {
     return (
       <View className="flex-1 bg-mist items-center justify-center">
@@ -188,6 +209,11 @@ export default function TeamScreen() {
         <Text className="text-white text-xl font-sans-medium flex-1" numberOfLines={1}>
           {team.nombre}
         </Text>
+        {esCapitan && (
+          <TouchableOpacity onPress={() => router.push(`/team/edit?id=${team.id}` as never)}>
+            <Feather name="edit-2" size={20} color="white" />
+          </TouchableOpacity>
+        )}
       </View>
 
       <ScrollView
@@ -271,14 +297,23 @@ export default function TeamScreen() {
                       </Text>
                       {isCap && <Feather name="star" size={12} color="#F5820D" />}
                     </View>
-                    {!!j.email && (
-                      <Text className="text-carbon text-xs" numberOfLines={1}>
-                        {j.email}
-                      </Text>
+                      {!!j.email && (
+                        <Text className="text-carbon text-xs" numberOfLines={1}>
+                          {j.email}
+                        </Text>
+                      )}
+                    </View>
+                    {esCapitan && !isCap && (
+                      <TouchableOpacity
+                        onPress={() => handleRemovePlayer(j.id, j.nombre)}
+                        className="ml-2 p-2 bg-mist rounded-full"
+                        activeOpacity={0.7}
+                      >
+                        <Feather name="user-x" size={16} color="#E53935" />
+                      </TouchableOpacity>
                     )}
                   </View>
-                </View>
-              );
+                );
             })
           )}
         </View>
