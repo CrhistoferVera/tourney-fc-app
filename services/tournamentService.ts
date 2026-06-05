@@ -40,6 +40,7 @@ export interface Tournament {
   totalPartidos?: number;
   tieneSolicitudPendiente?: boolean;
   ganadorTorneo?: { nombre: string; escudo: string | null } | null;
+  campos?: CampoDetalle[];
 }
 
 export interface CreateTournamentDto {

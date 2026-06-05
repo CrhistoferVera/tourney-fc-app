@@ -14,7 +14,13 @@ export default function MisTorneosTab() {
         loading={loading}
         error={error}
         onRetry={fetchData}
-        onPress={(id) => router.push(`/(app)/tournament/${id}` as never)}
+        onPress={(t) => {
+          if (t.estado === 'BORRADOR') {
+            router.push({ pathname: '/(app)/create-tournament', params: { id: t.id } } as any);
+          } else {
+            router.push(`/(app)/tournament/${t.id}` as never);
+          }
+        }}
         onRefresh={onRefresh}
         refreshing={refreshing}
       />
