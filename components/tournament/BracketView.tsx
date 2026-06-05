@@ -12,6 +12,8 @@ const HEADER_H = 54; // extra height to fit the schedule button below the label
 const LINE_COLOR = '#C4CFC8';
 
 // ── Math helpers ──────────────────────────────────────────────────────────────
+// El slot crece exponencialmente: ronda 0 = INITIAL_SLOT, ronda 1 = 2x, ronda 2 = 4x...
+// Esto garantiza que los conectores entre rondas queden centrados correctamente.
 function slotH(roundIdx: number) {
   return INITIAL_SLOT * Math.pow(2, roundIdx);
 }
@@ -230,23 +232,25 @@ export default function BracketView({
   const calculatedEquipos = partidosR1 > 0 ? partidosR1 * 2 : maxEquipos;
 
   const safe = Math.max(calculatedEquipos, 2);
+  // totalRounds = log2(equipos): 8 equipos → 3 rondas (cuartos, semi, final)
   const totalRounds = Math.ceil(Math.log2(safe));
   const firstRoundMatches = Math.ceil(safe / 2);
 
   const containerH = slotH(0) * firstRoundMatches + HEADER_H + 24;
   const containerW = totalRounds * (COL_W + COL_GAP) - COL_GAP + 32;
 
-  // ── Build bracket rounds (real + TBD) ──────────────────────────────────────
+  // Construye el bracket combinando partidos reales con casillas TBD.
+  // Para rondas que aún no existen en la base de datos, se calculan los
+  // posibles ganadores desde la ronda anterior para adelantar el cuadro.
   const bracketRounds: any[] = [];
 
   for (let r = 0; r < totalRounds; r++) {
     const matchCount = Math.max(1, Math.ceil(firstRoundMatches / Math.pow(2, r)));
     const realRonda = rondas.find((ro) => ro.ronda === r + 1);
-    
+
     const roundMatches = Array.from({ length: matchCount }, (__, m) => {
       const real = realRonda?.partidos[m];
-      
-      
+
       if (real) {
         const finished = partidoCopaFinalizado(real);
         return {
@@ -256,6 +260,7 @@ export default function BracketView({
           team2: real.equipoVisitante.nombre,
           team2Id: real.equipoVisitante.id,
           shield2: real.equipoVisitante.escudo,
+          // Solo mostrar el marcador si el partido está cerrado
           score1: finished ? real.golesLocal : null,
           score2: finished ? real.golesVisitante : null,
           penLocal: real.golesPenalesLocal ?? null,
@@ -264,8 +269,8 @@ export default function BracketView({
           tbd: false,
         };
       }
-      
-      // Otherwise, we calculate TBD teams based on the previous round's winners
+
+      // Ronda sin partido real: calcular quién podría estar desde los ganadores anteriores
       let computedTeam1 = 'Por definir';
       let computedTeam1Id: string | null = null;
       let computedShield1: string | null = null;
@@ -276,7 +281,7 @@ export default function BracketView({
 
       if (r > 0) {
         const prevRound = bracketRounds[r - 1];
-        
+
         const parentMatch1 = prevRound.matches[m * 2];
         const winner1 = parentMatch1 ? getWinnerOfMatch(parentMatch1) : null;
         if (winner1) {
@@ -284,7 +289,7 @@ export default function BracketView({
           computedTeam1Id = winner1.id;
           computedShield1 = winner1.escudo;
         }
-        
+
         const parentMatch2 = prevRound.matches[m * 2 + 1];
         const winner2 = parentMatch2 ? getWinnerOfMatch(parentMatch2) : null;
         if (winner2) {
@@ -295,7 +300,7 @@ export default function BracketView({
 
         isTbd = !winner1 || !winner2;
       }
-      
+
       return {
         team1: computedTeam1,
         team1Id: computedTeam1Id,
@@ -319,7 +324,10 @@ export default function BracketView({
     });
   }
 
-  // ── Build connector lines ─────────────────────────────────────────────────
+  // Construye las líneas SVG-like (Views absolutas) que conectan partidos entre rondas.
+  // Cada partido de la ronda r conecta con su partido padre en la ronda r+1 mediante
+  // una línea horizontal saliente, una vertical que une los dos partidos del par,
+  // y una línea horizontal entrante al partido padre.
   const connectors: React.ReactNode[] = [];
   for (let r = 0; r < totalRounds - 1; r++) {
     const matchCount = bracketRounds[r].matches.length;

@@ -57,6 +57,9 @@ export interface RondaFixture {
   partidos: Partido[];
 }
 
+// Un partido de copa está "cerrado" tanto si su faseJuego es FINALIZADO como si
+// todavía figura en PENALES pero ya tiene marcador de tanda registrado.
+// Esto alinea con la lógica del backend en isCopaMatchFinished.
 export function partidoCopaFinalizado(p: Partido): boolean {
   if (p.faseJuego === 'FINALIZADO') return true;
   if (p.faseJuego === 'PENALES' && p.golesPenalesLocal !== null && p.golesPenalesVisitante !== null) return true;
@@ -65,6 +68,11 @@ export function partidoCopaFinalizado(p: Partido): boolean {
 
 export type ScheduleMode = 'programar' | 'editar';
 
+// Determina qué botón mostrar en el bracket de copa para cada ronda:
+// - null: no mostrar nada (torneo no en curso o ronda bloqueada por la anterior)
+// - 'programar': hay partidos sin fecha asignada
+// - 'editar': todos los partidos de la ronda ya tienen fecha
+// Una ronda > 1 solo se puede programar cuando todos los partidos de la ronda anterior están finalizados.
 export function getRondaScheduleMode(
   rondaNum: number,
   rondas: RondaFixture[],
@@ -82,6 +90,9 @@ export function getRondaScheduleMode(
   const allScheduled = realRonda.partidos.every((p) => p.fecha !== null);
   return allScheduled ? 'editar' : 'programar';
 }
+// Filtra las rondas que deben mostrarse en la vista de lista del fixture de copa.
+// Una ronda posterior solo aparece cuando todos los partidos de la anterior están cerrados,
+// para no revelar cruces futuros antes de que estén confirmados.
 export function filterRondasCopaVisibles(rondas: RondaFixture[]): RondaFixture[] {
   const sorted = [...rondas].sort((a, b) => a.ronda - b.ronda);
   const visible: RondaFixture[] = [];
