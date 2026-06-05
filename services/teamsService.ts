@@ -122,6 +122,10 @@ export const deleteTeam = async (id: string): Promise<void> => {
   await api.delete(`/teams/${id}`, getToken());
 };
 
+export const removePlayer = async (teamId: string, targetUserId: string): Promise<void> => {
+  await api.delete(`/teams/${teamId}/members/${targetUserId}`, getToken());
+};
+
 export const leaveTeam = async (id: string): Promise<void> => {
   await api.delete(`/teams/${id}/leave`, getToken());
 };

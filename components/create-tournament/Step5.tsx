@@ -60,24 +60,28 @@ export default function Step5({
       <Text className="text-night font-sans-medium text-base mb-4">Resumen del torneo</Text>
 
       {/* Hero Card */}
-      <View className="bg-primary rounded-3xl p-6 mb-5 items-center overflow-hidden">
+      <View className="bg-primary rounded-3xl mb-5 overflow-hidden">
         {imagenLocal && (
           <Image 
             source={{ uri: imagenLocal }} 
-            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%', opacity: 0.35 }}
+            className="w-full h-40"
             resizeMode="cover" 
           />
         )}
-        <View className="w-16 h-16 bg-white/20 rounded-full items-center justify-center mb-3">
-            <Feather name="award" size={32} color="white" />
-        </View>
-        <Text className="text-white font-sans-medium text-xl text-center mb-1">
-            {nombre || 'Torneo sin nombre'}
-        </Text>
-        <View className="bg-black/20 px-3 py-1 rounded-full mt-1">
-            <Text className="text-white/90 font-sans text-xs text-center">
-                Revisa que todo esté correcto
-            </Text>
+        <View className="p-6 items-center">
+          {!imagenLocal && (
+            <View className="w-16 h-16 bg-white/20 rounded-full items-center justify-center mb-3">
+                <Feather name="award" size={32} color="white" />
+            </View>
+          )}
+          <Text className="text-white font-sans-medium text-xl text-center mb-1">
+              {nombre || 'Torneo sin nombre'}
+          </Text>
+          <View className="bg-black/20 px-3 py-1 rounded-full mt-1">
+              <Text className="text-white/90 font-sans text-xs text-center">
+                  Revisa que todo esté correcto
+              </Text>
+          </View>
         </View>
       </View>
 
