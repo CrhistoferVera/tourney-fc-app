@@ -76,8 +76,8 @@ export default function RegisterScreen() {
     setLoading(true);
     try {
       const data = await api.post('/auth/register', {
-        nombre,
-        email,
+        nombre: nombre.trim(),
+        email: email.trim(),
         password,
       });
       if (data.accessToken) {

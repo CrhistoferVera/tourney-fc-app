@@ -35,34 +35,53 @@ function parseTime(value: string): { h: number; m: number } {
   return { h: 12, m: 0 }; // valor por defecto razonable
 }
 
-/** Rueda scrollable que ajusta (snap) al valor central, estilo reloj de alarma. */
+const clampIndex = (idx: number, len: number) => Math.max(0, Math.min(len - 1, idx));
+
+/**
+ * Rueda scrollable estilo reloj de alarma. Mantiene su propio índice resaltado
+ * (no se controla desde fuera para no pelear con el gesto del usuario) y solo
+ * informa la selección al soltar el scroll o al tocar un número.
+ */
 function Wheel({
   data,
-  selected,
+  initialValue,
   onSelect,
 }: {
   data: number[];
-  selected: number;
+  initialValue: number;
   onSelect: (val: number) => void;
 }) {
   const ref = useRef<ScrollView>(null);
+  const didInit = useRef(false);
+  const [selectedIdx, setSelectedIdx] = useState(() =>
+    clampIndex(data.indexOf(initialValue), data.length),
+  );
 
-  useEffect(() => {
-    const idx = data.indexOf(selected);
-    if (idx >= 0) {
-      // Posicionar sin animación al abrir
-      requestAnimationFrame(() => {
-        ref.current?.scrollTo({ y: idx * ITEM_HEIGHT, animated: false });
-      });
-    }
-  }, [selected, data]);
+  // Posicionar en el valor inicial una sola vez, cuando el contenido ya está medido.
+  const handleContentSize = () => {
+    if (didInit.current) return;
+    didInit.current = true;
+    const idx = clampIndex(data.indexOf(initialValue), data.length);
+    ref.current?.scrollTo({ y: idx * ITEM_HEIGHT, animated: false });
+  };
 
+  // Resaltado en vivo mientras se desplaza.
+  const handleScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const idx = clampIndex(Math.round(e.nativeEvent.contentOffset.y / ITEM_HEIGHT), data.length);
+    if (idx !== selectedIdx) setSelectedIdx(idx);
+  };
+
+  // Confirmar selección al detenerse.
   const handleEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const idx = Math.round(e.nativeEvent.contentOffset.y / ITEM_HEIGHT);
-    const clamped = Math.max(0, Math.min(data.length - 1, idx));
-    const val = data[clamped];
-    if (val !== selected) onSelect(val);
-    ref.current?.scrollTo({ y: clamped * ITEM_HEIGHT, animated: true });
+    const idx = clampIndex(Math.round(e.nativeEvent.contentOffset.y / ITEM_HEIGHT), data.length);
+    setSelectedIdx(idx);
+    onSelect(data[idx]);
+  };
+
+  const selectByTap = (idx: number) => {
+    setSelectedIdx(idx);
+    onSelect(data[idx]);
+    ref.current?.scrollTo({ y: idx * ITEM_HEIGHT, animated: true });
   };
 
   return (
@@ -72,14 +91,20 @@ function Wheel({
         showsVerticalScrollIndicator={false}
         snapToInterval={ITEM_HEIGHT}
         decelerationRate="fast"
+        scrollEventThrottle={16}
+        nestedScrollEnabled
+        onScroll={handleScroll}
         onMomentumScrollEnd={handleEnd}
+        onContentSizeChange={handleContentSize}
         contentContainerStyle={{ paddingVertical: PAD * ITEM_HEIGHT }}
       >
-        {data.map((val) => {
-          const isSel = val === selected;
+        {data.map((val, i) => {
+          const isSel = i === selectedIdx;
           return (
-            <View
+            <TouchableOpacity
               key={val}
+              activeOpacity={0.7}
+              onPress={() => selectByTap(i)}
               style={{ height: ITEM_HEIGHT, alignItems: 'center', justifyContent: 'center' }}
             >
               <Text
@@ -91,7 +116,7 @@ function Wheel({
               >
                 {pad2(val)}
               </Text>
-            </View>
+            </TouchableOpacity>
           );
         })}
       </ScrollView>
@@ -109,17 +134,22 @@ export default function TimePickerField({
   onOpen,
   onClose,
 }: Props) {
-  const [draft, setDraft] = useState(() => parseTime(value));
+  // El borrador se mantiene en refs vivos mediante las ruedas; aquí guardamos
+  // el valor confirmado al vuelo a partir de cada rueda.
+  const draftRef = useRef(parseTime(value));
 
-  // Al abrir, sincronizar el borrador con el valor actual
+  // Al abrir, reiniciar el borrador al valor actual (importante en modo edición o reapertura).
   useEffect(() => {
-    if (visible) setDraft(parseTime(value));
+    if (visible) draftRef.current = parseTime(value);
   }, [visible, value]);
 
   const confirm = () => {
-    onChange(`${pad2(draft.h)}:${pad2(draft.m)}`);
+    const { h, m } = draftRef.current;
+    onChange(`${pad2(h)}:${pad2(m)}`);
     onClose();
   };
+
+  const initial = parseTime(value);
 
   return (
     <View style={{ flex: 1 }}>
@@ -185,41 +215,48 @@ export default function TimePickerField({
               {label}
             </Text>
 
-            <View style={{ height: PICKER_HEIGHT, justifyContent: 'center' }}>
-              {/* Banda central que resalta la selección */}
-              <View
-                pointerEvents="none"
-                style={{
-                  position: 'absolute',
-                  left: 32,
-                  right: 32,
-                  top: PAD * ITEM_HEIGHT,
-                  height: ITEM_HEIGHT,
-                  borderRadius: 12,
-                  backgroundColor: '#D4F5E2',
-                }}
-              />
-              <View
-                style={{
-                  flexDirection: 'row',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  gap: 4,
-                }}
-              >
-                <Wheel
-                  data={HOURS}
-                  selected={draft.h}
-                  onSelect={(h) => setDraft((d) => ({ ...d, h }))}
+            {/* Las ruedas se montan frescas en cada apertura para posicionarse bien */}
+            {visible && (
+              <View style={{ height: PICKER_HEIGHT, justifyContent: 'center' }}>
+                {/* Banda central que resalta la selección */}
+                <View
+                  pointerEvents="none"
+                  style={{
+                    position: 'absolute',
+                    left: 32,
+                    right: 32,
+                    top: PAD * ITEM_HEIGHT,
+                    height: ITEM_HEIGHT,
+                    borderRadius: 12,
+                    backgroundColor: '#D4F5E2',
+                  }}
                 />
-                <Text style={{ fontSize: 26, fontWeight: '700', color: '#0F1A14' }}>:</Text>
-                <Wheel
-                  data={MINUTES}
-                  selected={draft.m}
-                  onSelect={(m) => setDraft((d) => ({ ...d, m }))}
-                />
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    gap: 4,
+                  }}
+                >
+                  <Wheel
+                    data={HOURS}
+                    initialValue={initial.h}
+                    onSelect={(h) => {
+                      draftRef.current = { ...draftRef.current, h };
+                    }}
+                  />
+                  <Text style={{ fontSize: 26, fontWeight: '700', color: '#0F1A14' }}>:</Text>
+                  <Wheel
+                    data={MINUTES}
+                    initialValue={initial.m}
+                    onSelect={(m) => {
+                      draftRef.current = { ...draftRef.current, m };
+                    }}
+                  />
+                </View>
               </View>
-            </View>
+            )}
 
             <View style={{ flexDirection: 'row', gap: 12, paddingHorizontal: 20, marginTop: 16 }}>
               <TouchableOpacity

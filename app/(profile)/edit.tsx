@@ -33,9 +33,10 @@ export default function EditProfileScreen() {
   }, [usuario]);
 
   const validateNombre = (value: string) => {
-    if (value.length < 3) {
+    const trimmed = value.trim();
+    if (trimmed.length < 3) {
       setNombreError('El nombre debe tener al menos 3 caracteres');
-    } else if (value.length > 50) {
+    } else if (trimmed.length > 50) {
       setNombreError('El nombre no puede exceder 50 caracteres');
     } else {
       setNombreError('');
@@ -61,14 +62,15 @@ export default function EditProfileScreen() {
   };
 
   const handleSave = async () => {
-    if (nombreError || nombre.length < 3) {
+    const nombreTrimmed = nombre.trim();
+    if (nombreError || nombreTrimmed.length < 3) {
       showError('Error de validación', 'Corrige los errores antes de guardar');
       return;
     }
 
     const success = await updateProfile({
-      nombre,
-      zona,
+      nombre: nombreTrimmed,
+      zona: zona.trim(),
       ...(fotoPerfil && { fotoPerfil }),
     });
 

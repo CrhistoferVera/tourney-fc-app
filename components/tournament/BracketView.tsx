@@ -49,6 +49,8 @@ interface TeamRowProps {
   escudo: string | null;
   score: number | null | undefined;
   scoreOponente?: number | null;
+  penScore?: number | null;
+  penScoreOponente?: number | null;
   showScore?: boolean;
   tbd: boolean;
   border?: boolean;
@@ -61,6 +63,8 @@ function TeamRow({
   escudo,
   score,
   scoreOponente,
+  penScore,
+  penScoreOponente,
   showScore = false,
   tbd,
   border,
@@ -68,11 +72,18 @@ function TeamRow({
   onPress,
 }: TeamRowProps) {
   const marcador = showScore && hasMarcador(score, scoreOponente);
-  
+
   const sNum = score ?? 0;
   const sOpNum = scoreOponente ?? 0;
-  const isWinner = marcador && sNum > sOpNum;
-  const isLoser = marcador && sNum < sOpNum;
+  // Desempate por penales cuando el marcador regular está empatado
+  const hayPenales = penScore != null && penScoreOponente != null;
+  const empateRegular = marcador && sNum === sOpNum;
+  let isWinner = marcador && sNum > sOpNum;
+  let isLoser = marcador && sNum < sOpNum;
+  if (empateRegular && hayPenales) {
+    isWinner = penScore! > penScoreOponente!;
+    isLoser = penScore! < penScoreOponente!;
+  }
 
   const content = (
     <>
@@ -124,14 +135,17 @@ function TeamRow({
             alignItems: 'center',
           }}
         >
-          <Text 
-            style={{ 
-              fontSize: 12, 
-              fontWeight: isWinner ? '700' : '400', 
-              color: isWinner ? '#0D7A3E' : '#6B7280' 
+          <Text
+            style={{
+              fontSize: 12,
+              fontWeight: isWinner ? '700' : '400',
+              color: isWinner ? '#0D7A3E' : '#6B7280'
             }}
           >
             {score}
+            {empateRegular && hayPenales && (
+              <Text style={{ fontSize: 9, color: '#6B7280' }}> ({penScore})</Text>
+            )}
           </Text>
         </View>
       )}
@@ -177,6 +191,8 @@ function getWinnerOfMatch(match: {
   finished?: boolean;
   score1: number | null;
   score2: number | null;
+  penLocal?: number | null;
+  penVisitante?: number | null;
   team1: string;
   team1Id: string | null;
   shield1: string | null;
@@ -186,19 +202,14 @@ function getWinnerOfMatch(match: {
 }) {
   if (match.tbd || !match.finished) return null;
   if (match.score1 === null || match.score2 === null) return null;
-  if (match.score1 > match.score2) {
-    return {
-      nombre: match.team1,
-      id: match.team1Id,
-      escudo: match.shield1,
-    };
-  }
-  if (match.score2 > match.score1) {
-    return {
-      nombre: match.team2,
-      id: match.team2Id,
-      escudo: match.shield2,
-    };
+  const team1 = { nombre: match.team1, id: match.team1Id, escudo: match.shield1 };
+  const team2 = { nombre: match.team2, id: match.team2Id, escudo: match.shield2 };
+  if (match.score1 > match.score2) return team1;
+  if (match.score2 > match.score1) return team2;
+  // Empate en tiempo regular → se decide por penales
+  if (match.penLocal != null && match.penVisitante != null) {
+    if (match.penLocal > match.penVisitante) return team1;
+    if (match.penVisitante > match.penLocal) return team2;
   }
   return null;
 }
@@ -247,6 +258,8 @@ export default function BracketView({
           shield2: real.equipoVisitante.escudo,
           score1: finished ? real.golesLocal : null,
           score2: finished ? real.golesVisitante : null,
+          penLocal: real.golesPenalesLocal ?? null,
+          penVisitante: real.golesPenalesVisitante ?? null,
           finished,
           tbd: false,
         };
@@ -292,6 +305,8 @@ export default function BracketView({
         shield2: computedShield2,
         score1: null,
         score2: null,
+        penLocal: null,
+        penVisitante: null,
         finished: false,
         tbd: isTbd,
       };
@@ -456,6 +471,8 @@ export default function BracketView({
                       escudo={match.shield1}
                       score={match.score1}
                       scoreOponente={match.score2}
+                      penScore={match.penLocal}
+                      penScoreOponente={match.penVisitante}
                       showScore={match.finished}
                       tbd={match.team1 === 'Por definir'}
                       border
@@ -471,6 +488,8 @@ export default function BracketView({
                       escudo={match.shield2}
                       score={match.score2}
                       scoreOponente={match.score1}
+                      penScore={match.penVisitante}
+                      penScoreOponente={match.penLocal}
                       showScore={match.finished}
                       tbd={match.team2 === 'Por definir'}
                       isMine={match.team2 !== 'Por definir' && miEquipoId === match.team2Id}

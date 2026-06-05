@@ -50,7 +50,7 @@ export default function LoginScreen() {
 
     setLoading(true);
     try {
-      const data = await api.post('/auth/login', { email, password });
+      const data = await api.post('/auth/login', { email: email.trim(), password });
       if (data.accessToken) {
         setToken(data.accessToken);
         setUsuario({
