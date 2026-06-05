@@ -33,6 +33,18 @@ function openInMaps(lat: number, lng: number, label: string) {
   );
 }
 
+function openAddressInMaps(address: string, label: string) {
+  const query = encodeURIComponent(`${label} ${address}`);
+  const url = Platform.select({
+    ios: `http://maps.apple.com/?q=${query}`,
+    android: `geo:0,0?q=${query}`,
+    default: `https://www.google.com/maps/search/?api=1&query=${query}`,
+  });
+  Linking.openURL(url).catch(() =>
+    Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${query}`),
+  );
+}
+
 export default function CanchasScreen() {
   const { id: torneoId, nombre } = useLocalSearchParams<{ id: string; nombre?: string }>();
   const router = useRouter();
@@ -128,8 +140,8 @@ export default function CanchasScreen() {
                   </View>
                 </View>
 
-                {/* Mapa + acción (solo si hay coordenadas) */}
-                {hasCoords(campo) && (
+                {/* Mapa + acción */}
+                {hasCoords(campo) ? (
                   <>
                     <MapView
                       style={{ width: '100%', height: 160 }}
@@ -159,6 +171,15 @@ export default function CanchasScreen() {
                       <Text className="text-primary font-sans-medium text-sm">Abrir en Maps</Text>
                     </TouchableOpacity>
                   </>
+                ) : !!campo.direccion && (
+                  <TouchableOpacity
+                    onPress={() => openAddressInMaps(campo.direccion!, campo.nombre)}
+                    activeOpacity={0.85}
+                    className="flex-row items-center justify-center gap-2 py-3 border-t border-mist"
+                  >
+                    <Navigation size={15} color="#0D7A3E" />
+                    <Text className="text-primary font-sans-medium text-sm">Abrir en Maps</Text>
+                  </TouchableOpacity>
                 )}
               </View>
             ))

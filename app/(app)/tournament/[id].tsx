@@ -652,7 +652,7 @@ export default function TournamentDetailScreen() {
           style={{ shadowColor: '#0F1A14', shadowOpacity: 0.05, shadowRadius: 6, elevation: 1 }}
         >
           <View className="flex-row justify-between mb-2">
-            <View>
+            <View className="flex-1 mr-2">
               <Text className="text-carbon text-xs">Período</Text>
               <Text className="text-night font-sans-medium text-sm">
                 {formatDate(tournament.fechaInicio)} – {formatDate(tournament.fechaFin)}

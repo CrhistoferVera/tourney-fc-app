@@ -56,17 +56,27 @@ export default function Step3({
     if (formato === 'COPA') {
       const idx = validCopa.indexOf(maxEquipos);
       if (idx > 0) onChangeEquipos(validCopa[idx - 1]);
+      else if (idx === -1) {
+        const closest = validCopa.slice().reverse().find(x => x < maxEquipos);
+        onChangeEquipos(closest || 4);
+      }
     } else {
-      onChangeEquipos(Math.max(4, maxEquipos - 2));
+      const next = maxEquipos % 2 === 0 ? maxEquipos - 2 : maxEquipos - 1;
+      onChangeEquipos(Math.max(4, next));
     }
   };
 
   const handlePlus = () => {
     if (formato === 'COPA') {
       const idx = validCopa.indexOf(maxEquipos);
-      if (idx < validCopa.length - 1) onChangeEquipos(validCopa[idx + 1]);
+      if (idx !== -1 && idx < validCopa.length - 1) onChangeEquipos(validCopa[idx + 1]);
+      else if (idx === -1) {
+        const closest = validCopa.find(x => x > maxEquipos);
+        onChangeEquipos(closest || 32);
+      }
     } else {
-      onChangeEquipos(Math.min(32, maxEquipos + 2));
+      const next = maxEquipos % 2 === 0 ? maxEquipos + 2 : maxEquipos + 1;
+      onChangeEquipos(Math.min(32, next));
     }
   };
 

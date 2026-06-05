@@ -619,6 +619,7 @@ function TabAjustes({
   fechaFinInicial,
   maxEquiposInicial,
   equiposAprobados,
+  formato,
   onEstadoChange,
 }: {
   readonly torneoId: string;
@@ -627,9 +628,11 @@ function TabAjustes({
   readonly fechaFinInicial: string;
   readonly maxEquiposInicial: string;
   readonly equiposAprobados: number;
+  readonly formato: string;
   readonly onEstadoChange: (estado: string) => void;
 }) {
   const { alertState, hideAlert, showError, showSuccess, showConfirm } = useAlert();
+  const validCopa = [4, 8, 16, 32];
 
   const [calendarOpen, setCalendarOpen] = useState<'fin' | null>(null);
   const [fechaInicio, setFechaInicio] = useState(fechaInicioInicial?.slice(0, 10) ?? '');
@@ -789,7 +792,20 @@ function TabAjustes({
                 activeOpacity={0.7}
                 onPress={() => {
                   const cur = Number.parseInt(maxEquipos, 10) || 4;
-                  const next = Math.max(Math.max(4, equiposAprobados || 4), cur - 2);
+                  let next = 4;
+                  if (formato === 'COPA') {
+                    const idx = validCopa.indexOf(cur);
+                    if (idx > 0) next = validCopa[idx - 1];
+                    else if (idx === -1) next = validCopa.slice().reverse().find(x => x < cur) || 4;
+                  } else {
+                    next = cur % 2 === 0 ? cur - 2 : cur - 1;
+                    next = Math.max(4, next);
+                  }
+                  
+                  if (next < equiposAprobados) {
+                    showError('Valor inválido', `No puedes reducir a ${next} equipos: ya hay ${equiposAprobados} aprobados.`);
+                    return;
+                  }
                   setMaxEquipos(String(next));
                 }}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -822,7 +838,17 @@ function TabAjustes({
                 activeOpacity={0.7}
                 onPress={() => {
                   const cur = Number.parseInt(maxEquipos, 10) || 4;
-                  setMaxEquipos(String(Math.min(32, cur + 2)));
+                  let next = 32;
+                  if (formato === 'COPA') {
+                    const idx = validCopa.indexOf(cur);
+                    if (idx !== -1 && idx < validCopa.length - 1) next = validCopa[idx + 1];
+                    else if (idx === -1) next = validCopa.find(x => x > cur) || 32;
+                    else next = cur;
+                  } else {
+                    next = cur % 2 === 0 ? cur + 2 : cur + 1;
+                    next = Math.min(32, next);
+                  }
+                  setMaxEquipos(String(next));
                 }}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
@@ -901,6 +927,7 @@ export default function ManageScreen() {
     estado: estadoInicial,
     maxEquipos: maxEquiposInicial,
     equiposAprobados: equiposAprobadosInicial,
+    formato: formatoInicial,
   } = useLocalSearchParams<{
     id: string;
     fechaInicio: string;
@@ -908,6 +935,7 @@ export default function ManageScreen() {
     estado: string;
     maxEquipos: string;
     equiposAprobados: string;
+    formato: string;
   }>();
   const router = useRouter();
   const { alertState, hideAlert } = useAlert();
@@ -979,6 +1007,7 @@ export default function ManageScreen() {
             fechaFinInicial={fechaFinInicial ?? ''}
             maxEquiposInicial={maxEquiposInicial ?? '4'}
             equiposAprobados={equiposAprobados}
+            formato={formatoInicial ?? ''}
             onEstadoChange={setEstado}
           />
         )}
