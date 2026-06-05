@@ -133,6 +133,9 @@ interface ParticleProps {
   delay: number;
 }
 
+// Partícula de confetti animada: cae en loop desde arriba con oscilación lateral
+// y rotación aleatoria. Los valores aleatorios se fijan con useMemo para que no
+// cambien en cada render y arruinen la animación.
 function ConfettiParticle({ delay }: ParticleProps) {
   const animatedValue = useRef(new Animated.Value(0)).current;
 
@@ -243,6 +246,10 @@ export default function MatchScreen() {
     return ids;
   }, [partido?.eventos]);
 
+  // Calcula a qué equipo le toca patear el siguiente penal.
+  // El primer tiro no tiene turno predefinido (lo elige el árbitro).
+  // A partir del segundo, los turnos se alternan respecto al equipo que inició.
+  // K par → mismo equipo que el primero; K impar → el otro.
   const nextPenaltyTeamId = useMemo(() => {
     if (!partido || partido.faseJuego !== 'PENALES') return null;
     if (selectedEvent && selectedEvent.tipo !== 'GOL' && selectedEvent.tipo !== 'PENAL_FALLADO') {
@@ -253,7 +260,6 @@ export default function MatchScreen() {
       .slice()
       .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
     const K = penaltyEvents.length;
-    // El primer penal lo puede patear cualquiera: sin turno fijado todavía.
     if (K === 0) return null;
     const firstTeamId = penaltyEvents[0].equipoId;
     const otherTeamId =
@@ -261,6 +267,9 @@ export default function MatchScreen() {
     return K % 2 === 0 ? firstTeamId : otherTeamId;
   }, [partido, selectedEvent]);
 
+  // En muerte súbita, la rotación de pateadores vuelve a empezar cuando todos
+  // los jugadores elegibles han pateado (un "ciclo"). Este memo calcula qué
+  // jugadores ya patearon en el ciclo actual para que la UI los deshabilite.
   const kickedPlayerIdsInCurrentCycle = useMemo(() => {
     if (!partido || partido.faseJuego !== 'PENALES' || !selectedEquipoId) {
       return new Set<string>();
@@ -276,6 +285,8 @@ export default function MatchScreen() {
     if (N === 0) return new Set<string>();
 
     const K = teamPenalties.length;
+    // cycleIndex determina en qué vuelta de rotación estamos; dentro del ciclo
+    // solo se bloquean los jugadores que ya patearon en esta vuelta.
     const cycleIndex = Math.floor(K / N);
     const cycleStartIndex = cycleIndex * N;
     const kickedInCurrentCycle = teamPenalties.slice(cycleStartIndex).map((ev) => ev.jugadorId).filter(Boolean) as string[];
@@ -292,6 +303,8 @@ export default function MatchScreen() {
     return 25; 
   };
 
+  // Formato de cronómetro estilo transmisión: muestra "45 +3'" cuando hay tiempo añadido.
+  // Solo aplica durante PRIMER_TIEMPO y SEGUNDO_TIEMPO; en otras fases no muestra nada.
   const getFormattedTime = () => {
     if (!partido || displayMinutes <= 0) return '';
     if (partido.faseJuego !== 'PRIMER_TIEMPO' && partido.faseJuego !== 'SEGUNDO_TIEMPO') {
@@ -311,6 +324,9 @@ export default function MatchScreen() {
     return `${displayMinutes}'`;
   };
 
+  // Muestra la pantalla de celebración del campeón una sola vez por sesión.
+  // celebrationShownRef evita que el modal aparezca de nuevo si el partido
+  // se recarga por el polling mientras la pantalla está abierta.
   const maybeShowTournamentWinner = useCallback((m: Partido) => {
     if (celebrationShownRef.current || !m.ganadorTorneo) return;
     if (m.faseJuego !== 'FINALIZADO') return;
@@ -344,6 +360,8 @@ export default function MatchScreen() {
     }
   }, [id, maybeShowTournamentWinner]);
 
+  // Carga inicial completa + polling cada 10s solo para el partido (sin recargar el torneo)
+  // para mantener el marcador y los eventos actualizados durante el partido en vivo.
   useEffect(() => {
     fetchAll();
     const interval = setInterval(() => {
@@ -582,6 +600,8 @@ export default function MatchScreen() {
     setActionLoading(true);
     try {
       const wasPenales = partido.faseJuego === 'PENALES';
+      // En tanda de penales (o si el partido terminó por penales), los eventos van marcados
+      // con detalle 'PENAL' para que el backend y el tracker los identifiquen correctamente
       const isPenal = wasPenales || (partido.faseJuego === 'FINALIZADO' && partido.golesPenalesLocal !== null);
       await addMatchEvent(partido.id, {
         tipo: selectedEvent.tipo,

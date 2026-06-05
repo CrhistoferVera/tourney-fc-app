@@ -1,9 +1,12 @@
-// services/api.ts
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL;
 
+// Centraliza el manejo de errores HTTP. El 401 tiene dos casos:
+// - Si ya había token → el JWT expiró, se limpia la sesión para forzar re-login.
+// - Si no había token → es un intento de login fallido, se propaga el mensaje del backend.
 const handleResponse = async (response: Response) => {
   const data = await response.json();
   if (response.status === 401) {
+    // Importación dinámica para evitar dependencia circular con authStore
     const { useAuthStore } = await import('../store/authStore');
     const currentToken = useAuthStore.getState().token;
     if (currentToken) {

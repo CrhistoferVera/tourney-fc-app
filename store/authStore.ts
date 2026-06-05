@@ -21,6 +21,9 @@ interface AuthStore {
   clearPendingInviteCode: () => void;
 }
 
+// Estado de autenticación persistido en AsyncStorage.
+// pendingInviteCode guarda el código de invitación que llegó por deep-link
+// cuando el usuario no estaba logueado, para retomarlo después del login.
 export const useAuthStore = create<AuthStore>()(
   persist(
     (set) => ({
