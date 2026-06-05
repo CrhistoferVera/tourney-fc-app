@@ -21,6 +21,7 @@ import { useAuthStore } from '../../../store/authStore';
 import CustomAlert from '../../../components/CustomAlert';
 import { useAlert } from '../../../hooks/useAlert';
 import DatePickerField from '../../../components/create-tournament/DatePickerField';
+import ShieldDisplay from '../../../components/tournament/ShieldDisplay';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -376,17 +377,9 @@ function TabSolicitudes({
                 activeOpacity={0.8}
                 className="flex-row items-center px-4 py-3"
               >
-                {ins.equipo.escudo ? (
-                  <Image
-                    source={{ uri: ins.equipo.escudo }}
-                    className="w-10 h-10 rounded-full mr-3"
-                    resizeMode="cover"
-                  />
-                ) : (
-                  <View className="w-10 h-10 rounded-full bg-primary-light items-center justify-center mr-3">
-                    <Feather name="shield" size={18} color="#0D7A3E" />
-                  </View>
-                )}
+                <View className="mr-3">
+                  <ShieldDisplay escudo={ins.equipo.escudo} nombre={ins.equipo.nombre} size={40} />
+                </View>
                 <View className="flex-1">
                   <Text className="text-night font-sans-medium text-sm">{ins.equipo.nombre}</Text>
                   <Text className="text-carbon text-xs">

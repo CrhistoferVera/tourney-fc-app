@@ -1,6 +1,7 @@
-import { View, Text, TouchableOpacity, Image } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { Partido } from '../../services/fixtureService';
 import { formatPartidoFecha } from '../../utils/matchDate';
+import ShieldDisplay from './ShieldDisplay';
 
 interface Props {
   readonly partido: Partido;
@@ -11,31 +12,7 @@ interface Props {
 const formatFecha = (fecha: string | null) => formatPartidoFecha(fecha);
 
 function Shield({ escudo, nombre }: { readonly escudo: string | null; readonly nombre: string }) {
-  if (escudo) {
-    return (
-      <Image
-        source={{ uri: escudo }}
-        style={{ width: 34, height: 34 }}
-        resizeMode="contain"
-      />
-    );
-  }
-  return (
-    <View
-      style={{
-        width: 34,
-        height: 34,
-        borderRadius: 17,
-        backgroundColor: '#EBF0EC',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      <Text style={{ color: '#0D7A3E', fontSize: 14, fontWeight: '600' }}>
-        {nombre.charAt(0).toUpperCase()}
-      </Text>
-    </View>
-  );
+  return <ShieldDisplay escudo={escudo} nombre={nombre} size={34} />;
 }
 
 export default function MatchCard({ partido, canEdit, onPress }: Props) {

@@ -11,7 +11,7 @@ import {
 } from 'lucide-react-native';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { useState, useCallback } from 'react';
-import { ActivityIndicator, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import CustomAlert from '../../../components/CustomAlert';
 import { useAlert } from '../../../hooks/useAlert';
 import {
@@ -23,6 +23,7 @@ import {
 } from '../../../services/tournamentService';
 import { getFixture, Partido } from '../../../services/fixtureService';
 import MatchCard from '../../../components/tournament/MatchCard';
+import ShieldDisplay from '../../../components/tournament/ShieldDisplay';
 
 // ─── Helpers (module-level, zero complexity cost) ────────────────────────────
 
@@ -606,10 +607,17 @@ export default function TournamentDetailScreen() {
                 {tournament.formato === 'LIGA' ? 'Campeón de la liga' : 'Campeón del torneo'}
               </Text>
               {tournament.ganadorTorneo.escudo ? (
-                <Image
-                  source={{ uri: tournament.ganadorTorneo.escudo }}
-                  style={{ width: 72, height: 72, borderRadius: 36, marginBottom: 10, borderWidth: 3, borderColor: '#FCD34D' }}
-                />
+                <View
+                  style={{
+                    borderRadius: 20,
+                    marginBottom: 10,
+                    borderWidth: 3,
+                    borderColor: '#FCD34D',
+                    overflow: 'hidden',
+                  }}
+                >
+                  <ShieldDisplay escudo={tournament.ganadorTorneo.escudo} nombre={tournament.ganadorTorneo.nombre} size={72} />
+                </View>
               ) : (
                 <View
                   style={{

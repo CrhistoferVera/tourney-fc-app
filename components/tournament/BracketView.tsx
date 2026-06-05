@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, ScrollView, Image, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { RondaFixture, partidoCopaFinalizado, getRondaScheduleMode, ScheduleMode } from '../../services/fixtureService';
+import ShieldDisplay from './ShieldDisplay';
 
 // ── Layout constants ──────────────────────────────────────────────────────────
 const MATCH_H = 72;
@@ -91,27 +92,9 @@ function TeamRow({
     <>
       {tbd ? (
         <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: '#F3F4F6' }} />
-      ) : escudo ? (
-        <Image 
-          source={{ uri: escudo }} 
-          style={{ width: 20, height: 20, opacity: isLoser ? 0.6 : 1 }} 
-          resizeMode="contain" 
-        />
       ) : (
-        <View
-          style={{
-            width: 20,
-            height: 20,
-            borderRadius: 10,
-            backgroundColor: '#EBF0EC',
-            alignItems: 'center',
-            justifyContent: 'center',
-            opacity: isLoser ? 0.6 : 1,
-          }}
-        >
-          <Text style={{ fontSize: 9, fontWeight: '700', color: '#0D7A3E' }}>
-            {nombre.charAt(0).toUpperCase()}
-          </Text>
+        <View style={{ opacity: isLoser ? 0.6 : 1 }}>
+          <ShieldDisplay escudo={escudo} nombre={nombre} size={20} />
         </View>
       )}
       <Text
