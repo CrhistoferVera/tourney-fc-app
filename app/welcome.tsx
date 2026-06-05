@@ -22,7 +22,7 @@ export default function WelcomeScreen() {
         {pendingInviteCode ? (
           <View className="bg-primary-light border border-primary rounded-2xl px-4 py-3 mt-6">
             <Text className="text-primary font-sans-medium text-sm text-center">
-              Te invitaron a un equipo. Inicia sesión o regístrate para unirte.
+              Te invitaron a un equipo. Inicia sesión o regístrate para unirte a tu equipo.
             </Text>
           </View>
         ) : null}
