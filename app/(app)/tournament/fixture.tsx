@@ -86,12 +86,19 @@ export default function FixtureScreen() {
     return { mode, ronda: current };
   })();
 
+  // Época de fixture: invalida GETs en vuelo cuando se (re)genera, para que
+  // una respuesta vieja/vacía no pise el fixture recién generado.
+  const fixtureEpoch = useRef(0);
+
   const fetchFixture = useCallback(async () => {
     if (!torneoId) return;
+    const epoch = fixtureEpoch.current;
     try {
       const data = await getFixture(torneoId);
+      if (epoch !== fixtureEpoch.current) return; // respuesta obsoleta
       setRondas(Array.isArray(data) ? data : []);
     } catch {
+      if (epoch !== fixtureEpoch.current) return;
       setRondas([]);
     }
   }, [torneoId]);
@@ -142,9 +149,13 @@ export default function FixtureScreen() {
         : '¿Generar el fixture automáticamente con los equipos inscritos?',
       async () => {
         setGenerating(true);
+        // Invalida cualquier getFixture en vuelo (p. ej. del polling de 10s)
+        // para que no sobrescriba el fixture recién generado con datos vacíos.
+        fixtureEpoch.current += 1;
         try {
           const data = await generateFixture(torneoId);
-          setRondas(data);
+          fixtureEpoch.current += 1;
+          setRondas(Array.isArray(data) ? data : []);
           setRondaActual(0);
           showSuccess('Fixture generado', 'El fixture fue generado exitosamente');
         } catch (e: any) {

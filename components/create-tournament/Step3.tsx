@@ -123,7 +123,7 @@ export default function Step3({
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
               <Users size={12} color="#3D4F44" />
               <Text style={{ color: '#3D4F44', fontSize: 11, fontFamily: 'Inter_400Regular' }}>
-                equipos máx.
+                Cant. Equipos
               </Text>
             </View>
           </View>

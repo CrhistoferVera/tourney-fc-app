@@ -1,9 +1,11 @@
 import { Pressable, View, Text, Image } from 'react-native';
-import { router, Tabs, useRouter } from 'expo-router';
+import { router, Tabs, useRouter, usePathname } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { Feather } from '@expo/vector-icons';
 import { Inbox, Link, Trophy } from 'lucide-react-native';
 import BottomTabBar from '../../../components/DrawerMenu';
 import { useAuthStore } from '../../../store/authStore';
+import { inboxService } from '../../../services/inboxService';
 
 const renderTabBar = () => <BottomTabBar />;
 
@@ -58,12 +60,59 @@ const HeaderAvatar = () => {
   );
 };
 
+const InboxButton = () => {
+  const [hasNotifications, setHasNotifications] = useState(false);
+  const pathname = usePathname();
+  const token = useAuthStore((s) => s.token);
+
+  useEffect(() => {
+    if (!token) {
+      setHasNotifications(false);
+      return;
+    }
+    let cancelled = false;
+    const check = async () => {
+      try {
+        const data = await inboxService.getInvitaciones();
+        if (!cancelled) setHasNotifications(data.length > 0);
+      } catch {
+        /* silencioso */
+      }
+    };
+    check();
+    const id = setInterval(check, 30000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+    // Revisa al montar, al navegar entre pantallas y cada 30s
+  }, [pathname, token]);
+
+  return (
+    <Pressable onPress={() => router.push('/inbox')} style={{ padding: 4 }}>
+      <Inbox size={24} color="#FFFFFF" />
+      {hasNotifications && (
+        <View
+          style={{
+            position: 'absolute',
+            top: 2,
+            right: 2,
+            width: 11,
+            height: 11,
+            borderRadius: 6,
+            backgroundColor: '#FACC15',
+            borderWidth: 1.5,
+            borderColor: '#0D7A3E',
+          }}
+        />
+      )}
+    </Pressable>
+  );
+};
+
 const HeaderRight = () => (
   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginRight: 4 }}>
-    
-    <Pressable onPress={() => {router.push('/inbox')}} style={{ padding: 4 }}>
-      <Inbox size={24} color="#FFFFFF" />
-    </Pressable>
+    <InboxButton />
     <HeaderAvatar />
   </View>
 );

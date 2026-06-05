@@ -36,6 +36,7 @@ interface Inscripcion { id: string; estado: string; createdAt: string; equipo: E
 
 function TabStaff({ torneoId }: { readonly torneoId: string }) {
   const token = useAuthStore.getState().token ?? undefined;
+  const currentUserEmail = useAuthStore.getState().usuario?.email ?? '';
   const { alertState, hideAlert, showError, showSuccess } = useAlert();
 
   const [staffPendientes, setStaffPendientes] = useState<StaffPendiente[]>([]);
@@ -72,6 +73,7 @@ function TabStaff({ torneoId }: { readonly torneoId: string }) {
       setSearching(true);
       try {
         const yaExisten = new Set([
+          currentUserEmail,
           ...staffAgregados.map((s) => s.email),
           ...staffPendientes.map((s) => s.email),
           ...staffAceptados.map((s) => s.email),
@@ -84,6 +86,10 @@ function TabStaff({ torneoId }: { readonly torneoId: string }) {
   }, [staffAgregados, staffPendientes, staffAceptados]);
 
   const handleSelectUser = (user: User) => {
+    if (user.email === currentUserEmail) {
+      showError('Acción no permitida', 'No puedes agregarte a ti mismo como staff, ya eres el organizador.');
+      return;
+    }
     setStaffAgregados((prev) => [...prev, { email: user.email, nombre: user.nombre }]);
     setStaffQuery('');
     setStaffResults([]);
@@ -763,7 +769,7 @@ function TabAjustes({
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }}>
           <Users size={14} color="#3D4F44" />
           <Text style={{ color: '#3D4F44', fontFamily: 'Inter_500Medium', fontSize: 12 }}>
-            Máximo de equipos
+            Cantidad de equipos
           </Text>
         </View>
 
