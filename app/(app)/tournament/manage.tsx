@@ -1006,7 +1006,7 @@ export default function ManageScreen() {
   const [equiposAprobados, setEquiposAprobados] = useState(Number.parseInt(equiposAprobadosInicial ?? '0', 10));
   const [estado, setEstado] = useState(estadoInicial ?? '');
 
-  const showSolicitudes = estado === 'INSCRIPCION' || estado === 'BORRADOR';
+  const showSolicitudes = estado === 'EN_INSCRIPCION' || estado === 'BORRADOR';
 
   useEffect(() => {
     if (tab === 'solicitudes' && !showSolicitudes) {
