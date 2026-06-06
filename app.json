@@ -6,7 +6,7 @@
       "backgroundColor": "#FFFFFF"
     },
     "slug": "tourney-fc-app",
-    "version": "3.0.0",
+    "version": "6.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "tourneyfcapp",
@@ -24,7 +24,7 @@
       },
       "config": {
         "googleMaps": {
-          "apiKey": "AIzaSyCPRY0RL"
+          "apiKey": "A"
         }
       },
       "edgeToEdgeEnabled": true,
