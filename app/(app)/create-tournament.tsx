@@ -338,6 +338,7 @@ export default function CreateTournamentScreen() {
             zona={form.zona}
             fechaInicio={form.fechaInicio}
             fechaFin={form.fechaFin}
+            imagen={form.imagen}
             imagenLocal={form.imagenLocal}
             errors={step1Errors}
             onChange={onChange}

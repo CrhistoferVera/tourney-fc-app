@@ -17,6 +17,7 @@ interface Props {
   zona: string;
   fechaInicio: string;
   fechaFin: string;
+  imagen?: string;
   imagenLocal?: string;
   errors: Step1Errors;
   onChange: (key: string, value: string) => void;
@@ -31,6 +32,7 @@ export default function Step1({
   zona,
   fechaInicio,
   fechaFin,
+  imagen,
   imagenLocal,
   errors,
   onChange,
@@ -42,7 +44,7 @@ export default function Step1({
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: true,
-      aspect: [16, 9],
+      aspect: [4, 3],
       quality: 0.8,
     });
 
@@ -57,10 +59,18 @@ export default function Step1({
         <TouchableOpacity
           onPress={pickImage}
           activeOpacity={0.8}
-          className="w-full h-32 bg-white rounded-2xl border-2 border-dashed border-mist items-center justify-center overflow-hidden"
+          className="w-full h-40 bg-white rounded-2xl border-2 border-dashed border-mist items-center justify-center overflow-hidden"
         >
-          {imagenLocal ? (
-            <Image source={{ uri: imagenLocal }} className="w-full h-full" resizeMode="cover" />
+          {imagenLocal || imagen ? (
+            <>
+              <Image source={{ uri: imagenLocal || imagen }} className="w-full h-full" resizeMode="cover" />
+              <View className="absolute inset-0 bg-black/30 items-center justify-center">
+                <View className="bg-white/20 px-4 py-2 rounded-full flex-row items-center backdrop-blur-sm">
+                  <Camera size={18} color="white" />
+                  <Text className="text-white font-sans-medium ml-2 text-sm">Cambiar foto</Text>
+                </View>
+              </View>
+            </>
           ) : (
             <View className="items-center">
               <View className="w-12 h-12 bg-primary-light rounded-full items-center justify-center mb-2">
@@ -68,7 +78,7 @@ export default function Step1({
               </View>
               <Text className="text-carbon font-sans-medium text-sm">Añadir foto del torneo</Text>
               <Text className="text-carbon/60 font-sans text-xs mt-1">
-                Formatos: JPG, PNG (16:9)
+                Formatos: JPG, PNG (4:3)
               </Text>
             </View>
           )}

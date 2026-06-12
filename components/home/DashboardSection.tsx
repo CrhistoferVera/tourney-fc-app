@@ -16,6 +16,9 @@ import ProximoPartidoCard from '../dashboard/ProximoPartidoCard';
 import TorneoResumenCard from '../dashboard/TorneoResumenCard';
 import { TorneoResumen } from '../../hooks/useDashboard';
 import ResultadoCard from '../dashboard/ResultadoCard';
+import BallLoader from '../common/BallLoader';
+
+
 
 function SectionTitle({
   icon,
@@ -108,7 +111,7 @@ export default function DashboardSection({
   if (loading && !data) {
     return (
       <View className="flex-1 items-center justify-center bg-mist">
-        <ActivityIndicator color="#0D7A3E" size="large" />
+        <BallLoader />
         <Text className="text-carbon text-sm mt-3">Cargando tu inicio...</Text>
       </View>
     );
@@ -133,19 +136,28 @@ export default function DashboardSection({
   }
 
   return (
-    <ScrollView
-      className="flex-1 bg-mist"
-      contentContainerStyle={{ paddingBottom: 40 }}
-      showsVerticalScrollIndicator={false}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          tintColor="#0D7A3E"
-          colors={['#0D7A3E']}
-        />
-      }
-    >
+    <View style={{ flex: 1 }}>
+      {/* Indicador pull-to-refresh custom */}
+      {refreshing && (
+        <View style={{ position: 'absolute', top: 10, left: 0, right: 0, zIndex: 10, alignItems: 'center' }}>
+          <BallLoader size={38} />
+        </View>
+      )}
+      <ScrollView
+        className="flex-1 bg-mist"
+        contentContainerStyle={{ paddingBottom: 40 }}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="transparent"
+            colors={['transparent']}
+            progressBackgroundColor="transparent"
+            progressViewOffset={-1000}
+          />
+        }
+      >
       {/* Hero */}
       <View className="bg-primary pt-2 pb-8 px-4">
         <View
@@ -248,5 +260,6 @@ export default function DashboardSection({
         ) : null}
       </View>
     </ScrollView>
+    </View>
   );
 }
