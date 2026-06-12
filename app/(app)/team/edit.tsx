@@ -49,10 +49,16 @@ export default function EditTeamScreen() {
     }, [fetchTeam]),
   );
 
+  const MAX_NOMBRE = 20;
+
   const handleSubmit = async () => {
     const trimmed = nombre.trim();
     if (trimmed.length < 3) {
       showError('Nombre inválido', 'El nombre del equipo debe tener al menos 3 caracteres.');
+      return;
+    }
+    if (trimmed.length > MAX_NOMBRE) {
+      showError('Nombre inválido', `El nombre del equipo no puede superar los ${MAX_NOMBRE} caracteres.`);
       return;
     }
     if (!id) return;
@@ -121,14 +127,29 @@ export default function EditTeamScreen() {
           className="bg-white rounded-2xl px-4 py-4 mb-6"
           style={{ elevation: 1, shadowColor: '#0F1A14', shadowOpacity: 0.05, shadowRadius: 6 }}
         >
-          <TextInput
-            className="bg-mist rounded-xl px-4 py-3 text-night text-sm mb-3"
-            placeholder="Nombre del equipo *"
-            placeholderTextColor="#3D4F44"
-            value={nombre}
-            onChangeText={setNombre}
-            autoCapitalize="words"
-          />
+          <View className="mb-3">
+            <TextInput
+              className="bg-mist rounded-xl px-4 py-3 text-night text-sm"
+              placeholder="Nombre del equipo *"
+              placeholderTextColor="#3D4F44"
+              value={nombre}
+              onChangeText={(text) => {
+                const sanitized = text
+                  .replace(/^\s+/, '')
+                  .replace(/\s{2,}/g, ' ')
+                  .replace(/\./g, '');
+                setNombre(sanitized.slice(0, MAX_NOMBRE));
+              }}
+              autoCapitalize="words"
+              maxLength={MAX_NOMBRE}
+            />
+            <Text
+              className="text-right text-xs mt-1 pr-1"
+              style={{ color: nombre.length >= MAX_NOMBRE ? '#e53e3e' : '#6B7280' }}
+            >
+              {nombre.length}/{MAX_NOMBRE}
+            </Text>
+          </View>
           <TextInput
             className="bg-mist rounded-xl px-4 py-3 text-night text-sm"
             placeholder="Teléfono del capitán (opcional)"

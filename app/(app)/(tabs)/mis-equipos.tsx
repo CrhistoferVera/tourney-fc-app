@@ -13,6 +13,7 @@ import CustomAlert from '../../../components/CustomAlert';
 import MyTeamCard from '../../../components/team/MyTeamCard';
 import { useAlert } from '../../../hooks/useAlert';
 import { getMyTeams, MyTeamSummary } from '../../../services/teamsService';
+import BallLoader from '../../../components/common/BallLoader';
 
 export default function MisEquiposScreen() {
   const router = useRouter();
@@ -76,19 +77,27 @@ export default function MisEquiposScreen() {
           <ActivityIndicator color="#0D7A3E" size="large" />
         </View>
       ) : (
-        <ScrollView
-          className="flex-1"
-          contentContainerStyle={{ padding: 16, paddingBottom: 48 }}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor="#0D7A3E"
-              colors={['#0D7A3E']}
-            />
-          }
-        >
+        <View style={{ flex: 1 }}>
+          {refreshing && (
+            <View style={{ position: 'absolute', top: 10, left: 0, right: 0, zIndex: 10, alignItems: 'center' }}>
+              <BallLoader size={38} />
+            </View>
+          )}
+          <ScrollView
+            className="flex-1"
+            contentContainerStyle={{ padding: 16, paddingBottom: 48 }}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor="transparent"
+                colors={['transparent']}
+                progressBackgroundColor="transparent"
+                progressViewOffset={-1000}
+              />
+            }
+          >
           {equipos.length === 0 && (
             <View
               className="bg-white rounded-2xl px-6 py-10 items-center"
@@ -138,6 +147,7 @@ export default function MisEquiposScreen() {
             </>
           )}
         </ScrollView>
+        </View>
       )}
     </View>
   );
